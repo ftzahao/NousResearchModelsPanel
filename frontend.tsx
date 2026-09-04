@@ -1420,7 +1420,8 @@ function App() {
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch("/api/models", { signal: controller.signal })
+    const API_URL = "https://inference-api.nousresearch.com/v1/models"
+    fetch(API_URL, { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`Server returned ${r.status}`)
         return r.json()
