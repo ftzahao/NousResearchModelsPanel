@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NousResearch Models Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwindcss.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                200: '#bae6fd',
+                300: '#7dd3fc',
+                400: '#38bdf8',
+                500: '#0ea5e9',
+                600: '#0284c7',
+                700: '#0369a1',
+                800: '#075985',
+                900: '#0c4a6e',
+                950: '#082f49',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      * { font-family: 'Inter', system-ui, sans-serif; }
+
+      /* Light theme variables */
+      :root {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8fafc;
+        --bg-tertiary: #f1f5f9;
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #94a3b8;
+        --border-primary: #e2e8f0;
+        --border-subtle: #f1f5f9;
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(0, 0, 0, 0.08);
+        --card-bg: #ffffff;
+        --card-hover-bg: #f8fafc;
+        --input-bg: #ffffff;
+        --badge-bg: #f1f5f9;
+      }
+
+      /* Dark theme variables */
+      .dark {
+        --bg-primary: #030712;
+        --bg-secondary: #111827;
+        --bg-tertiary: #1f2937;
+        --text-primary: #f9fafb;
+        --text-secondary: #d1d5db;
+        --text-muted: #6b7280;
+        --border-primary: rgba(255, 255, 255, 0.1);
+        --border-subtle: rgba(255, 255, 255, 0.05);
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.06);
+        --card-bg: rgba(255, 255, 255, 0.03);
+        --card-hover-bg: rgba(255, 255, 255, 0.05);
+        --input-bg: rgba(0, 0, 0, 0.3);
+        --badge-bg: rgba(255, 255, 255, 0.05);
+      }
+
+      body {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        transition: background-color 0.2s, color 0.2s;
+      }
+
+      .glass {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+      }
+
+      .dark .glass {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+      }
+
+      .card-glow:hover {
+        box-shadow: 0 4px 24px rgba(14,165,233,0.12);
+      }
+
+      .dark .card-glow:hover {
+        box-shadow: 0 0 30px rgba(14,165,233,0.15);
+      }
+
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 3px; }
+      .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      .modality-tag { font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; }
+
+      /* Light mode scrollbar */
+      :root::-webkit-scrollbar-thumb { background: #cbd5e1; }
+    </style>
+  </head>
+  <body class="dark min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="./frontend.tsx"></script>
+  </body>
+</html>
