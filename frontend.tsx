@@ -127,7 +127,18 @@ const translations = {
     batchLabel: "批处理",
     newLabel: "新",
     routerLabel: "路由",
-    daysAgoLabel: "天前"
+    daysAgoLabel: "天前",
+    currency: "货币",
+    usd: "美元",
+    cny: "人民币",
+    customRate: "自定义汇率",
+    exchangeRate: "汇率",
+    fetchRate: "获取汇率",
+    rateFetched: "汇率已获取",
+    rateError: "获取汇率失败",
+    enterRate: "输入汇率",
+    apply: "应用",
+    cancel: "取消"
   },
   en: {
     title: "NousResearch Models",
@@ -210,7 +221,18 @@ const translations = {
     batchLabel: "BATCH",
     newLabel: "NEW",
     routerLabel: "ROUTER",
-    daysAgoLabel: "days ago"
+    daysAgoLabel: "days ago",
+    currency: "Currency",
+    usd: "USD",
+    cny: "CNY",
+    customRate: "Custom Rate",
+    exchangeRate: "Exchange Rate",
+    fetchRate: "Fetch Rate",
+    rateFetched: "Rate fetched",
+    rateError: "Failed to fetch rate",
+    enterRate: "Enter rate",
+    apply: "Apply",
+    cancel: "Cancel"
   }
 }
 
@@ -346,6 +368,32 @@ const providerColors: Record<string, string> = {
   meituan: "#FFD700"
 }
 
+type Currency = "USD" | "CNY"
+
+const CurrencyContext = createContext<{
+  currency: Currency
+  setCurrency: (c: Currency) => void
+  exchangeRate: number
+  setExchangeRate: (r: number) => void
+  customRate: string
+  setCustomRate: (r: string) => void
+  showCustomInput: boolean
+  setShowCustomInput: (v: boolean) => void
+}>({
+  currency: "USD",
+  setCurrency: () => {},
+  exchangeRate: 7.25,
+  setExchangeRate: () => {},
+  customRate: "",
+  setCustomRate: () => {},
+  showCustomInput: false,
+  setShowCustomInput: () => {}
+})
+
+function useCurrency() {
+  return useContext(CurrencyContext)
+}
+
 function getProvider(id: string): string {
   const key = id.split("/")[0]?.replace("~", "") ?? "unknown"
   return key
@@ -366,10 +414,21 @@ function stripZeros(s: string): string {
   return s.replace(/\.?0+$/, "")
 }
 
-function formatPrice(val: string | undefined, lang: Lang = "zh"): string {
+function formatPrice(
+  val: string | undefined,
+  lang: Lang = "zh",
+  currency: Currency = "USD",
+  exchangeRate: number = 7.25
+): string {
   if (!val) return "—"
   const n = bn(val)
   if (n.isZero()) return lang === "zh" ? "免费" : "Free"
+
+  if (currency === "CNY") {
+    const cnyValue = n.times(1e6).times(exchangeRate)
+    return `¥${stripZeros(cnyValue.toFixed(2))}/1M`
+  }
+
   return `$${stripZeros(n.times(1e6).toFixed(2))}/1M`
 }
 
@@ -435,13 +494,23 @@ function StatCard({
   const { theme } = useTheme()
   return (
     <div className="glass rounded-xl p-4 flex items-center gap-3 animate-fade-in">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${theme === 'dark' ? 'bg-brand-500/10 text-brand-400' : 'bg-brand-50 text-brand-600'}`}>
+      <div
+        className={`w-10 h-10 rounded-lg flex items-center justify-center ${theme === "dark" ? "bg-brand-500/10 text-brand-400" : "bg-brand-50 text-brand-600"}`}
+      >
         {icon}
       </div>
       <div>
-        <div className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{value}</div>
-        <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{label}</div>
-        {sub && <div className={`text-[10px] ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{sub}</div>}
+        <div className={`text-2xl font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
+          {value}
+        </div>
+        <div className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+          {label}
+        </div>
+        {sub && (
+          <div className={`text-[10px] ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+            {sub}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -459,6 +528,7 @@ function ModelCard({
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
+  const { currency, exchangeRate } = useCurrency()
   const provider = getProvider(model.id)
   const color = getProviderColor(model.id)
   const benchmarks = model.benchmarks?.artificial_analysis
@@ -476,7 +546,7 @@ function ModelCard({
     >
       {/* Header */}
       <div
-        className={`p-4 cursor-pointer transition-colors ${isDark ? 'hover:bg-white/[0.02]' : 'hover:bg-gray-50'}`}
+        className={`p-4 cursor-pointer transition-colors ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-gray-50"}`}
         onClick={onToggle}
       >
         <div className="flex items-start justify-between gap-2">
@@ -486,45 +556,61 @@ function ModelCard({
                 className="inline-block w-2 h-2 rounded-full flex-shrink-0"
                 style={{ background: color }}
               />
-              <span className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{model.name}</span>
+              <span
+                className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-gray-900"}`}
+              >
+                {model.name}
+              </span>
               {isNew && (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-700'}`}>
+                <span
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? "bg-emerald-500/20 text-emerald-300" : "bg-emerald-100 text-emerald-700"}`}
+                >
                   {t.newLabel}
                 </span>
               )}
               {isBatch && (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700'}`}>
+                <span
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? "bg-amber-500/20 text-amber-300" : "bg-amber-100 text-amber-700"}`}
+                >
                   {t.batchLabel}
                 </span>
               )}
               {isFree && (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700'}`}>
+                <span
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? "bg-green-500/20 text-green-300" : "bg-green-100 text-green-700"}`}
+                >
                   {t.freeLabel}
                 </span>
               )}
               {isRouter && (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-700'}`}>
+                <span
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? "bg-cyan-500/20 text-cyan-300" : "bg-cyan-100 text-cyan-700"}`}
+                >
                   {t.routerLabel}
                 </span>
               )}
             </div>
-            <div className={`text-[11px] mt-0.5 font-mono truncate ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{model.id}</div>
+            <div
+              className={`text-[11px] mt-0.5 font-mono truncate ${isDark ? "text-gray-500" : "text-gray-400"}`}
+            >
+              {model.id}
+            </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {model.reasoning?.mandatory && (
               <span title="Reasoning mandatory">
-                <Brain size={14} className={isDark ? 'text-violet-400' : 'text-violet-600'} />
+                <Brain size={14} className={isDark ? "text-violet-400" : "text-violet-600"} />
               </span>
             )}
             {model.top_provider?.is_moderated && (
               <span title="Moderated">
-                <Shield size={14} className={isDark ? 'text-blue-400' : 'text-blue-600'} />
+                <Shield size={14} className={isDark ? "text-blue-400" : "text-blue-600"} />
               </span>
             )}
             {expanded ? (
-              <ChevronUp size={16} className={isDark ? 'text-gray-500' : 'text-gray-400'} />
+              <ChevronUp size={16} className={isDark ? "text-gray-500" : "text-gray-400"} />
             ) : (
-              <ChevronDown size={16} className={isDark ? 'text-gray-500' : 'text-gray-400'} />
+              <ChevronDown size={16} className={isDark ? "text-gray-500" : "text-gray-400"} />
             )}
           </div>
         </div>
@@ -532,7 +618,11 @@ function ModelCard({
         {/* Modality tags */}
         <div className="flex flex-wrap gap-1 mt-2">
           {model.architecture?.input_modalities?.map((m) => {
-            const colors = modalityColors[m] ?? (isDark ? { dark: "bg-gray-500/20 text-gray-300", light: "bg-gray-100 text-gray-600" } : { dark: "", light: "" })
+            const colors =
+              modalityColors[m] ??
+              (isDark
+                ? { dark: "bg-gray-500/20 text-gray-300", light: "bg-gray-100 text-gray-600" }
+                : { dark: "", light: "" })
             return (
               <span
                 key={m}
@@ -542,9 +632,13 @@ function ModelCard({
               </span>
             )
           })}
-          <span className={`text-[10px] ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>→</span>
+          <span className={`text-[10px] ${isDark ? "text-gray-600" : "text-gray-400"}`}>→</span>
           {model.architecture?.output_modalities?.map((m) => {
-            const colors = modalityColors[m] ?? (isDark ? { dark: "bg-gray-500/20 text-gray-300", light: "bg-gray-100 text-gray-600" } : { dark: "", light: "" })
+            const colors =
+              modalityColors[m] ??
+              (isDark
+                ? { dark: "bg-gray-500/20 text-gray-300", light: "bg-gray-100 text-gray-600" }
+                : { dark: "", light: "" })
             return (
               <span
                 key={m}
@@ -559,33 +653,45 @@ function ModelCard({
         {/* Quick stats */}
         <div className="grid grid-cols-2 gap-2 mt-3">
           <div>
-            <div className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t.context}</div>
-            <div className={`text-xs font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+            <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+              {t.context}
+            </div>
+            <div className={`text-xs font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
               {model.context_length}
               {model.top_provider?.context_length &&
                 model.top_provider.context_length !== model.context_length && (
-                  <span className={isDark ? 'text-gray-500 ml-1' : 'text-gray-400 ml-1'}>({model.top_provider.context_length})</span>
+                  <span className={isDark ? "text-gray-500 ml-1" : "text-gray-400 ml-1"}>
+                    ({model.top_provider.context_length})
+                  </span>
                 )}
             </div>
           </div>
           {model.top_provider?.max_completion_tokens ? (
             <div>
-              <div className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t.maxOutput}</div>
-              <div className={`text-xs font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+              <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+                {t.maxOutput}
+              </div>
+              <div className={`text-xs font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
                 {model.top_provider.max_completion_tokens}
               </div>
             </div>
           ) : null}
           <div>
-            <div className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t.promptPrice}</div>
-            <div className={`text-xs font-medium ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-              {formatPrice(model.pricing.prompt, lang)}
+            <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+              {t.promptPrice}
+            </div>
+            <div
+              className={`text-xs font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+            >
+              {formatPrice(model.pricing.prompt, lang, currency, exchangeRate)}
             </div>
           </div>
           <div>
-            <div className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t.completePrice}</div>
-            <div className={`text-xs font-medium ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>
-              {formatPrice(model.pricing.completion, lang)}
+            <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+              {t.completePrice}
+            </div>
+            <div className={`text-xs font-medium ${isDark ? "text-sky-400" : "text-sky-600"}`}>
+              {formatPrice(model.pricing.completion, lang, currency, exchangeRate)}
             </div>
           </div>
         </div>
@@ -594,10 +700,14 @@ function ModelCard({
         {benchmarks?.intelligence_index != null && (
           <div className="mt-3">
             <div className="flex justify-between text-[10px] mb-0.5">
-              <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>{t.intelligence}</span>
-              <span className={`font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{benchmarks.intelligence_index}</span>
+              <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.intelligence}</span>
+              <span className={`font-medium ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+                {benchmarks.intelligence_index}
+              </span>
             </div>
-            <div className={`h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}>
+            <div
+              className={`h-1.5 rounded-full overflow-hidden ${isDark ? "bg-gray-800" : "bg-gray-200"}`}
+            >
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{
@@ -612,17 +722,27 @@ function ModelCard({
 
       {/* Expanded Details */}
       {expanded && (
-        <div className={`border-t p-4 space-y-4 animate-fade-in ${isDark ? 'border-white/5' : 'border-gray-200'}`}>
+        <div
+          className={`border-t p-4 space-y-4 animate-fade-in ${isDark ? "border-white/5" : "border-gray-200"}`}
+        >
           {/* Description */}
           {model.description && (
-            <p className={`text-xs leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{model.description}</p>
+            <p className={`text-xs leading-relaxed ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+              {model.description}
+            </p>
           )}
 
           {/* Pricing Grid */}
           <div>
-            <h4 className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            <h4
+              className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+            >
               <DollarSign size={12} /> {t.pricingDetails}
-              <span className={`text-[10px] font-normal ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>($/1M tokens)</span>
+              <span
+                className={`text-[10px] font-normal ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              >
+                ($/1M tokens)
+              </span>
             </h4>
             {(() => {
               const pricingItems: Array<{
@@ -632,15 +752,61 @@ function ModelCard({
                 colorLight: string
                 per1k?: boolean
               }> = [
-                { key: "prompt", label: t.prompt, colorDark: "text-emerald-400", colorLight: "text-emerald-600" },
-                { key: "completion", label: t.completion, colorDark: "text-sky-400", colorLight: "text-sky-600" },
-                { key: "input_cache_read", label: t.cacheRead, colorDark: "text-violet-400", colorLight: "text-violet-600" },
-                { key: "input_cache_write", label: t.cacheWrite, colorDark: "text-violet-400", colorLight: "text-violet-600" },
-                { key: "input_cache_write_1h", label: t.cacheWrite1h, colorDark: "text-purple-400", colorLight: "text-purple-600" },
-                { key: "web_search", label: t.webSearch, colorDark: "text-amber-400", colorLight: "text-amber-600", per1k: true },
-                { key: "image", label: t.image, colorDark: "text-purple-400", colorLight: "text-purple-600" },
-                { key: "audio", label: t.audio, colorDark: "text-orange-400", colorLight: "text-orange-600" },
-                { key: "internal_reasoning", label: t.reasoningPrice, colorDark: "text-rose-400", colorLight: "text-rose-600" }
+                {
+                  key: "prompt",
+                  label: t.prompt,
+                  colorDark: "text-emerald-400",
+                  colorLight: "text-emerald-600"
+                },
+                {
+                  key: "completion",
+                  label: t.completion,
+                  colorDark: "text-sky-400",
+                  colorLight: "text-sky-600"
+                },
+                {
+                  key: "input_cache_read",
+                  label: t.cacheRead,
+                  colorDark: "text-violet-400",
+                  colorLight: "text-violet-600"
+                },
+                {
+                  key: "input_cache_write",
+                  label: t.cacheWrite,
+                  colorDark: "text-violet-400",
+                  colorLight: "text-violet-600"
+                },
+                {
+                  key: "input_cache_write_1h",
+                  label: t.cacheWrite1h,
+                  colorDark: "text-purple-400",
+                  colorLight: "text-purple-600"
+                },
+                {
+                  key: "web_search",
+                  label: t.webSearch,
+                  colorDark: "text-amber-400",
+                  colorLight: "text-amber-600",
+                  per1k: true
+                },
+                {
+                  key: "image",
+                  label: t.image,
+                  colorDark: "text-purple-400",
+                  colorLight: "text-purple-600"
+                },
+                {
+                  key: "audio",
+                  label: t.audio,
+                  colorDark: "text-orange-400",
+                  colorLight: "text-orange-600"
+                },
+                {
+                  key: "internal_reasoning",
+                  label: t.reasoningPrice,
+                  colorDark: "text-rose-400",
+                  colorLight: "text-rose-600"
+                }
               ]
               const p = model.pricing as unknown as Record<string, string | undefined>
               const orig = model.pricing.original as unknown as
@@ -650,18 +816,31 @@ function ModelCard({
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {active.map((item) => (
-                    <div key={item.key} className={`rounded-lg p-2 ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
-                      <div className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{item.label}</div>
-                      <div className={`text-xs font-medium ${isDark ? item.colorDark : item.colorLight}`}>
+                    <div
+                      key={item.key}
+                      className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
+                    >
+                      <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+                        {item.label}
+                      </div>
+                      <div
+                        className={`text-xs font-medium ${isDark ? item.colorDark : item.colorLight}`}
+                      >
                         {item.per1k
-                          ? `$${stripZeros(bn(p[item.key]).times(1000).toFixed(4))}/1K`
-                          : formatPrice(p[item.key], lang)}
+                          ? currency === "CNY"
+                            ? `¥${stripZeros(bn(p[item.key]).times(1000).times(exchangeRate).toFixed(4))}/1K`
+                            : `$${stripZeros(bn(p[item.key]).times(1000).toFixed(4))}/1K`
+                          : formatPrice(p[item.key], lang, currency, exchangeRate)}
                       </div>
                       {orig?.[item.key] && (
-                        <div className={`text-[10px] line-through ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <div
+                          className={`text-[10px] line-through ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                        >
                           {item.per1k
-                            ? `$${stripZeros(bn(orig[item.key]).times(1000).toFixed(4))}/1K`
-                            : formatPrice(orig[item.key], lang)}
+                            ? currency === "CNY"
+                              ? `¥${stripZeros(bn(orig[item.key]).times(1000).times(exchangeRate).toFixed(4))}/1K`
+                              : `$${stripZeros(bn(orig[item.key]).times(1000).toFixed(4))}/1K`
+                            : formatPrice(orig[item.key], lang, currency, exchangeRate)}
                         </div>
                       )}
                     </div>
@@ -682,7 +861,9 @@ function ModelCard({
                     {/* Time-based overrides */}
                     {timeOverrides.length > 0 && (
                       <div>
-                        <div className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <div
+                          className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                        >
                           <Clock size={10} /> {t.peakPricing}
                         </div>
                         <div className="space-y-1.5">
@@ -711,30 +892,51 @@ function ModelCard({
                               (d) => d === "saturday" || d === "sunday"
                             )
                             return (
-                              <div key={i} className={`rounded-lg p-2 text-[11px] ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
+                              <div
+                                key={i}
+                                className={`rounded-lg p-2 text-[11px] ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
+                              >
                                 <div className="flex items-center gap-2 mb-1">
                                   <span
-                                    className={`px-1.5 py-0.5 rounded text-[9px] ${isWeekend ? (isDark ? "bg-blue-500/20 text-blue-300" : "bg-blue-100 text-blue-700") : (isDark ? "bg-orange-500/20 text-orange-300" : "bg-orange-100 text-orange-700")}`}
+                                    className={`px-1.5 py-0.5 rounded text-[9px] ${isWeekend ? (isDark ? "bg-blue-500/20 text-blue-300" : "bg-blue-100 text-blue-700") : isDark ? "bg-orange-500/20 text-orange-300" : "bg-orange-100 text-orange-700"}`}
                                   >
                                     {isWeekend ? t.weekend : t.weekday}
                                   </span>
-                                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{days}</span>
-                                  {timeRange && <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>{timeRange}</span>}
+                                  <span className={isDark ? "text-gray-400" : "text-gray-500"}>
+                                    {days}
+                                  </span>
+                                  {timeRange && (
+                                    <span className={isDark ? "text-gray-500" : "text-gray-400"}>
+                                      {timeRange}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                                   {o.prompt && (
-                                    <span className={isDark ? 'text-emerald-400' : 'text-emerald-600'}>
-                                      {t.prompt}: {formatPrice(o.prompt, lang)}
+                                    <span
+                                      className={isDark ? "text-emerald-400" : "text-emerald-600"}
+                                    >
+                                      {t.prompt}:{" "}
+                                      {formatPrice(o.prompt, lang, currency, exchangeRate)}
                                     </span>
                                   )}
                                   {o.completion && (
-                                    <span className={isDark ? 'text-sky-400' : 'text-sky-600'}>
-                                      {t.completion}: {formatPrice(o.completion, lang)}
+                                    <span className={isDark ? "text-sky-400" : "text-sky-600"}>
+                                      {t.completion}:{" "}
+                                      {formatPrice(o.completion, lang, currency, exchangeRate)}
                                     </span>
                                   )}
                                   {o.input_cache_read && (
-                                    <span className={isDark ? 'text-violet-400' : 'text-violet-600'}>
-                                      {t.cacheRead}: {formatPrice(o.input_cache_read, lang)}
+                                    <span
+                                      className={isDark ? "text-violet-400" : "text-violet-600"}
+                                    >
+                                      {t.cacheRead}:{" "}
+                                      {formatPrice(
+                                        o.input_cache_read,
+                                        lang,
+                                        currency,
+                                        exchangeRate
+                                      )}
                                     </span>
                                   )}
                                 </div>
@@ -747,31 +949,43 @@ function ModelCard({
                     {/* Token-based overrides */}
                     {tokenOverrides.length > 0 && (
                       <div>
-                        <div className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <div
+                          className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                        >
                           <Layers size={10} /> {t.tieredPricing}
                         </div>
                         <div className="space-y-1.5">
                           {tokenOverrides.map((o, i) => (
-                            <div key={i} className={`rounded-lg p-2 text-[11px] ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
+                            <div
+                              key={i}
+                              className={`rounded-lg p-2 text-[11px] ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
+                            >
                               <div className="mb-1">
-                                <span className={`px-1.5 py-0.5 rounded text-[9px] ${isDark ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-700'}`}>
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[9px] ${isDark ? "bg-teal-500/20 text-teal-300" : "bg-teal-100 text-teal-700"}`}
+                                >
                                   ≥{formatCtx(o.min_prompt_tokens!)} {t.aboveTokens}
                                 </span>
                               </div>
                               <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                                 {o.prompt && (
-                                  <span className={isDark ? 'text-emerald-400' : 'text-emerald-600'}>
-                                    {t.prompt}: {formatPrice(o.prompt, lang)}
+                                  <span
+                                    className={isDark ? "text-emerald-400" : "text-emerald-600"}
+                                  >
+                                    {t.prompt}:{" "}
+                                    {formatPrice(o.prompt, lang, currency, exchangeRate)}
                                   </span>
                                 )}
                                 {o.completion && (
-                                  <span className={isDark ? 'text-sky-400' : 'text-sky-600'}>
-                                    {t.completion}: {formatPrice(o.completion, lang)}
+                                  <span className={isDark ? "text-sky-400" : "text-sky-600"}>
+                                    {t.completion}:{" "}
+                                    {formatPrice(o.completion, lang, currency, exchangeRate)}
                                   </span>
                                 )}
                                 {o.input_cache_read && (
-                                  <span className={isDark ? 'text-violet-400' : 'text-violet-600'}>
-                                    {t.cacheRead}: {formatPrice(o.input_cache_read, lang)}
+                                  <span className={isDark ? "text-violet-400" : "text-violet-600"}>
+                                    {t.cacheRead}:{" "}
+                                    {formatPrice(o.input_cache_read, lang, currency, exchangeRate)}
                                   </span>
                                 )}
                               </div>
@@ -787,38 +1001,48 @@ function ModelCard({
 
           {/* Capabilities */}
           <div>
-            <h4 className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            <h4
+              className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+            >
               <Zap size={12} /> {t.capabilities}
             </h4>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
-                <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>{t.contextLengthLabel}</span>
-                <div className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{model.context_length} tokens</div>
+              <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
+                <span className={isDark ? "text-gray-500" : "text-gray-400"}>
+                  {t.contextLengthLabel}
+                </span>
+                <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+                  {model.context_length} tokens
+                </div>
                 {model.top_provider?.context_length &&
                   model.top_provider.context_length !== model.context_length && (
-                    <div className={`text-[10px] mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <div
+                      className={`text-[10px] mt-0.5 ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                    >
                       {t.contextTopProvider}: {model.top_provider.context_length} tokens
                     </div>
                   )}
               </div>
               {model.top_provider?.max_completion_tokens && (
-                <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
-                  <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>{t.maxOutput}</span>
-                  <div className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
+                  <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.maxOutput}</span>
+                  <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
                     {model.top_provider.max_completion_tokens} tokens
                   </div>
                 </div>
               )}
               {model.architecture?.tokenizer && (
-                <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
-                  <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>{t.tokenizer}</span>
-                  <div className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{model.architecture.tokenizer}</div>
+                <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
+                  <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.tokenizer}</span>
+                  <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+                    {model.architecture.tokenizer}
+                  </div>
                 </div>
               )}
               {model.top_provider?.is_moderated != null && (
-                <div className={`rounded-lg p-2 ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
-                  <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>{t.moderated}</span>
-                  <div className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
+                  <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.moderated}</span>
+                  <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
                     {model.top_provider.is_moderated ? t.yes : t.no}
                   </div>
                 </div>
@@ -829,7 +1053,9 @@ function ModelCard({
           {/* Reasoning */}
           {model.reasoning && (
             <div>
-              <h4 className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              <h4
+                className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+              >
                 <Brain size={12} /> {t.reasoningLabel}
               </h4>
               <div className="flex flex-wrap gap-1.5">
@@ -838,15 +1064,19 @@ function ModelCard({
                     key={e}
                     className={`text-[10px] px-2 py-0.5 rounded-full ${
                       e === model.reasoning!.default_effort
-                        ? isDark ? "bg-violet-500/30 text-violet-200 ring-1 ring-violet-500/40" : "bg-violet-100 text-violet-700 ring-1 ring-violet-300"
-                        : isDark ? "bg-gray-800 text-gray-400" : "bg-gray-200 text-gray-500"
+                        ? isDark
+                          ? "bg-violet-500/30 text-violet-200 ring-1 ring-violet-500/40"
+                          : "bg-violet-100 text-violet-700 ring-1 ring-violet-300"
+                        : isDark
+                          ? "bg-gray-800 text-gray-400"
+                          : "bg-gray-200 text-gray-500"
                     }`}
                   >
                     {e} {e === model.reasoning!.default_effort && "★"}
                   </span>
                 ))}
               </div>
-              <div className={`text-[10px] mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              <div className={`text-[10px] mt-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
                 {model.reasoning.mandatory ? t.mandatory : t.optional}
                 {model.reasoning.default_enabled && ` · ${t.enabledByDefault}`}
               </div>
@@ -856,7 +1086,9 @@ function ModelCard({
           {/* Benchmarks */}
           {benchmarks && (
             <div>
-              <h4 className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              <h4
+                className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+              >
                 <BarChart3 size={12} /> {t.benchmarks}
               </h4>
               <div className="grid grid-cols-3 gap-2">
@@ -867,10 +1099,21 @@ function ModelCard({
                 ]
                   .filter((b) => b.val != null)
                   .map((b) => (
-                    <div key={b.label} className={`rounded-lg p-2 ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
-                      <div className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{b.label}</div>
-                      <div className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{b.val}</div>
-                      <div className={`h-1 rounded-full mt-1 overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`}>
+                    <div
+                      key={b.label}
+                      className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
+                    >
+                      <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+                        {b.label}
+                      </div>
+                      <div
+                        className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}
+                      >
+                        {b.val}
+                      </div>
+                      <div
+                        className={`h-1 rounded-full mt-1 overflow-hidden ${isDark ? "bg-gray-800" : "bg-gray-200"}`}
+                      >
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400"
                           style={{ width: `${Math.min((b.val! / b.max) * 100, 100)}%` }}
@@ -885,20 +1128,35 @@ function ModelCard({
           {/* Design Arena */}
           {arenas.length > 0 && (
             <div>
-              <h4 className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              <h4
+                className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+              >
                 <Sparkles size={12} /> {t.designArena}
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                 {arenas.map((a) => (
-                  <div key={`${a.arena}-${a.category}`} className={`rounded-lg p-2 ${isDark ? 'bg-gray-900/50' : 'bg-gray-100'}`}>
-                    <div className={`text-[10px] capitalize ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <div
+                    key={`${a.arena}-${a.category}`}
+                    className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
+                  >
+                    <div
+                      className={`text-[10px] capitalize ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                    >
                       {a.category.replace(/-/g, " ")}
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>#{a.rank}</span>
-                      <span className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>ELO {a.elo}</span>
+                      <span
+                        className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-900"}`}
+                      >
+                        #{a.rank}
+                      </span>
+                      <span className={`text-[10px] ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                        ELO {a.elo}
+                      </span>
                     </div>
-                    <div className={`text-[10px] ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                    <div
+                      className={`text-[10px] ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                    >
                       {a.win_rate}% {t.winRate}
                     </div>
                   </div>
@@ -909,12 +1167,16 @@ function ModelCard({
 
           {/* Parameters */}
           <div>
-            <h4 className={`text-xs font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{t.supportedParams}</h4>
+            <h4
+              className={`text-xs font-semibold mb-2 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+            >
+              {t.supportedParams}
+            </h4>
             <div className="flex flex-wrap gap-1">
               {(model.supported_parameters ?? []).map((p) => (
                 <span
                   key={p}
-                  className={`text-[10px] px-1.5 py-0.5 rounded ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'}`}
+                  className={`text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-gray-800 text-gray-400" : "bg-gray-200 text-gray-600"}`}
                 >
                   {p}
                 </span>
@@ -923,7 +1185,9 @@ function ModelCard({
           </div>
 
           {/* Meta */}
-          <div className={`flex items-center gap-4 text-[10px] pt-2 border-t ${isDark ? 'text-gray-500 border-white/5' : 'text-gray-400 border-gray-200'}`}>
+          <div
+            className={`flex items-center gap-4 text-[10px] pt-2 border-t ${isDark ? "text-gray-500 border-white/5" : "text-gray-400 border-gray-200"}`}
+          >
             <span className="flex items-center gap-1">
               <Clock size={10} /> {formatDate(model.created, lang)}
             </span>
@@ -967,12 +1231,18 @@ function PricingChart({ models }: { models: Model[] }) {
 
   return (
     <div className="glass rounded-2xl p-4 animate-fade-in">
-      <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-        <DollarSign size={14} className={isDark ? 'text-emerald-400' : 'text-emerald-600'} /> {t.promptPriceChart}
+      <h3
+        className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-gray-200" : "text-gray-700"}`}
+      >
+        <DollarSign size={14} className={isDark ? "text-emerald-400" : "text-emerald-600"} />{" "}
+        {t.promptPriceChart}
       </h3>
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={data} layout="vertical" margin={{ left: 80, right: 16 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+          />
           <XAxis
             type="number"
             tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 10 }}
@@ -1035,18 +1305,29 @@ function BenchmarkScatter({ models }: { models: Model[] }) {
 
   return (
     <div className="glass rounded-2xl p-4 animate-fade-in">
-      <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-        <Brain size={14} className={isDark ? 'text-violet-400' : 'text-violet-600'} /> {t.intelligenceVsCoding}
+      <h3
+        className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-gray-200" : "text-gray-700"}`}
+      >
+        <Brain size={14} className={isDark ? "text-violet-400" : "text-violet-600"} />{" "}
+        {t.intelligenceVsCoding}
       </h3>
       <ResponsiveContainer width="100%" height={320}>
         <ScatterChart margin={{ bottom: 8, left: 8, right: 16 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+          />
           <XAxis
             type="number"
             dataKey="coding"
             name="Coding"
             tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 10 }}
-            label={{ value: "Coding Index", position: "bottom", fill: isDark ? "#6B7280" : "#9CA3AF", fontSize: 10 }}
+            label={{
+              value: "Coding Index",
+              position: "bottom",
+              fill: isDark ? "#6B7280" : "#9CA3AF",
+              fontSize: 10
+            }}
           />
           <YAxis
             type="number"
@@ -1081,7 +1362,10 @@ function BenchmarkScatter({ models }: { models: Model[] }) {
       </ResponsiveContainer>
       <div className="flex flex-wrap gap-2 mt-2 justify-center">
         {Array.from(new Set(data.map((d) => d.provider))).map((p) => (
-          <span key={p} className={`flex items-center gap-1 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+          <span
+            key={p}
+            className={`flex items-center gap-1 text-[10px] ${isDark ? "text-gray-400" : "text-gray-500"}`}
+          >
             <span
               className="w-2 h-2 rounded-full"
               style={{ background: providerColors[p] ?? "#6B7280" }}
@@ -1126,12 +1410,18 @@ function ContextChart({ models }: { models: Model[] }) {
 
   return (
     <div className="glass rounded-2xl p-4 animate-fade-in">
-      <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-        <Layers size={14} className={isDark ? 'text-cyan-400' : 'text-cyan-600'} /> {t.maxContextByProvider}
+      <h3
+        className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-gray-200" : "text-gray-700"}`}
+      >
+        <Layers size={14} className={isDark ? "text-cyan-400" : "text-cyan-600"} />{" "}
+        {t.maxContextByProvider}
       </h3>
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={data} margin={{ left: 8, right: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+          />
           <XAxis
             dataKey="provider"
             tick={{ fill: isDark ? "#D1D5DB" : "#374151", fontSize: 10 }}
@@ -1139,7 +1429,10 @@ function ContextChart({ models }: { models: Model[] }) {
             textAnchor="end"
             height={50}
           />
-          <YAxis tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 10 }} tickFormatter={(v) => formatCtx(v)} />
+          <YAxis
+            tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 10 }}
+            tickFormatter={(v) => formatCtx(v)}
+          />
           <Tooltip
             contentStyle={{
               background: isDark ? "#1F2937" : "#ffffff",
@@ -1181,8 +1474,11 @@ function ProviderPie({ models }: { models: Model[] }) {
 
   return (
     <div className="glass rounded-2xl p-4 animate-fade-in">
-      <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-        <Globe size={14} className={isDark ? 'text-amber-400' : 'text-amber-600'} /> {t.modelsByProvider}
+      <h3
+        className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-gray-200" : "text-gray-700"}`}
+      >
+        <Globe size={14} className={isDark ? "text-amber-400" : "text-amber-600"} />{" "}
+        {t.modelsByProvider}
       </h3>
       <ResponsiveContainer width="100%" height={240}>
         <PieChart>
@@ -1214,7 +1510,10 @@ function ProviderPie({ models }: { models: Model[] }) {
       </ResponsiveContainer>
       <div className="flex flex-wrap gap-2 justify-center mt-1">
         {data.slice(0, 8).map((d) => (
-          <span key={d.name} className={`flex items-center gap-1 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+          <span
+            key={d.name}
+            className={`flex items-center gap-1 text-[10px] ${isDark ? "text-gray-400" : "text-gray-500"}`}
+          >
             <span className="w-2 h-2 rounded-full" style={{ background: d.color }} />
             {d.name} ({d.value})
           </span>
@@ -1263,15 +1562,18 @@ function FilterBar({
   const { t } = useLang()
   const { theme } = useTheme()
   const isDark = theme === "dark"
-  const inputClass = `w-full pl-8 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500/50 border ${isDark ? 'bg-gray-900/50 text-gray-200 placeholder-gray-500 border-white/5' : 'bg-white text-gray-900 placeholder-gray-400 border-gray-200'}`
-  const selectClass = `px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500/50 border ${isDark ? 'bg-gray-900/50 text-gray-300 border-white/5' : 'bg-white text-gray-700 border-gray-200'}`
+  const inputClass = `w-full pl-8 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500/50 border ${isDark ? "bg-gray-900/50 text-gray-200 placeholder-gray-500 border-white/5" : "bg-white text-gray-900 placeholder-gray-400 border-gray-200"}`
+  const selectClass = `px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500/50 border ${isDark ? "bg-gray-900/50 text-gray-300 border-white/5" : "bg-white text-gray-700 border-gray-200"}`
 
   return (
     <div className="glass rounded-2xl p-3 animate-fade-in">
       <div className="flex flex-wrap items-center gap-2">
         {/* Search */}
         <div className="relative flex-1 min-w-[200px]">
-          <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+          <Search
+            size={14}
+            className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+          />
           <input
             type="text"
             placeholder={t.searchPlaceholder}
@@ -1284,7 +1586,12 @@ function FilterBar({
               onClick={() => setSearch("")}
               className="absolute right-2 top-1/2 -translate-y-1/2"
             >
-              <X size={14} className={isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'} />
+              <X
+                size={14}
+                className={
+                  isDark ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"
+                }
+              />
             </button>
           )}
         </div>
@@ -1318,11 +1625,7 @@ function FilterBar({
         </select>
 
         {/* Sort */}
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className={selectClass}
-        >
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={selectClass}>
           <option value="newest">{t.newest}</option>
           <option value="prompt-asc">{t.priceLowHigh}</option>
           <option value="prompt-desc">{t.priceHighLow}</option>
@@ -1337,8 +1640,12 @@ function FilterBar({
           onClick={() => setShowReasoning(!showReasoning)}
           className={`px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
             showReasoning
-              ? isDark ? "bg-violet-500/20 text-violet-300 border-violet-500/30" : "bg-violet-100 text-violet-700 border-violet-300"
-              : isDark ? "bg-gray-900/50 text-gray-400 border-white/5" : "bg-gray-100 text-gray-500 border-gray-200"
+              ? isDark
+                ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                : "bg-violet-100 text-violet-700 border-violet-300"
+              : isDark
+                ? "bg-gray-900/50 text-gray-400 border-white/5"
+                : "bg-gray-100 text-gray-500 border-gray-200"
           }`}
         >
           <Brain size={12} /> {t.reasoning}
@@ -1348,24 +1655,30 @@ function FilterBar({
           onClick={() => setShowFree(!showFree)}
           className={`px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
             showFree
-              ? isDark ? "bg-green-500/20 text-green-300 border-green-500/30" : "bg-green-100 text-green-700 border-green-300"
-              : isDark ? "bg-gray-900/50 text-gray-400 border-white/5" : "bg-gray-100 text-gray-500 border-gray-200"
+              ? isDark
+                ? "bg-green-500/20 text-green-300 border-green-500/30"
+                : "bg-green-100 text-green-700 border-green-300"
+              : isDark
+                ? "bg-gray-900/50 text-gray-400 border-white/5"
+                : "bg-gray-100 text-gray-500 border-gray-200"
           }`}
         >
           <Sparkles size={12} /> {t.free}
         </button>
 
         {/* View toggle */}
-        <div className={`flex rounded-lg border overflow-hidden ${isDark ? 'bg-gray-900/50 border-white/5' : 'bg-gray-100 border-gray-200'}`}>
+        <div
+          className={`flex rounded-lg border overflow-hidden ${isDark ? "bg-gray-900/50 border-white/5" : "bg-gray-100 border-gray-200"}`}
+        >
           <button
             onClick={() => setViewMode("grid")}
-            className={`p-2 ${viewMode === "grid" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : (isDark ? "text-gray-500" : "text-gray-400")}`}
+            className={`p-2 ${viewMode === "grid" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
           >
             <Grid3X3 size={14} />
           </button>
           <button
             onClick={() => setViewMode("list")}
-            className={`p-2 ${viewMode === "list" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : (isDark ? "text-gray-500" : "text-gray-400")}`}
+            className={`p-2 ${viewMode === "list" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
           >
             <List size={14} />
           </button>
@@ -1393,6 +1706,64 @@ function App() {
     if (saved === "light" || saved === "dark") return saved
     return "dark"
   })
+
+  // Currency state
+  const [currency, setCurrency] = useState<Currency>(() => {
+    const saved = localStorage.getItem("currency") as Currency | null
+    return saved === "CNY" ? "CNY" : "USD"
+  })
+  const [exchangeRate, setExchangeRate] = useState<number>(() => {
+    const saved = localStorage.getItem("exchangeRate")
+    return saved ? parseFloat(saved) : 7.25
+  })
+  const [customRate, setCustomRate] = useState<string>(() => {
+    const saved = localStorage.getItem("customRate")
+    return saved ?? ""
+  })
+  const [showCustomInput, setShowCustomInput] = useState<boolean>(false)
+  const [rateStatus, setRateStatus] = useState<"idle" | "fetching" | "success" | "error">("idle")
+
+  const handleSetCurrency = (c: Currency) => {
+    setCurrency(c)
+    localStorage.setItem("currency", c)
+  }
+
+  const handleSetExchangeRate = (r: number) => {
+    setExchangeRate(r)
+    localStorage.setItem("exchangeRate", r.toString())
+  }
+
+  const handleSetCustomRate = (r: string) => {
+    setCustomRate(r)
+    localStorage.setItem("customRate", r)
+  }
+
+  const fetchExchangeRate = async () => {
+    setRateStatus("fetching")
+    try {
+      const res = await fetch("https://open.er-api.com/v6/latest/USD")
+      if (!res.ok) throw new Error("Failed to fetch")
+      const data = await res.json()
+      if (data.rates?.CNY) {
+        handleSetExchangeRate(data.rates.CNY)
+        handleSetCustomRate(data.rates.CNY.toString())
+        setRateStatus("success")
+      } else {
+        throw new Error("CNY rate not found")
+      }
+    } catch {
+      setRateStatus("error")
+    }
+    setTimeout(() => setRateStatus("idle"), 2000)
+  }
+
+  const handleApplyCustomRate = () => {
+    const rate = parseFloat(customRate)
+    if (!isNaN(rate) && rate > 0) {
+      handleSetExchangeRate(rate)
+      setShowCustomInput(false)
+    }
+  }
   const [models, setModels] = useState<Model[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1527,7 +1898,9 @@ function App() {
           <div className="min-h-screen flex items-center justify-center">
             <div className="text-center">
               <div className="w-12 h-12 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{t.loading}</p>
+              <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                {t.loading}
+              </p>
             </div>
           </div>
         </LangContext.Provider>
@@ -1542,7 +1915,9 @@ function App() {
           <div className="min-h-screen flex items-center justify-center">
             <div className="text-center glass rounded-2xl p-8">
               <p className="text-red-400 text-sm mb-2">{t.loadFailed}</p>
-              <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{error}</p>
+              <p className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+                {error}
+              </p>
             </div>
           </div>
         </LangContext.Provider>
@@ -1553,165 +1928,327 @@ function App() {
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
       <LangContext.Provider value={{ lang, t, setLang: handleSetLang }}>
-        <div className="min-h-screen">
-          {/* Header */}
-          <header className={`sticky top-0 z-50 backdrop-blur-xl border-b ${theme === 'dark' ? 'bg-gray-950/80 border-white/5' : 'bg-white/80 border-gray-200'}`}>
-            <div className="max-w-[1600px] mx-auto px-4 py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center">
-                    <Cpu size={16} className="text-white" />
+        <CurrencyContext.Provider
+          value={{
+            currency,
+            setCurrency: handleSetCurrency,
+            exchangeRate,
+            setExchangeRate: handleSetExchangeRate,
+            customRate,
+            setCustomRate: handleSetCustomRate,
+            showCustomInput,
+            setShowCustomInput
+          }}
+        >
+          <div className="min-h-screen">
+            {/* Header */}
+            <header
+              className={`sticky top-0 z-50 backdrop-blur-xl border-b ${theme === "dark" ? "bg-gray-950/80 border-white/5" : "bg-white/80 border-gray-200"}`}
+            >
+              <div className="max-w-[1600px] mx-auto px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center">
+                      <Cpu size={16} className="text-white" />
+                    </div>
+                    <div>
+                      <h1
+                        className={`text-base font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                      >
+                        {t.title}
+                      </h1>
+                      <p
+                        className={`text-[10px] ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                      >
+                        {t.subtitle}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h1 className={`text-base font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{t.title}</h1>
-                    <p className={`text-[10px] ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{t.subtitle}</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setTab("models")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        tab === "models"
+                          ? theme === "dark"
+                            ? "bg-brand-500/20 text-brand-300"
+                            : "bg-brand-100 text-brand-700"
+                          : theme === "dark"
+                            ? "text-gray-400 hover:text-gray-200"
+                            : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      <Grid3X3 size={12} className="inline mr-1" /> {t.models}
+                    </button>
+                    <button
+                      onClick={() => setTab("charts")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        tab === "charts"
+                          ? theme === "dark"
+                            ? "bg-brand-500/20 text-brand-300"
+                            : "bg-brand-100 text-brand-700"
+                          : theme === "dark"
+                            ? "text-gray-400 hover:text-gray-200"
+                            : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      <BarChart3 size={12} className="inline mr-1" /> {t.analytics}
+                    </button>
+                    <a
+                      href="https://inference-api.nousresearch.com/v1/models"
+                      target="_blank"
+                      rel="noopener"
+                      className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}
+                    >
+                      API <ExternalLink size={10} />
+                    </a>
+                    {/* Theme Toggle */}
+                    <button
+                      onClick={toggleTheme}
+                      className={`p-2 rounded-lg transition-colors ${theme === "dark" ? "text-gray-400 hover:text-yellow-300 hover:bg-yellow-500/10" : "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"}`}
+                      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                    >
+                      {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+                    </button>
+                    {/* Language Toggle */}
+                    <button
+                      onClick={() => setLang(lang === "zh" ? "en" : "zh")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${theme === "dark" ? "bg-gray-800/50 text-gray-300 hover:text-white hover:bg-gray-700/50" : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200"}`}
+                    >
+                      <Globe size={12} />
+                      {lang === "zh" ? "EN" : "中"}
+                    </button>
+
+                    {/* Currency Toggle */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowCustomInput(!showCustomInput)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${theme === "dark" ? "bg-gray-800/50 text-gray-300 hover:text-white hover:bg-gray-700/50" : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200"}`}
+                      >
+                        <DollarSign size={12} />
+                        {currency === "USD" ? "USD" : `CNY ¥${exchangeRate.toFixed(2)}`}
+                        <ChevronDown size={10} />
+                      </button>
+
+                      {/* Currency Dropdown */}
+                      {showCustomInput && (
+                        <div
+                          className={`absolute right-0 top-full mt-1 w-56 rounded-xl shadow-xl border z-50 ${theme === "dark" ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
+                        >
+                          <div className="p-3 space-y-3">
+                            {/* Currency Selection */}
+                            <div>
+                              <div
+                                className={`text-[10px] mb-2 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                              >
+                                {t.currency}
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleSetCurrency("USD")}
+                                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    currency === "USD"
+                                      ? theme === "dark"
+                                        ? "bg-brand-500/20 text-brand-300 ring-1 ring-brand-500/30"
+                                        : "bg-brand-100 text-brand-700 ring-1 ring-brand-300"
+                                      : theme === "dark"
+                                        ? "bg-gray-800 text-gray-400 hover:text-gray-200"
+                                        : "bg-gray-100 text-gray-600 hover:text-gray-800"
+                                  }`}
+                                >
+                                  USD
+                                </button>
+                                <button
+                                  onClick={() => handleSetCurrency("CNY")}
+                                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    currency === "CNY"
+                                      ? theme === "dark"
+                                        ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/30"
+                                        : "bg-rose-100 text-rose-700 ring-1 ring-rose-300"
+                                      : theme === "dark"
+                                        ? "bg-gray-800 text-gray-400 hover:text-gray-200"
+                                        : "bg-gray-100 text-gray-600 hover:text-gray-800"
+                                  }`}
+                                >
+                                  CNY
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Exchange Rate - Only show when CNY is selected */}
+                            {currency === "CNY" && (
+                              <>
+                                <div>
+                                  <div
+                                    className={`text-[10px] mb-1.5 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                                  >
+                                    {t.exchangeRate}: 1 USD = ¥{exchangeRate.toFixed(4)}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={fetchExchangeRate}
+                                      disabled={rateStatus === "fetching"}
+                                      className={`flex-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${
+                                        rateStatus === "success"
+                                          ? "bg-green-500/20 text-green-400"
+                                          : rateStatus === "error"
+                                            ? "bg-red-500/20 text-red-400"
+                                            : theme === "dark"
+                                              ? "bg-gray-800 text-gray-400 hover:text-gray-200"
+                                              : "bg-gray-100 text-gray-600 hover:text-gray-800"
+                                      }`}
+                                    >
+                                      {rateStatus === "fetching"
+                                        ? "..."
+                                        : rateStatus === "success"
+                                          ? t.rateFetched
+                                          : t.fetchRate}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Custom Rate Input */}
+                                <div>
+                                  <div
+                                    className={`text-[10px] mb-1.5 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                                  >
+                                    {t.customRate}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="number"
+                                      value={customRate}
+                                      onChange={(e) => handleSetCustomRate(e.target.value)}
+                                      placeholder={t.enterRate}
+                                      step="0.01"
+                                      className={`flex-1 px-2 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-500/50 border ${
+                                        theme === "dark"
+                                          ? "bg-gray-800 text-gray-300 placeholder-gray-600 border-white/10"
+                                          : "bg-gray-50 text-gray-700 placeholder-gray-400 border-gray-200"
+                                      }`}
+                                    />
+                                    <button
+                                      onClick={handleApplyCustomRate}
+                                      className="px-3 py-1.5 rounded-lg text-[10px] font-medium bg-brand-500/20 text-brand-400 hover:bg-brand-500/30 transition-colors"
+                                    >
+                                      {t.apply}
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setTab("models")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      tab === "models"
-                        ? theme === 'dark' ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700"
-                        : theme === 'dark' ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    <Grid3X3 size={12} className="inline mr-1" /> {t.models}
-                  </button>
-                  <button
-                    onClick={() => setTab("charts")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      tab === "charts"
-                        ? theme === 'dark' ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700"
-                        : theme === 'dark' ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    <BarChart3 size={12} className="inline mr-1" /> {t.analytics}
-                  </button>
-                  <a
-                    href="https://inference-api.nousresearch.com/v1/models"
-                    target="_blank"
-                    rel="noopener"
-                    className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 ${theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
-                  >
-                    API <ExternalLink size={10} />
-                  </a>
-                  {/* Theme Toggle */}
-                  <button
-                    onClick={toggleTheme}
-                    className={`p-2 rounded-lg transition-colors ${theme === 'dark' ? 'text-gray-400 hover:text-yellow-300 hover:bg-yellow-500/10' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'}`}
-                    title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                  >
-                    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                  </button>
-                  {/* Language Toggle */}
-                  <button
-                    onClick={() => setLang(lang === "zh" ? "en" : "zh")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${theme === 'dark' ? 'bg-gray-800/50 text-gray-300 hover:text-white hover:bg-gray-700/50' : 'bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-                  >
-                    <Globe size={12} />
-                    {lang === "zh" ? "EN" : "中"}
-                  </button>
-                </div>
               </div>
-            </div>
-          </header>
+            </header>
 
-        <main className="max-w-[1600px] mx-auto px-4 py-4 space-y-4">
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <StatCard icon={<Layers size={18} />} label={t.totalModels} value={stats.total} />
-            <StatCard icon={<Globe size={18} />} label={t.providers} value={stats.providers} />
-            <StatCard
-              icon={<Brain size={18} />}
-              label={t.reasoningModels}
-              value={stats.reasoning}
-            />
-            <StatCard icon={<Sparkles size={18} />} label={t.freeModels} value={stats.free} />
-            <StatCard
-              icon={<Activity size={18} />}
-              label={t.avgIntelligence}
-              value={stats.avgIntelligence}
-            />
-          </div>
-
-          {tab === "models" ? (
-            <>
-              {/* Filters */}
-              <FilterBar
-                search={search}
-                setSearch={setSearch}
-                provider={provider}
-                setProvider={setProvider}
-                modality={modality}
-                setModality={setModality}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-                showReasoning={showReasoning}
-                setShowReasoning={setShowReasoning}
-                showFree={showFree}
-                setShowFree={setShowFree}
-                viewMode={viewMode}
-                setViewMode={setViewMode}
-                providers={providers}
-                modalities={modalities}
-              />
-
-              {/* Results count */}
-              <div className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                {t.showing} {filtered.length} {t.of} {models.length} {t.modelsCount}
-                {search && (
-                  <span>
-                    {" "}
-                    {t.matching} "{search}"
-                  </span>
-                )}
+            <main className="max-w-[1600px] mx-auto px-4 py-4 space-y-4">
+              {/* Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <StatCard icon={<Layers size={18} />} label={t.totalModels} value={stats.total} />
+                <StatCard icon={<Globe size={18} />} label={t.providers} value={stats.providers} />
+                <StatCard
+                  icon={<Brain size={18} />}
+                  label={t.reasoningModels}
+                  value={stats.reasoning}
+                />
+                <StatCard icon={<Sparkles size={18} />} label={t.freeModels} value={stats.free} />
+                <StatCard
+                  icon={<Activity size={18} />}
+                  label={t.avgIntelligence}
+                  value={stats.avgIntelligence}
+                />
               </div>
 
-              {/* Model Grid */}
-              <div
-                className={`grid gap-3 ${
-                  viewMode === "grid"
-                    ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                    : "grid-cols-1"
-                }`}
-              >
-                {filtered.map((m) => (
-                  <ModelCard
-                    key={m.id}
-                    model={m}
-                    expanded={expandedId === m.id}
-                    onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
+              {tab === "models" ? (
+                <>
+                  {/* Filters */}
+                  <FilterBar
+                    search={search}
+                    setSearch={setSearch}
+                    provider={provider}
+                    setProvider={setProvider}
+                    modality={modality}
+                    setModality={setModality}
+                    sortBy={sortBy}
+                    setSortBy={setSortBy}
+                    showReasoning={showReasoning}
+                    setShowReasoning={setShowReasoning}
+                    showFree={showFree}
+                    setShowFree={setShowFree}
+                    viewMode={viewMode}
+                    setViewMode={setViewMode}
+                    providers={providers}
+                    modalities={modalities}
                   />
-                ))}
-              </div>
 
-              {filtered.length === 0 && (
-                <div className={`text-center py-16 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                  <Search size={32} className="mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">{t.noModels}</p>
+                  {/* Results count */}
+                  <div
+                    className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                  >
+                    {t.showing} {filtered.length} {t.of} {models.length} {t.modelsCount}
+                    {search && (
+                      <span>
+                        {" "}
+                        {t.matching} "{search}"
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Model Grid */}
+                  <div
+                    className={`grid gap-3 ${
+                      viewMode === "grid"
+                        ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                        : "grid-cols-1"
+                    }`}
+                  >
+                    {filtered.map((m) => (
+                      <ModelCard
+                        key={m.id}
+                        model={m}
+                        expanded={expandedId === m.id}
+                        onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
+                      />
+                    ))}
+                  </div>
+
+                  {filtered.length === 0 && (
+                    <div
+                      className={`text-center py-16 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                    >
+                      <Search size={32} className="mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">{t.noModels}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Charts Tab */
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <PricingChart models={models} />
+                  <BenchmarkScatter models={models} />
+                  <ContextChart models={models} />
+                  <ProviderPie models={models} />
                 </div>
               )}
-            </>
-          ) : (
-            /* Charts Tab */
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <PricingChart models={models} />
-              <BenchmarkScatter models={models} />
-              <ContextChart models={models} />
-              <ProviderPie models={models} />
-            </div>
-          )}
-        </main>
+            </main>
 
-        {/* Footer */}
-        <footer className={`border-t mt-8 ${theme === 'dark' ? 'border-white/5' : 'border-gray-200'}`}>
-          <div className={`max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between text-[10px] ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
-            <span>{t.dataFrom}</span>
-            <span>{t.builtWith}</span>
+            {/* Footer */}
+            <footer
+              className={`border-t mt-8 ${theme === "dark" ? "border-white/5" : "border-gray-200"}`}
+            >
+              <div
+                className={`max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between text-[10px] ${theme === "dark" ? "text-gray-600" : "text-gray-400"}`}
+              >
+                <span>{t.dataFrom}</span>
+                <span>{t.builtWith}</span>
+              </div>
+            </footer>
           </div>
-        </footer>
-      </div>
+        </CurrencyContext.Provider>
       </LangContext.Provider>
     </ThemeContext.Provider>
   )
