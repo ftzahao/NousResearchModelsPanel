@@ -1563,7 +1563,7 @@ function FilterBar({
   const { theme } = useTheme()
   const isDark = theme === "dark"
   const inputClass = `w-full pl-8 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500/50 border ${isDark ? "bg-gray-900/50 text-gray-200 placeholder-gray-500 border-white/5" : "bg-white text-gray-900 placeholder-gray-400 border-gray-200"}`
-  const selectClass = `px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500/50 border ${isDark ? "bg-gray-900/50 text-gray-300 border-white/5" : "bg-white text-gray-700 border-gray-200"}`
+  const selectClass = `px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500/50 border appearance-none select-arrow ${isDark ? "bg-gray-900/50 text-gray-300 border-white/5" : "bg-white text-gray-700 border-gray-200"}`
 
   return (
     <div className="glass rounded-2xl p-3 animate-fade-in">
