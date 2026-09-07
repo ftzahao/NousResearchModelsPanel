@@ -2,6 +2,11 @@ import React, { useState, useEffect, useMemo, createContext, useContext } from "
 import { createRoot } from "react-dom/client"
 import BigNumber from "bignumber.js"
 import {
+  buildModelCatalogJson,
+  type ExportableModel,
+  type ModelConfigExporter
+} from "./model-export"
+import {
   BarChart,
   Bar,
   XAxis,
@@ -39,7 +44,10 @@ import {
   Clock,
   Shield,
   Sun,
-  Moon
+  Moon,
+  Check,
+  Copy,
+  Download
 } from "lucide-react"
 
 // ─── i18n ────────────────────────────────────────────────────────────
@@ -138,7 +146,16 @@ const translations = {
     rateError: "获取汇率失败",
     enterRate: "输入汇率",
     apply: "应用",
-    cancel: "取消"
+    cancel: "取消",
+    optimized: "优化详情",
+    apiJson: "API JSON",
+    selected: "已选择",
+    selectVisible: "选择当前结果",
+    clearSelection: "清空选择",
+    export: "导出",
+    configurationFormat: "配置格式",
+    download: "下载",
+    codexCatalog: "Codex model_catalog_json"
   },
   en: {
     title: "NousResearch Models",
@@ -232,7 +249,16 @@ const translations = {
     rateError: "Failed to fetch rate",
     enterRate: "Enter rate",
     apply: "Apply",
-    cancel: "Cancel"
+    cancel: "Cancel",
+    optimized: "Optimized",
+    apiJson: "API JSON",
+    selected: "selected",
+    selectVisible: "Select visible",
+    clearSelection: "Clear",
+    export: "Export",
+    configurationFormat: "Configuration format",
+    download: "Download",
+    codexCatalog: "Codex model_catalog_json"
   }
 }
 
@@ -526,11 +552,19 @@ function StatCard({
 function ModelCard({
   model,
   expanded,
-  onToggle
+  onToggle,
+  selected,
+  onSelect,
+  rawDetails,
+  onToggleRawDetails
 }: {
   model: Model
   expanded: boolean
   onToggle: () => void
+  selected: boolean
+  onSelect: () => void
+  rawDetails: boolean
+  onToggleRawDetails: () => void
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
@@ -558,6 +592,31 @@ function ModelCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                aria-label={selected ? `Deselect ${model.name}` : `Select ${model.name}`}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onSelect()
+                }}
+                className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                  selected
+                    ? "!bg-blue-700 !border-blue-900 text-white shadow-[0_0_0_2px_rgba(37,99,235,0.35)]"
+                    : isDark
+                      ? "border-gray-500 bg-gray-800/80 text-transparent hover:border-brand-400"
+                      : "border-gray-400 bg-white text-transparent shadow-sm hover:border-brand-500"
+                }`}
+              >
+                {selected && (
+                  <span
+                    aria-hidden="true"
+                    className="text-white font-black text-[12px] leading-none"
+                    style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff" }}
+                  >
+                    ✓
+                  </span>
+                )}
+              </button>
               <span
                 className="inline-block w-2 h-2 rounded-full flex-shrink-0"
                 style={{ background: color }}
@@ -731,476 +790,541 @@ function ModelCard({
         <div
           className={`border-t p-4 space-y-4 animate-fade-in ${isDark ? "border-white/5" : "border-gray-200"}`}
         >
-          {/* Description */}
-          {model.description && (
-            <p className={`text-xs leading-relaxed ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-              {model.description}
-            </p>
-          )}
-
-          {/* Pricing Grid */}
-          <div>
-            <h4
-              className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+          <div className="flex items-center justify-between gap-2">
+            <div
+              className={`flex rounded-lg border overflow-hidden ${isDark ? "border-white/10" : "border-gray-200"}`}
             >
-              <DollarSign size={12} /> {t.pricingDetails}
-              <span
-                className={`text-[10px] font-normal ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              <button
+                type="button"
+                onClick={() => onToggleRawDetails()}
+                className={`px-2 py-1 text-[10px] ${!rawDetails ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-400" : "text-gray-500"}`}
               >
-                ({currencyUnit(lang, currency)})
-              </span>
-            </h4>
-            {(() => {
-              const pricingItems: Array<{
-                key: string
-                label: string
-                colorDark: string
-                colorLight: string
-                per1k?: boolean
-              }> = [
-                {
-                  key: "prompt",
-                  label: t.prompt,
-                  colorDark: "text-emerald-400",
-                  colorLight: "text-emerald-600"
-                },
-                {
-                  key: "completion",
-                  label: t.completion,
-                  colorDark: "text-sky-400",
-                  colorLight: "text-sky-600"
-                },
-                {
-                  key: "input_cache_read",
-                  label: t.cacheRead,
-                  colorDark: "text-violet-400",
-                  colorLight: "text-violet-600"
-                },
-                {
-                  key: "input_cache_write",
-                  label: t.cacheWrite,
-                  colorDark: "text-violet-400",
-                  colorLight: "text-violet-600"
-                },
-                {
-                  key: "input_cache_write_1h",
-                  label: t.cacheWrite1h,
-                  colorDark: "text-purple-400",
-                  colorLight: "text-purple-600"
-                },
-                {
-                  key: "web_search",
-                  label: t.webSearch,
-                  colorDark: "text-amber-400",
-                  colorLight: "text-amber-600",
-                  per1k: true
-                },
-                {
-                  key: "image",
-                  label: t.image,
-                  colorDark: "text-purple-400",
-                  colorLight: "text-purple-600"
-                },
-                {
-                  key: "audio",
-                  label: t.audio,
-                  colorDark: "text-orange-400",
-                  colorLight: "text-orange-600"
-                },
-                {
-                  key: "internal_reasoning",
-                  label: t.reasoningPrice,
-                  colorDark: "text-rose-400",
-                  colorLight: "text-rose-600"
-                }
-              ]
-              const p = model.pricing as unknown as Record<string, string | undefined>
-              const orig = model.pricing.original as unknown as
-                | Record<string, string | undefined>
-                | undefined
-              const active = pricingItems.filter((item) => p[item.key])
-              return (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {active.map((item) => (
-                    <div
-                      key={item.key}
-                      className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
-                    >
-                      <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-                        {item.label}
-                      </div>
-                      <div
-                        className={`text-xs font-medium ${isDark ? item.colorDark : item.colorLight}`}
-                      >
-                        {item.per1k
-                          ? currency === "CNY"
-                            ? `¥${stripZeros(bn(p[item.key]).times(1000).times(exchangeRate).toFixed(4))}/1K`
-                            : `$${stripZeros(bn(p[item.key]).times(1000).toFixed(4))}/1K`
-                          : formatPrice(p[item.key], lang, currency, exchangeRate)}
-                      </div>
-                      {orig?.[item.key] && (
+                {t.optimized}
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleRawDetails()}
+                className={`px-2 py-1 text-[10px] ${rawDetails ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-400" : "text-gray-500"}`}
+              >
+                {t.apiJson}
+              </button>
+            </div>
+            {rawDetails && (
+              <button
+                type="button"
+                onClick={() => navigator.clipboard?.writeText(JSON.stringify(model, null, 2))}
+                className={`p-1.5 rounded ${isDark ? "text-gray-400 hover:bg-white/10" : "text-gray-500 hover:bg-gray-100"}`}
+                title="Copy JSON"
+              >
+                <Copy size={13} />
+              </button>
+            )}
+          </div>
+          {rawDetails ? (
+            <pre
+              className={`max-h-[520px] overflow-auto rounded-lg p-3 text-[10px] leading-relaxed whitespace-pre-wrap break-all ${isDark ? "bg-gray-950 text-gray-300" : "bg-gray-50 text-gray-700"}`}
+            >
+              {JSON.stringify(model, null, 2)}
+            </pre>
+          ) : (
+            <>
+              {/* Description */}
+              {model.description && (
+                <p
+                  className={`text-xs leading-relaxed ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                >
+                  {model.description}
+                </p>
+              )}
+
+              {/* Pricing Grid */}
+              <div>
+                <h4
+                  className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                >
+                  <DollarSign size={12} /> {t.pricingDetails}
+                  <span
+                    className={`text-[10px] font-normal ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                  >
+                    ({currencyUnit(lang, currency)})
+                  </span>
+                </h4>
+                {(() => {
+                  const pricingItems: Array<{
+                    key: string
+                    label: string
+                    colorDark: string
+                    colorLight: string
+                    per1k?: boolean
+                  }> = [
+                    {
+                      key: "prompt",
+                      label: t.prompt,
+                      colorDark: "text-emerald-400",
+                      colorLight: "text-emerald-600"
+                    },
+                    {
+                      key: "completion",
+                      label: t.completion,
+                      colorDark: "text-sky-400",
+                      colorLight: "text-sky-600"
+                    },
+                    {
+                      key: "input_cache_read",
+                      label: t.cacheRead,
+                      colorDark: "text-violet-400",
+                      colorLight: "text-violet-600"
+                    },
+                    {
+                      key: "input_cache_write",
+                      label: t.cacheWrite,
+                      colorDark: "text-violet-400",
+                      colorLight: "text-violet-600"
+                    },
+                    {
+                      key: "input_cache_write_1h",
+                      label: t.cacheWrite1h,
+                      colorDark: "text-purple-400",
+                      colorLight: "text-purple-600"
+                    },
+                    {
+                      key: "web_search",
+                      label: t.webSearch,
+                      colorDark: "text-amber-400",
+                      colorLight: "text-amber-600",
+                      per1k: true
+                    },
+                    {
+                      key: "image",
+                      label: t.image,
+                      colorDark: "text-purple-400",
+                      colorLight: "text-purple-600"
+                    },
+                    {
+                      key: "audio",
+                      label: t.audio,
+                      colorDark: "text-orange-400",
+                      colorLight: "text-orange-600"
+                    },
+                    {
+                      key: "internal_reasoning",
+                      label: t.reasoningPrice,
+                      colorDark: "text-rose-400",
+                      colorLight: "text-rose-600"
+                    }
+                  ]
+                  const p = model.pricing as unknown as Record<string, string | undefined>
+                  const orig = model.pricing.original as unknown as
+                    | Record<string, string | undefined>
+                    | undefined
+                  const active = pricingItems.filter((item) => p[item.key])
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {active.map((item) => (
                         <div
-                          className={`text-[10px] line-through ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                          key={item.key}
+                          className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
                         >
-                          {item.per1k
-                            ? currency === "CNY"
-                              ? `¥${stripZeros(bn(orig[item.key]).times(1000).times(exchangeRate).toFixed(4))}/1K`
-                              : `$${stripZeros(bn(orig[item.key]).times(1000).toFixed(4))}/1K`
-                            : formatPrice(orig[item.key], lang, currency, exchangeRate)}
+                          <div
+                            className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                          >
+                            {item.label}
+                          </div>
+                          <div
+                            className={`text-xs font-medium ${isDark ? item.colorDark : item.colorLight}`}
+                          >
+                            {item.per1k
+                              ? currency === "CNY"
+                                ? `¥${stripZeros(bn(p[item.key]).times(1000).times(exchangeRate).toFixed(4))}/1K`
+                                : `$${stripZeros(bn(p[item.key]).times(1000).toFixed(4))}/1K`
+                              : formatPrice(p[item.key], lang, currency, exchangeRate)}
+                          </div>
+                          {orig?.[item.key] && (
+                            <div
+                              className={`text-[10px] line-through ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                            >
+                              {item.per1k
+                                ? currency === "CNY"
+                                  ? `¥${stripZeros(bn(orig[item.key]).times(1000).times(exchangeRate).toFixed(4))}/1K`
+                                  : `$${stripZeros(bn(orig[item.key]).times(1000).toFixed(4))}/1K`
+                                : formatPrice(orig[item.key], lang, currency, exchangeRate)}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+                {/* Pricing overrides */}
+                {model.pricing.overrides &&
+                  model.pricing.overrides.length > 0 &&
+                  (() => {
+                    const timeOverrides = model.pricing.overrides.filter((o) => o.utc_days)
+                    const tokenOverrides = model.pricing.overrides.filter(
+                      (o) => o.min_prompt_tokens != null
+                    )
+                    return (
+                      <div className="mt-2 space-y-2">
+                        {/* Time-based overrides */}
+                        {timeOverrides.length > 0 && (
+                          <div>
+                            <div
+                              className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                            >
+                              <Clock size={10} /> {t.peakPricing}
+                            </div>
+                            <div className="space-y-1.5">
+                              {timeOverrides.map((o, i) => {
+                                const days =
+                                  o.utc_days
+                                    ?.map((d) =>
+                                      lang === "zh"
+                                        ? ({
+                                            monday: "周一",
+                                            tuesday: "周二",
+                                            wednesday: "周三",
+                                            thursday: "周四",
+                                            friday: "周五",
+                                            saturday: "周六",
+                                            sunday: "周日"
+                                          }[d] ?? d)
+                                        : d.slice(0, 3)
+                                    )
+                                    .join(", ") ?? ""
+                                const timeRange =
+                                  o.utc_start != null && o.utc_end != null
+                                    ? `${String(o.utc_start).padStart(2, "0")}:00–${String(o.utc_end).padStart(2, "0")}:00 UTC`
+                                    : ""
+                                const isWeekend = o.utc_days?.every(
+                                  (d) => d === "saturday" || d === "sunday"
+                                )
+                                return (
+                                  <div
+                                    key={i}
+                                    className={`rounded-lg p-2 text-[11px] ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span
+                                        className={`px-1.5 py-0.5 rounded text-[9px] ${isWeekend ? (isDark ? "bg-blue-500/20 text-blue-300" : "bg-blue-100 text-blue-700") : isDark ? "bg-orange-500/20 text-orange-300" : "bg-orange-100 text-orange-700"}`}
+                                      >
+                                        {isWeekend ? t.weekend : t.weekday}
+                                      </span>
+                                      <span className={isDark ? "text-gray-400" : "text-gray-500"}>
+                                        {days}
+                                      </span>
+                                      {timeRange && (
+                                        <span
+                                          className={isDark ? "text-gray-500" : "text-gray-400"}
+                                        >
+                                          {timeRange}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                                      {o.prompt && (
+                                        <span
+                                          className={
+                                            isDark ? "text-emerald-400" : "text-emerald-600"
+                                          }
+                                        >
+                                          {t.prompt}:{" "}
+                                          {formatPrice(o.prompt, lang, currency, exchangeRate)}
+                                        </span>
+                                      )}
+                                      {o.completion && (
+                                        <span className={isDark ? "text-sky-400" : "text-sky-600"}>
+                                          {t.completion}:{" "}
+                                          {formatPrice(o.completion, lang, currency, exchangeRate)}
+                                        </span>
+                                      )}
+                                      {o.input_cache_read && (
+                                        <span
+                                          className={isDark ? "text-violet-400" : "text-violet-600"}
+                                        >
+                                          {t.cacheRead}:{" "}
+                                          {formatPrice(
+                                            o.input_cache_read,
+                                            lang,
+                                            currency,
+                                            exchangeRate
+                                          )}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {/* Token-based overrides */}
+                        {tokenOverrides.length > 0 && (
+                          <div>
+                            <div
+                              className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                            >
+                              <Layers size={10} /> {t.tieredPricing}
+                            </div>
+                            <div className="space-y-1.5">
+                              {tokenOverrides.map((o, i) => (
+                                <div
+                                  key={i}
+                                  className={`rounded-lg p-2 text-[11px] ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
+                                >
+                                  <div className="mb-1">
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded text-[9px] ${isDark ? "bg-teal-500/20 text-teal-300" : "bg-teal-100 text-teal-700"}`}
+                                    >
+                                      ≥{formatCtx(o.min_prompt_tokens!)} {t.aboveTokens}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                                    {o.prompt && (
+                                      <span
+                                        className={isDark ? "text-emerald-400" : "text-emerald-600"}
+                                      >
+                                        {t.prompt}:{" "}
+                                        {formatPrice(o.prompt, lang, currency, exchangeRate)}
+                                      </span>
+                                    )}
+                                    {o.completion && (
+                                      <span className={isDark ? "text-sky-400" : "text-sky-600"}>
+                                        {t.completion}:{" "}
+                                        {formatPrice(o.completion, lang, currency, exchangeRate)}
+                                      </span>
+                                    )}
+                                    {o.input_cache_read && (
+                                      <span
+                                        className={isDark ? "text-violet-400" : "text-violet-600"}
+                                      >
+                                        {t.cacheRead}:{" "}
+                                        {formatPrice(
+                                          o.input_cache_read,
+                                          lang,
+                                          currency,
+                                          exchangeRate
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+              </div>
+
+              {/* Capabilities */}
+              <div>
+                <h4
+                  className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                >
+                  <Zap size={12} /> {t.capabilities}
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
+                    <span className={isDark ? "text-gray-500" : "text-gray-400"}>
+                      {t.contextLengthLabel}
+                    </span>
+                    <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+                      {model.context_length} tokens
+                    </div>
+                    {model.top_provider?.context_length &&
+                      model.top_provider.context_length !== model.context_length && (
+                        <div
+                          className={`text-[10px] mt-0.5 ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                        >
+                          {t.contextTopProvider}: {model.top_provider.context_length} tokens
                         </div>
                       )}
-                    </div>
-                  ))}
-                </div>
-              )
-            })()}
-            {/* Pricing overrides */}
-            {model.pricing.overrides &&
-              model.pricing.overrides.length > 0 &&
-              (() => {
-                const timeOverrides = model.pricing.overrides.filter((o) => o.utc_days)
-                const tokenOverrides = model.pricing.overrides.filter(
-                  (o) => o.min_prompt_tokens != null
-                )
-                return (
-                  <div className="mt-2 space-y-2">
-                    {/* Time-based overrides */}
-                    {timeOverrides.length > 0 && (
-                      <div>
-                        <div
-                          className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}
-                        >
-                          <Clock size={10} /> {t.peakPricing}
-                        </div>
-                        <div className="space-y-1.5">
-                          {timeOverrides.map((o, i) => {
-                            const days =
-                              o.utc_days
-                                ?.map((d) =>
-                                  lang === "zh"
-                                    ? ({
-                                        monday: "周一",
-                                        tuesday: "周二",
-                                        wednesday: "周三",
-                                        thursday: "周四",
-                                        friday: "周五",
-                                        saturday: "周六",
-                                        sunday: "周日"
-                                      }[d] ?? d)
-                                    : d.slice(0, 3)
-                                )
-                                .join(", ") ?? ""
-                            const timeRange =
-                              o.utc_start != null && o.utc_end != null
-                                ? `${String(o.utc_start).padStart(2, "0")}:00–${String(o.utc_end).padStart(2, "0")}:00 UTC`
-                                : ""
-                            const isWeekend = o.utc_days?.every(
-                              (d) => d === "saturday" || d === "sunday"
-                            )
-                            return (
-                              <div
-                                key={i}
-                                className={`rounded-lg p-2 text-[11px] ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
-                              >
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span
-                                    className={`px-1.5 py-0.5 rounded text-[9px] ${isWeekend ? (isDark ? "bg-blue-500/20 text-blue-300" : "bg-blue-100 text-blue-700") : isDark ? "bg-orange-500/20 text-orange-300" : "bg-orange-100 text-orange-700"}`}
-                                  >
-                                    {isWeekend ? t.weekend : t.weekday}
-                                  </span>
-                                  <span className={isDark ? "text-gray-400" : "text-gray-500"}>
-                                    {days}
-                                  </span>
-                                  {timeRange && (
-                                    <span className={isDark ? "text-gray-500" : "text-gray-400"}>
-                                      {timeRange}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                                  {o.prompt && (
-                                    <span
-                                      className={isDark ? "text-emerald-400" : "text-emerald-600"}
-                                    >
-                                      {t.prompt}:{" "}
-                                      {formatPrice(o.prompt, lang, currency, exchangeRate)}
-                                    </span>
-                                  )}
-                                  {o.completion && (
-                                    <span className={isDark ? "text-sky-400" : "text-sky-600"}>
-                                      {t.completion}:{" "}
-                                      {formatPrice(o.completion, lang, currency, exchangeRate)}
-                                    </span>
-                                  )}
-                                  {o.input_cache_read && (
-                                    <span
-                                      className={isDark ? "text-violet-400" : "text-violet-600"}
-                                    >
-                                      {t.cacheRead}:{" "}
-                                      {formatPrice(
-                                        o.input_cache_read,
-                                        lang,
-                                        currency,
-                                        exchangeRate
-                                      )}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    {/* Token-based overrides */}
-                    {tokenOverrides.length > 0 && (
-                      <div>
-                        <div
-                          className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}
-                        >
-                          <Layers size={10} /> {t.tieredPricing}
-                        </div>
-                        <div className="space-y-1.5">
-                          {tokenOverrides.map((o, i) => (
-                            <div
-                              key={i}
-                              className={`rounded-lg p-2 text-[11px] ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
-                            >
-                              <div className="mb-1">
-                                <span
-                                  className={`px-1.5 py-0.5 rounded text-[9px] ${isDark ? "bg-teal-500/20 text-teal-300" : "bg-teal-100 text-teal-700"}`}
-                                >
-                                  ≥{formatCtx(o.min_prompt_tokens!)} {t.aboveTokens}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                                {o.prompt && (
-                                  <span
-                                    className={isDark ? "text-emerald-400" : "text-emerald-600"}
-                                  >
-                                    {t.prompt}:{" "}
-                                    {formatPrice(o.prompt, lang, currency, exchangeRate)}
-                                  </span>
-                                )}
-                                {o.completion && (
-                                  <span className={isDark ? "text-sky-400" : "text-sky-600"}>
-                                    {t.completion}:{" "}
-                                    {formatPrice(o.completion, lang, currency, exchangeRate)}
-                                  </span>
-                                )}
-                                {o.input_cache_read && (
-                                  <span className={isDark ? "text-violet-400" : "text-violet-600"}>
-                                    {t.cacheRead}:{" "}
-                                    {formatPrice(o.input_cache_read, lang, currency, exchangeRate)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                )
-              })()}
-          </div>
-
-          {/* Capabilities */}
-          <div>
-            <h4
-              className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
-            >
-              <Zap size={12} /> {t.capabilities}
-            </h4>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
-                <span className={isDark ? "text-gray-500" : "text-gray-400"}>
-                  {t.contextLengthLabel}
-                </span>
-                <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
-                  {model.context_length} tokens
-                </div>
-                {model.top_provider?.context_length &&
-                  model.top_provider.context_length !== model.context_length && (
-                    <div
-                      className={`text-[10px] mt-0.5 ${isDark ? "text-gray-400" : "text-gray-500"}`}
-                    >
-                      {t.contextTopProvider}: {model.top_provider.context_length} tokens
+                  {model.top_provider?.max_completion_tokens && (
+                    <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
+                      <span className={isDark ? "text-gray-500" : "text-gray-400"}>
+                        {t.maxOutput}
+                      </span>
+                      <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+                        {model.top_provider.max_completion_tokens} tokens
+                      </div>
                     </div>
                   )}
+                  {model.architecture?.tokenizer && (
+                    <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
+                      <span className={isDark ? "text-gray-500" : "text-gray-400"}>
+                        {t.tokenizer}
+                      </span>
+                      <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+                        {model.architecture.tokenizer}
+                      </div>
+                    </div>
+                  )}
+                  {model.top_provider?.is_moderated != null && (
+                    <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
+                      <span className={isDark ? "text-gray-500" : "text-gray-400"}>
+                        {t.moderated}
+                      </span>
+                      <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+                        {model.top_provider.is_moderated ? t.yes : t.no}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              {model.top_provider?.max_completion_tokens && (
-                <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
-                  <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.maxOutput}</span>
-                  <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
-                    {model.top_provider.max_completion_tokens} tokens
-                  </div>
-                </div>
-              )}
-              {model.architecture?.tokenizer && (
-                <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
-                  <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.tokenizer}</span>
-                  <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
-                    {model.architecture.tokenizer}
-                  </div>
-                </div>
-              )}
-              {model.top_provider?.is_moderated != null && (
-                <div className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}>
-                  <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.moderated}</span>
-                  <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
-                    {model.top_provider.is_moderated ? t.yes : t.no}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Reasoning */}
-          {model.reasoning && (
-            <div>
-              <h4
-                className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
-              >
-                <Brain size={12} /> {t.reasoningLabel}
-              </h4>
-              <div className="flex flex-wrap gap-1.5">
-                {(model.reasoning.supported_efforts ?? []).map((e) => (
-                  <span
-                    key={e}
-                    className={`text-[10px] px-2 py-0.5 rounded-full ${
-                      e === model.reasoning!.default_effort
-                        ? isDark
-                          ? "bg-violet-500/30 text-violet-200 ring-1 ring-violet-500/40"
-                          : "bg-violet-100 text-violet-700 ring-1 ring-violet-300"
-                        : isDark
-                          ? "bg-gray-800 text-gray-400"
-                          : "bg-gray-200 text-gray-500"
-                    }`}
+              {/* Reasoning */}
+              {model.reasoning && (
+                <div>
+                  <h4
+                    className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
                   >
-                    {e} {e === model.reasoning!.default_effort && "★"}
-                  </span>
-                ))}
-              </div>
-              <div className={`text-[10px] mt-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-                {model.reasoning.mandatory ? t.mandatory : t.optional}
-                {model.reasoning.default_enabled && ` · ${t.enabledByDefault}`}
-              </div>
-            </div>
-          )}
-
-          {/* Benchmarks */}
-          {benchmarks && (
-            <div>
-              <h4
-                className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
-              >
-                <BarChart3 size={12} /> {t.benchmarks}
-              </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {[
-                  { label: t.intelligence, val: benchmarks.intelligence_index, max: 70 },
-                  { label: t.codingIndex, val: benchmarks.coding_index, max: 90 },
-                  { label: t.agentic, val: benchmarks.agentic_index, max: 70 }
-                ]
-                  .filter((b) => b.val != null)
-                  .map((b) => (
-                    <div
-                      key={b.label}
-                      className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
-                    >
-                      <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-                        {b.label}
-                      </div>
-                      <div
-                        className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}
+                    <Brain size={12} /> {t.reasoningLabel}
+                  </h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(model.reasoning.supported_efforts ?? []).map((e) => (
+                      <span
+                        key={e}
+                        className={`text-[10px] px-2 py-0.5 rounded-full ${
+                          e === model.reasoning!.default_effort
+                            ? isDark
+                              ? "bg-violet-500/30 text-violet-200 ring-1 ring-violet-500/40"
+                              : "bg-violet-100 text-violet-700 ring-1 ring-violet-300"
+                            : isDark
+                              ? "bg-gray-800 text-gray-400"
+                              : "bg-gray-200 text-gray-500"
+                        }`}
                       >
-                        {b.val}
-                      </div>
+                        {e} {e === model.reasoning!.default_effort && "★"}
+                      </span>
+                    ))}
+                  </div>
+                  <div className={`text-[10px] mt-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+                    {model.reasoning.mandatory ? t.mandatory : t.optional}
+                    {model.reasoning.default_enabled && ` · ${t.enabledByDefault}`}
+                  </div>
+                </div>
+              )}
+
+              {/* Benchmarks */}
+              {benchmarks && (
+                <div>
+                  <h4
+                    className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                  >
+                    <BarChart3 size={12} /> {t.benchmarks}
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { label: t.intelligence, val: benchmarks.intelligence_index, max: 70 },
+                      { label: t.codingIndex, val: benchmarks.coding_index, max: 90 },
+                      { label: t.agentic, val: benchmarks.agentic_index, max: 70 }
+                    ]
+                      .filter((b) => b.val != null)
+                      .map((b) => (
+                        <div
+                          key={b.label}
+                          className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
+                        >
+                          <div
+                            className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                          >
+                            {b.label}
+                          </div>
+                          <div
+                            className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}
+                          >
+                            {b.val}
+                          </div>
+                          <div
+                            className={`h-1 rounded-full mt-1 overflow-hidden ${isDark ? "bg-gray-800" : "bg-gray-200"}`}
+                          >
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400"
+                              style={{ width: `${Math.min((b.val! / b.max) * 100, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Design Arena */}
+              {arenas.length > 0 && (
+                <div>
+                  <h4
+                    className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
+                  >
+                    <Sparkles size={12} /> {t.designArena}
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                    {arenas.map((a) => (
                       <div
-                        className={`h-1 rounded-full mt-1 overflow-hidden ${isDark ? "bg-gray-800" : "bg-gray-200"}`}
+                        key={`${a.arena}-${a.category}`}
+                        className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
                       >
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400"
-                          style={{ width: `${Math.min((b.val! / b.max) * 100, 100)}%` }}
-                        />
+                          className={`text-[10px] capitalize ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                        >
+                          {a.category.replace(/-/g, " ")}
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span
+                            className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-900"}`}
+                          >
+                            #{a.rank}
+                          </span>
+                          <span
+                            className={`text-[10px] ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                          >
+                            ELO {a.elo}
+                          </span>
+                        </div>
+                        <div
+                          className={`text-[10px] ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                        >
+                          {a.win_rate}% {t.winRate}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {/* Design Arena */}
-          {arenas.length > 0 && (
-            <div>
-              <h4
-                className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
-              >
-                <Sparkles size={12} /> {t.designArena}
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                {arenas.map((a) => (
-                  <div
-                    key={`${a.arena}-${a.category}`}
-                    className={`rounded-lg p-2 ${isDark ? "bg-gray-900/50" : "bg-gray-100"}`}
-                  >
-                    <div
-                      className={`text-[10px] capitalize ${isDark ? "text-gray-500" : "text-gray-400"}`}
-                    >
-                      {a.category.replace(/-/g, " ")}
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span
-                        className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-900"}`}
-                      >
-                        #{a.rank}
-                      </span>
-                      <span className={`text-[10px] ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                        ELO {a.elo}
-                      </span>
-                    </div>
-                    <div
-                      className={`text-[10px] ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
-                    >
-                      {a.win_rate}% {t.winRate}
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Parameters */}
-          <div>
-            <h4
-              className={`text-xs font-semibold mb-2 ${isDark ? "text-gray-300" : "text-gray-600"}`}
-            >
-              {t.supportedParams}
-            </h4>
-            <div className="flex flex-wrap gap-1">
-              {(model.supported_parameters ?? []).map((p) => (
-                <span
-                  key={p}
-                  className={`text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-gray-800 text-gray-400" : "bg-gray-200 text-gray-600"}`}
+              {/* Parameters */}
+              <div>
+                <h4
+                  className={`text-xs font-semibold mb-2 ${isDark ? "text-gray-300" : "text-gray-600"}`}
                 >
-                  {p}
-                </span>
-              ))}
-            </div>
-          </div>
+                  {t.supportedParams}
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {(model.supported_parameters ?? []).map((p) => (
+                    <span
+                      key={p}
+                      className={`text-[10px] px-1.5 py-0.5 rounded ${isDark ? "bg-gray-800 text-gray-400" : "bg-gray-200 text-gray-600"}`}
+                    >
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
 
-          {/* Meta */}
-          <div
-            className={`flex items-center gap-4 text-[10px] pt-2 border-t ${isDark ? "text-gray-500 border-white/5" : "text-gray-400 border-gray-200"}`}
-          >
-            <span className="flex items-center gap-1">
-              <Clock size={10} /> {formatDate(model.created, lang)}
-            </span>
-            <span>
-              {daysSince(model.created)} {t.daysAgo}
-            </span>
-          </div>
+              {/* Meta */}
+              <div
+                className={`flex items-center gap-4 text-[10px] pt-2 border-t ${isDark ? "text-gray-500 border-white/5" : "text-gray-400 border-gray-200"}`}
+              >
+                <span className="flex items-center gap-1">
+                  <Clock size={10} /> {formatDate(model.created, lang)}
+                </span>
+                <span>
+                  {daysSince(model.created)} {t.daysAgo}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -1783,6 +1907,10 @@ function App() {
   const [showFree, setShowFree] = useState(false)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [rawDetails, setRawDetails] = useState<Record<string, boolean>>({})
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [exporterId, setExporterId] = useState("codex")
+  const [showExportMenu, setShowExportMenu] = useState(false)
   const [tab, setTab] = useState<"models" | "charts">("models")
 
   const toggleTheme = () => {
@@ -1880,6 +2008,40 @@ function App() {
 
     return result
   }, [models, search, provider, modality, sortBy, showReasoning, showFree])
+
+  const exporters = useMemo<ModelConfigExporter[]>(
+    () => [
+      {
+        id: "codex",
+        label: t.codexCatalog,
+        fileName: "models.json",
+        build: (items) => buildModelCatalogJson(items)
+      }
+    ],
+    [t]
+  )
+  const selectedModels = useMemo(
+    () => models.filter((model) => selectedIds.has(model.id)),
+    [models, selectedIds]
+  )
+  const activeExporter = exporters.find((exporter) => exporter.id === exporterId) ?? exporters[0]
+
+  const downloadExport = () => {
+    if (!activeExporter || selectedModels.length === 0) return
+    const payload = JSON.stringify(
+      activeExporter.build(selectedModels as ExportableModel[]),
+      null,
+      2
+    )
+    const blob = new Blob([payload], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = activeExporter.fileName
+    anchor.click()
+    URL.revokeObjectURL(url)
+    setShowExportMenu(false)
+  }
 
   const stats = useMemo(
     () => ({
@@ -2187,6 +2349,72 @@ function App() {
                     modalities={modalities}
                   />
 
+                  {/* Selection and export toolbar */}
+                  <div
+                    className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-2 ${theme === "dark" ? "border-white/10 bg-gray-900/40" : "border-gray-200 bg-white"}`}
+                  >
+                    <div
+                      className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                    >
+                      {selectedModels.length} {t.selected}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedIds(new Set(filtered.map((model) => model.id)))}
+                        className={`px-2 py-1.5 rounded-lg text-[10px] ${theme === "dark" ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                      >
+                        {t.selectVisible}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedIds(new Set())}
+                        className={`px-2 py-1.5 rounded-lg text-[10px] ${theme === "dark" ? "text-gray-400 hover:bg-white/10" : "text-gray-500 hover:bg-gray-100"}`}
+                      >
+                        {t.clearSelection}
+                      </button>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          disabled={!selectedModels.length}
+                          onClick={() => setShowExportMenu(!showExportMenu)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] bg-brand-500/20 text-brand-300 disabled:opacity-40"
+                        >
+                          <Download size={12} /> {t.export}
+                        </button>
+                        {showExportMenu && (
+                          <div
+                            className={`absolute right-0 top-full mt-1 z-20 w-64 rounded-xl border p-2 shadow-xl ${theme === "dark" ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
+                          >
+                            <div
+                              className={`text-[10px] mb-2 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                            >
+                              {t.configurationFormat}
+                            </div>
+                            <select
+                              value={exporterId}
+                              onChange={(event) => setExporterId(event.target.value)}
+                              className={`w-full rounded-lg border px-2 py-1.5 text-xs mb-2 ${theme === "dark" ? "bg-gray-800 border-white/10 text-gray-200" : "bg-gray-50 border-gray-200 text-gray-700"}`}
+                            >
+                              {exporters.map((exporter) => (
+                                <option key={exporter.id} value={exporter.id}>
+                                  {exporter.label}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={downloadExport}
+                              className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${theme === "dark" ? "!bg-blue-600 !border-blue-500 !text-white hover:!bg-blue-500" : "!bg-blue-700 !border-blue-800 !text-white shadow-sm hover:!bg-blue-800"}`}
+                            >
+                              {t.download} {activeExporter?.fileName}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Results count */}
                   <div
                     className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
@@ -2214,6 +2442,22 @@ function App() {
                         model={m}
                         expanded={expandedId === m.id}
                         onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
+                        selected={selectedIds.has(m.id)}
+                        onSelect={() =>
+                          setSelectedIds((current) => {
+                            const next = new Set(current)
+                            if (next.has(m.id)) next.delete(m.id)
+                            else next.add(m.id)
+                            return next
+                          })
+                        }
+                        rawDetails={rawDetails[m.id] ?? false}
+                        onToggleRawDetails={() =>
+                          setRawDetails((current) => ({
+                            ...current,
+                            [m.id]: !(current[m.id] ?? false)
+                          }))
+                        }
                       />
                     ))}
                   </div>
