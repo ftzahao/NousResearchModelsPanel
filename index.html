@@ -110,6 +110,65 @@
 
       /* Light mode scrollbar */
       :root::-webkit-scrollbar-thumb { background: #cbd5e1; }
+
+      /* ── Responsive overrides ─────────────────────────── */
+      @media (max-width: 640px) {
+        /* Compact header on mobile */
+        .header-controls {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.375rem;
+          justify-content: flex-end;
+        }
+        .header-controls .hide-mobile {
+          display: none;
+        }
+        /* Filter bar vertical stacking */
+        .filter-inner {
+          flex-direction: column;
+        }
+        .filter-inner .filter-search {
+          min-width: 0 !important;
+          width: 100% !important;
+        }
+        .filter-inner .filter-selects {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.5rem;
+          width: 100%;
+        }
+        .filter-inner .filter-toggles {
+          display: flex;
+          gap: 0.375rem;
+          width: 100%;
+          justify-content: space-between;
+        }
+        .filter-inner .filter-toggles button {
+          flex: 1;
+          justify-content: center;
+        }
+      }
+      @media (min-width: 641px) and (max-width: 768px) {
+        .filter-inner .filter-selects {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.5rem;
+        }
+      }
+      /* Large screen: cap model grid width for readability */
+      @media (min-width: 1800px) {
+        .model-grid {
+          grid-template-columns: repeat(4, 1fr);
+          max-width: 1600px;
+          margin: 0 auto;
+        }
+      }
+      /* Chart responsive */
+      @media (max-width: 480px) {
+        .recharts-wrapper .recharts-cartesian-axis-yAxis .recharts-cartesian-axis-tick-value {
+          font-size: 9px !important;
+        }
+      }
     </style>
   </head>
   <body class="dark min-h-screen">

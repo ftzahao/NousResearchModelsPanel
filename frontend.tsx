@@ -76,8 +76,8 @@ const translations = {
     loading: "正在从 NousResearch API 加载模型...",
     loadFailed: "加载模型失败",
     context: "上下文",
-    promptPrice: "输入价格 $/M",
-    completePrice: "输出价格 $/M",
+    promptPrice: "输入价格",
+    completePrice: "输出价格",
     pricingDetails: "价格详情",
     prompt: "输入",
     completion: "输出",
@@ -105,7 +105,7 @@ const translations = {
     winRate: "胜率",
     supportedParams: "支持参数",
     daysAgo: "天前",
-    promptPriceChart: "输入价格对比 ($/1M tokens)",
+    promptPriceChart: "输入价格对比",
     intelligenceVsCoding: "智能指数 vs 编程指数",
     maxContextByProvider: "各提供商最大上下文长度",
     originalPrice: "原价",
@@ -170,8 +170,8 @@ const translations = {
     loading: "Loading models from NousResearch API...",
     loadFailed: "Failed to load models",
     context: "Context",
-    promptPrice: "Prompt $/M",
-    completePrice: "Complete $/M",
+    promptPrice: "Prompt",
+    completePrice: "Complete",
     pricingDetails: "Pricing Details",
     prompt: "Prompt",
     completion: "Completion",
@@ -199,7 +199,7 @@ const translations = {
     winRate: "win",
     supportedParams: "Supported Parameters",
     daysAgo: "days ago",
-    promptPriceChart: "Prompt Price Comparison ($/1M tokens)",
+    promptPriceChart: "Prompt Price Comparison",
     intelligenceVsCoding: "Intelligence vs Coding Index",
     maxContextByProvider: "Max Context Length by Provider",
     modelsByProvider: "Models by Provider",
@@ -414,6 +414,11 @@ function stripZeros(s: string): string {
   return s.replace(/\.?0+$/, "")
 }
 
+function currencyUnit(lang: Lang, currency: Currency): string {
+  const sym = currency === "CNY" ? "¥" : "$"
+  return lang === "zh" ? `${sym}/M` : `${sym}/1M tokens`
+}
+
 function formatPrice(
   val: string | undefined,
   lang: Lang = "zh",
@@ -432,11 +437,12 @@ function formatPrice(
   return `$${stripZeros(n.times(1e6).toFixed(2))}/1M`
 }
 
-function formatPriceRaw(val: string | undefined): string {
+function formatPriceRaw(val: string | undefined, currency: Currency = "USD"): string {
   if (!val) return "—"
   const n = bn(val)
-  if (n.isZero()) return "$0"
-  return `$${stripZeros(n.toFixed(10))}`
+  const sym = currency === "CNY" ? "¥" : "$"
+  if (n.isZero()) return `${sym}0`
+  return `${sym}${stripZeros(n.toFixed(10))}`
 }
 
 function formatCtx(n: number): string {
@@ -678,7 +684,7 @@ function ModelCard({
           ) : null}
           <div>
             <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-              {t.promptPrice}
+              {t.promptPrice} <span className="opacity-60">{currencyUnit(lang, currency)}</span>
             </div>
             <div
               className={`text-xs font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
@@ -688,7 +694,7 @@ function ModelCard({
           </div>
           <div>
             <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-              {t.completePrice}
+              {t.completePrice} <span className="opacity-60">{currencyUnit(lang, currency)}</span>
             </div>
             <div className={`text-xs font-medium ${isDark ? "text-sky-400" : "text-sky-600"}`}>
               {formatPrice(model.pricing.completion, lang, currency, exchangeRate)}
@@ -741,7 +747,7 @@ function ModelCard({
               <span
                 className={`text-[10px] font-normal ${isDark ? "text-gray-500" : "text-gray-400"}`}
               >
-                ($/1M tokens)
+                ({currencyUnit(lang, currency)})
               </span>
             </h4>
             {(() => {
@@ -1091,7 +1097,7 @@ function ModelCard({
               >
                 <BarChart3 size={12} /> {t.benchmarks}
               </h4>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {[
                   { label: t.intelligence, val: benchmarks.intelligence_index, max: 70 },
                   { label: t.codingIndex, val: benchmarks.coding_index, max: 90 },
@@ -1133,7 +1139,7 @@ function ModelCard({
               >
                 <Sparkles size={12} /> {t.designArena}
               </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
                 {arenas.map((a) => (
                   <div
                     key={`${a.arena}-${a.category}`}
@@ -1203,8 +1209,9 @@ function ModelCard({
 
 // ─── Pricing Chart ───────────────────────────────────────────────────
 function PricingChart({ models }: { models: Model[] }) {
-  const { t } = useLang()
+  const { lang, t } = useLang()
   const { theme } = useTheme()
+  const { currency } = useCurrency()
   const isDark = theme === "dark"
   const data = useMemo(() => {
     return models
@@ -1235,10 +1242,10 @@ function PricingChart({ models }: { models: Model[] }) {
         className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-gray-200" : "text-gray-700"}`}
       >
         <DollarSign size={14} className={isDark ? "text-emerald-400" : "text-emerald-600"} />{" "}
-        {t.promptPriceChart}
+        {t.promptPriceChart} <span className="opacity-60">({currencyUnit(lang, currency)})</span>
       </h3>
       <ResponsiveContainer width="100%" height={320}>
-        <BarChart data={data} layout="vertical" margin={{ left: 80, right: 16 }}>
+        <BarChart data={data} layout="vertical" margin={{ left: 10, right: 16 }}>
           <CartesianGrid
             strokeDasharray="3 3"
             stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
@@ -1246,13 +1253,13 @@ function PricingChart({ models }: { models: Model[] }) {
           <XAxis
             type="number"
             tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 10 }}
-            tickFormatter={(v) => `$${v.toFixed(2)}`}
+            tickFormatter={(v) => `${currency === "CNY" ? "¥" : "$"}${v.toFixed(2)}`}
           />
           <YAxis
             type="category"
             dataKey="name"
             tick={{ fill: isDark ? "#D1D5DB" : "#374151", fontSize: 10 }}
-            width={80}
+            width={60}
           />
           <Tooltip
             contentStyle={{
@@ -1311,8 +1318,8 @@ function BenchmarkScatter({ models }: { models: Model[] }) {
         <Brain size={14} className={isDark ? "text-violet-400" : "text-violet-600"} />{" "}
         {t.intelligenceVsCoding}
       </h3>
-      <ResponsiveContainer width="100%" height={320}>
-        <ScatterChart margin={{ bottom: 8, left: 8, right: 16 }}>
+      <ResponsiveContainer width="100%" height={300}>
+        <ScatterChart margin={{ bottom: 4, left: 0, right: 8 }}>
           <CartesianGrid
             strokeDasharray="3 3"
             stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
@@ -1416,7 +1423,7 @@ function ContextChart({ models }: { models: Model[] }) {
         <Layers size={14} className={isDark ? "text-cyan-400" : "text-cyan-600"} />{" "}
         {t.maxContextByProvider}
       </h3>
-      <ResponsiveContainer width="100%" height={240}>
+      <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ left: 8, right: 8 }}>
           <CartesianGrid
             strokeDasharray="3 3"
@@ -1567,9 +1574,9 @@ function FilterBar({
 
   return (
     <div className="glass rounded-2xl p-3 animate-fade-in">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="filter-inner flex flex-wrap items-center gap-2">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="filter-search relative flex-1 min-w-[160px] sm:min-w-[200px]">
           <Search
             size={14}
             className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? "text-gray-500" : "text-gray-400"}`}
@@ -1596,92 +1603,93 @@ function FilterBar({
           )}
         </div>
 
-        {/* Provider */}
-        <select
-          value={provider}
-          onChange={(e) => setProvider(e.target.value)}
-          className={selectClass}
-        >
-          <option value="">{t.allProviders}</option>
-          {providers.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-
-        {/* Modality */}
-        <select
-          value={modality}
-          onChange={(e) => setModality(e.target.value)}
-          className={selectClass}
-        >
-          <option value="">{t.allModalities}</option>
-          {modalities.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-
-        {/* Sort */}
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={selectClass}>
-          <option value="newest">{t.newest}</option>
-          <option value="prompt-asc">{t.priceLowHigh}</option>
-          <option value="prompt-desc">{t.priceHighLow}</option>
-          <option value="context">{t.contextLength}</option>
-          <option value="intelligence">{t.intelligence}</option>
-          <option value="coding">{t.codingIndex}</option>
-          <option value="name">{t.nameAZ}</option>
-        </select>
-
-        {/* Toggles */}
-        <button
-          onClick={() => setShowReasoning(!showReasoning)}
-          className={`px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
-            showReasoning
-              ? isDark
-                ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
-                : "bg-violet-100 text-violet-700 border-violet-300"
-              : isDark
-                ? "bg-gray-900/50 text-gray-400 border-white/5"
-                : "bg-gray-100 text-gray-500 border-gray-200"
-          }`}
-        >
-          <Brain size={12} /> {t.reasoning}
-        </button>
-
-        <button
-          onClick={() => setShowFree(!showFree)}
-          className={`px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
-            showFree
-              ? isDark
-                ? "bg-green-500/20 text-green-300 border-green-500/30"
-                : "bg-green-100 text-green-700 border-green-300"
-              : isDark
-                ? "bg-gray-900/50 text-gray-400 border-white/5"
-                : "bg-gray-100 text-gray-500 border-gray-200"
-          }`}
-        >
-          <Sparkles size={12} /> {t.free}
-        </button>
-
-        {/* View toggle */}
-        <div
-          className={`flex rounded-lg border overflow-hidden ${isDark ? "bg-gray-900/50 border-white/5" : "bg-gray-100 border-gray-200"}`}
-        >
-          <button
-            onClick={() => setViewMode("grid")}
-            className={`p-2 ${viewMode === "grid" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+        {/* Selects row */}
+        <div className="filter-selects flex items-center gap-2">
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            className={selectClass}
           >
-            <Grid3X3 size={14} />
+            <option value="">{t.allProviders}</option>
+            {providers.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+          <select
+            value={modality}
+            onChange={(e) => setModality(e.target.value)}
+            className={selectClass}
+          >
+            <option value="">{t.allModalities}</option>
+            {modalities.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className={selectClass}
+          >
+            <option value="newest">{t.newest}</option>
+            <option value="prompt-asc">{t.priceLowHigh}</option>
+            <option value="prompt-desc">{t.priceHighLow}</option>
+            <option value="context">{t.contextLength}</option>
+            <option value="intelligence">{t.intelligence}</option>
+            <option value="coding">{t.codingIndex}</option>
+            <option value="name">{t.nameAZ}</option>
+          </select>
+        </div>
+
+        {/* Toggles row */}
+        <div className="filter-toggles flex items-center gap-2">
+          <button
+            onClick={() => setShowReasoning(!showReasoning)}
+            className={`px-2 sm:px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
+              showReasoning
+                ? isDark
+                  ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                  : "bg-violet-100 text-violet-700 border-violet-300"
+                : isDark
+                  ? "bg-gray-900/50 text-gray-400 border-white/5"
+                  : "bg-gray-100 text-gray-500 border-gray-200"
+            }`}
+          >
+            <Brain size={12} /> {t.reasoning}
           </button>
           <button
-            onClick={() => setViewMode("list")}
-            className={`p-2 ${viewMode === "list" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+            onClick={() => setShowFree(!showFree)}
+            className={`px-2 sm:px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
+              showFree
+                ? isDark
+                  ? "bg-green-500/20 text-green-300 border-green-500/30"
+                  : "bg-green-100 text-green-700 border-green-300"
+                : isDark
+                  ? "bg-gray-900/50 text-gray-400 border-white/5"
+                  : "bg-gray-100 text-gray-500 border-gray-200"
+            }`}
           >
-            <List size={14} />
+            <Sparkles size={12} /> {t.free}
           </button>
+          <div
+            className={`flex rounded-lg border overflow-hidden ${isDark ? "bg-gray-900/50 border-white/5" : "bg-gray-100 border-gray-200"}`}
+          >
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-2 ${viewMode === "grid" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+            >
+              <Grid3X3 size={14} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 ${viewMode === "list" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+            >
+              <List size={14} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1940,34 +1948,34 @@ function App() {
             setShowCustomInput
           }}
         >
-          <div className="min-h-screen">
+          <div className="min-h-screen overflow-x-hidden">
             {/* Header */}
             <header
               className={`sticky top-0 z-50 backdrop-blur-xl border-b ${theme === "dark" ? "bg-gray-950/80 border-white/5" : "bg-white/80 border-gray-200"}`}
             >
-              <div className="max-w-[1600px] mx-auto px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center">
+              <div className="max-w-[1600px] mx-auto px-3 sm:px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center flex-shrink-0">
                       <Cpu size={16} className="text-white" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h1
-                        className={`text-base font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                        className={`text-sm sm:text-base font-bold truncate ${theme === "dark" ? "text-white" : "text-gray-900"}`}
                       >
                         {t.title}
                       </h1>
                       <p
-                        className={`text-[10px] ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                        className={`text-[10px] truncate ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
                       >
                         {t.subtitle}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="header-controls flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                     <button
                       onClick={() => setTab("models")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         tab === "models"
                           ? theme === "dark"
                             ? "bg-brand-500/20 text-brand-300"
@@ -1977,11 +1985,12 @@ function App() {
                             : "text-gray-500 hover:text-gray-700"
                       }`}
                     >
-                      <Grid3X3 size={12} className="inline mr-1" /> {t.models}
+                      <Grid3X3 size={12} className="inline sm:mr-1" />{" "}
+                      <span className="hidden sm:inline">{t.models}</span>
                     </button>
                     <button
                       onClick={() => setTab("charts")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         tab === "charts"
                           ? theme === "dark"
                             ? "bg-brand-500/20 text-brand-300"
@@ -1991,17 +2000,17 @@ function App() {
                             : "text-gray-500 hover:text-gray-700"
                       }`}
                     >
-                      <BarChart3 size={12} className="inline mr-1" /> {t.analytics}
+                      <BarChart3 size={12} className="inline sm:mr-1" />{" "}
+                      <span className="hidden sm:inline">{t.analytics}</span>
                     </button>
                     <a
                       href="https://inference-api.nousresearch.com/v1/models"
                       target="_blank"
                       rel="noopener"
-                      className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}
+                      className={`hidden sm:flex px-3 py-1.5 rounded-lg text-xs items-center gap-1 ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}
                     >
                       API <ExternalLink size={10} />
                     </a>
-                    {/* Theme Toggle */}
                     <button
                       onClick={toggleTheme}
                       className={`p-2 rounded-lg transition-colors ${theme === "dark" ? "text-gray-400 hover:text-yellow-300 hover:bg-yellow-500/10" : "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"}`}
@@ -2009,33 +2018,30 @@ function App() {
                     >
                       {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
                     </button>
-                    {/* Language Toggle */}
                     <button
                       onClick={() => setLang(lang === "zh" ? "en" : "zh")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${theme === "dark" ? "bg-gray-800/50 text-gray-300 hover:text-white hover:bg-gray-700/50" : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200"}`}
+                      className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${theme === "dark" ? "bg-gray-800/50 text-gray-300 hover:text-white hover:bg-gray-700/50" : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200"}`}
                     >
                       <Globe size={12} />
                       {lang === "zh" ? "EN" : "中"}
                     </button>
-
-                    {/* Currency Toggle */}
                     <div className="relative">
                       <button
                         onClick={() => setShowCustomInput(!showCustomInput)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${theme === "dark" ? "bg-gray-800/50 text-gray-300 hover:text-white hover:bg-gray-700/50" : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200"}`}
+                        className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${theme === "dark" ? "bg-gray-800/50 text-gray-300 hover:text-white hover:bg-gray-700/50" : "bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200"}`}
                       >
                         <DollarSign size={12} />
-                        {currency === "USD" ? "USD" : `CNY ¥${exchangeRate.toFixed(2)}`}
+                        <span className="hidden sm:inline">
+                          {currency === "USD" ? "USD" : `CNY ¥${exchangeRate.toFixed(2)}`}
+                        </span>
+                        <span className="sm:hidden">{currency === "USD" ? "$" : "¥"}</span>
                         <ChevronDown size={10} />
                       </button>
-
-                      {/* Currency Dropdown */}
                       {showCustomInput && (
                         <div
-                          className={`absolute right-0 top-full mt-1 w-56 rounded-xl shadow-xl border z-50 ${theme === "dark" ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
+                          className={`absolute right-0 top-full mt-1 rounded-xl shadow-xl border z-50 ${theme === "dark" ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
                         >
                           <div className="p-3 space-y-3">
-                            {/* Currency Selection */}
                             <div>
                               <div
                                 className={`text-[10px] mb-2 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
@@ -2073,8 +2079,6 @@ function App() {
                                 </button>
                               </div>
                             </div>
-
-                            {/* Exchange Rate - Only show when CNY is selected */}
                             {currency === "CNY" && (
                               <>
                                 <div>
@@ -2105,8 +2109,6 @@ function App() {
                                     </button>
                                   </div>
                                 </div>
-
-                                {/* Custom Rate Input */}
                                 <div>
                                   <div
                                     className={`text-[10px] mb-1.5 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
@@ -2145,9 +2147,9 @@ function App() {
               </div>
             </header>
 
-            <main className="max-w-[1600px] mx-auto px-4 py-4 space-y-4">
+            <main className="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 space-y-4">
               {/* Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
                 <StatCard icon={<Layers size={18} />} label={t.totalModels} value={stats.total} />
                 <StatCard icon={<Globe size={18} />} label={t.providers} value={stats.providers} />
                 <StatCard
@@ -2202,7 +2204,7 @@ function App() {
                   <div
                     className={`grid gap-3 ${
                       viewMode === "grid"
-                        ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                        ? "model-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
                         : "grid-cols-1"
                     }`}
                   >
@@ -2227,7 +2229,7 @@ function App() {
                 </>
               ) : (
                 /* Charts Tab */
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                   <PricingChart models={models} />
                   <BenchmarkScatter models={models} />
                   <ContextChart models={models} />
@@ -2241,7 +2243,7 @@ function App() {
               className={`border-t mt-8 ${theme === "dark" ? "border-white/5" : "border-gray-200"}`}
             >
               <div
-                className={`max-w-[1600px] mx-auto px-4 py-4 flex items-center justify-between text-[10px] ${theme === "dark" ? "text-gray-600" : "text-gray-400"}`}
+                className={`max-w-[1600px] mx-auto px-3 sm:px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] ${theme === "dark" ? "text-gray-600" : "text-gray-400"}`}
               >
                 <span>{t.dataFrom}</span>
                 <span>{t.builtWith}</span>
