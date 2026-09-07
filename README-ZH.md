@@ -8,13 +8,22 @@
 
 - **模型浏览** — 可搜索/筛选的卡片，展示定价、上下文长度、模态和基准测试数据
 - **数据分析图表** — 价格对比、智能指数 vs 编程指数散点图、上下文分布、提供商饼图
+- **模型导出** — 勾选模型后导出 Codex 模型目录 JSON（`model-export.ts`）
+- **货币切换** — 价格支持 CNY/USD 显示
 - **中英双语** — 中英文切换
 - **深色/浅色主题** — 支持主题切换
+- **响应式适配** — 移动端友好布局
 - **自动刷新** — 每次加载自动从 NousResearch API 获取最新数据
 
 ## 技术栈
 
-Bun + React 19 + Recharts + Tailwind CSS + Lucide Icons
+Bun + React 19 + Recharts + Tailwind CSS + Lucide Icons + BigNumber.js
+
+## 项目结构
+
+- `index.ts` — Bun 服务器（应用运行在 8092 端口）
+- `index.html` / `src/` — 前端代码（`app.tsx`、`components/`、`contexts.tsx`、`i18n.ts`、`utils.ts`）
+- `model-export.ts` — 模型选择 → Codex 模型目录 JSON 导出逻辑
 
 ## 本地开发
 
@@ -24,6 +33,13 @@ bun run dev
 ```
 
 启动后访问 `http://localhost:8092`，支持热重载。
+
+## 测试与类型检查
+
+```bash
+bun test
+bun run typecheck
+```
 
 ## 构建
 
