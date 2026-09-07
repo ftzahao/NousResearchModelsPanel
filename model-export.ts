@@ -67,7 +67,7 @@ export function buildModelCatalogJson(models: ExportableModel[]): ModelCatalog {
   console.log(models, "models")
   return {
     models: models.map((model) => {
-      const contextWindow = model.top_provider.context_length ?? 0
+      const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
       const efforts = model.reasoning?.supported_efforts
       return {
         slug: model.id,

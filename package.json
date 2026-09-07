@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun --hot index.ts",
-    "build": "bash build.sh"
+    "build": "bash build.sh",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "latest",

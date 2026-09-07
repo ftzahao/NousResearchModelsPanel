@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { buildModelCatalogJson } from "./model-export"
+import { buildModelCatalogJson, type ExportableModel } from "./model-export"
 
 const model = {
   id: "qwen/qwen3-coder",
@@ -8,12 +8,13 @@ const model = {
   context_length: 131072,
   architecture: { input_modalities: ["text"], output_modalities: ["text"] },
   supported_parameters: ["reasoning", "temperature"],
+  top_provider: { context_length: 131072 },
   reasoning: {
     mandatory: false,
     supported_efforts: ["low", "high"],
     default_effort: "low"
   }
-}
+} as unknown as ExportableModel
 
 test("builds a Codex model catalog from selected API models", () => {
   expect(buildModelCatalogJson([model])).toEqual({
@@ -36,7 +37,11 @@ test("builds a Codex model catalog from selected API models", () => {
 })
 
 test("keeps catalog models JSON serializable and handles missing optional fields", () => {
-  expect(buildModelCatalogJson([{ id: "free/model", name: "Free", context_length: 0 }])).toEqual({
+  expect(
+    buildModelCatalogJson([
+      { id: "free/model", name: "Free", context_length: 0 } as unknown as ExportableModel
+    ])
+  ).toEqual({
     models: [
       {
         slug: "free/model",
