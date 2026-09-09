@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { Search, Brain, Sparkles, Grid3X3, List, X } from "lucide-react"
 import { useLang } from "../i18n"
 import { useTheme } from "../contexts"
@@ -23,10 +23,10 @@ export function FilterBar({
 }: {
   search: string
   setSearch: (v: string) => void
-  provider: string
-  setProvider: (v: string) => void
-  modality: string
-  setModality: (v: string) => void
+  provider: string[]
+  setProvider: (v: string[]) => void
+  modality: string[]
+  setModality: (v: string[]) => void
   sortBy: string
   setSortBy: (v: string) => void
   showReasoning: boolean
@@ -44,8 +44,41 @@ export function FilterBar({
   const inputClass = `w-full pl-8 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500/50 border ${isDark ? "bg-gray-900/50 text-gray-200 placeholder-gray-500 border-white/5" : "bg-white text-gray-900 placeholder-gray-400 border-gray-200"}`
   const selectClass = `px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500/50 border appearance-none select-arrow ${isDark ? "bg-gray-900/50 text-gray-300 border-white/5" : "bg-white text-gray-700 border-gray-200"}`
 
+  const [providerOpen, setProviderOpen] = useState(false)
+  const providerRef = useRef<HTMLDivElement>(null)
+  const [modalityOpen, setModalityOpen] = useState(false)
+  const modalityRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!providerOpen) return
+    const handler = (e: MouseEvent) => {
+      if (providerRef.current && !providerRef.current.contains(e.target as Node))
+        setProviderOpen(false)
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [providerOpen])
+
+  useEffect(() => {
+    if (!modalityOpen) return
+    const handler = (e: MouseEvent) => {
+      if (modalityRef.current && !modalityRef.current.contains(e.target as Node))
+        setModalityOpen(false)
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [modalityOpen])
+
+  const toggleProvider = (p: string) => {
+    setProvider(provider.includes(p) ? provider.filter((x) => x !== p) : [...provider, p])
+  }
+
+  const toggleModality = (m: string) => {
+    setModality(modality.includes(m) ? modality.filter((x) => x !== m) : [...modality, m])
+  }
+
   return (
-    <div className="glass rounded-2xl p-3 animate-fade-in">
+    <div className="glass relative z-20 rounded-2xl p-3 animate-fade-in">
       <div className="filter-inner flex flex-wrap items-center gap-2">
         {/* Search */}
         <div className="filter-search relative flex-1 min-w-[160px] sm:min-w-[200px]">
@@ -77,30 +110,84 @@ export function FilterBar({
 
         {/* Selects row */}
         <div className="filter-selects flex items-center gap-2">
-          <select
-            value={provider}
-            onChange={(e) => setProvider(e.target.value)}
-            className={selectClass}
-          >
-            <option value="">{t.allProviders}</option>
-            {providers.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-          <select
-            value={modality}
-            onChange={(e) => setModality(e.target.value)}
-            className={selectClass}
-          >
-            <option value="">{t.allModalities}</option>
-            {modalities.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
+          <div className="relative" ref={providerRef}>
+            <button
+              onClick={() => setProviderOpen(!providerOpen)}
+              className={`${selectClass} flex items-center gap-1.5`}
+            >
+              {provider.length === 0 ? t.allProviders : `${provider.length} ${t.selected}`}
+            </button>
+            {providerOpen && (
+              <div
+                className={`absolute left-0 top-full z-30 mt-1 max-h-64 w-48 overflow-y-auto rounded-lg border p-1 shadow-lg ${isDark ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
+              >
+                {providers.map((p) => {
+                  const checked = provider.includes(p)
+                  return (
+                    <label
+                      key={p}
+                      className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm ${isDark ? "text-gray-300 hover:bg-white/5" : "text-gray-700 hover:bg-gray-100"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleProvider(p)}
+                        className="accent-brand-500"
+                      />
+                      {p}
+                    </label>
+                  )
+                })}
+                {provider.length > 0 && (
+                  <button
+                    onClick={() => setProvider([])}
+                    className={`mt-1 w-full rounded-md px-2 py-1.5 text-xs ${isDark ? "text-gray-500 hover:bg-white/5" : "text-gray-400 hover:bg-gray-100"}`}
+                  >
+                    {t.clear}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="relative" ref={modalityRef}>
+            <button
+              onClick={() => setModalityOpen(!modalityOpen)}
+              className={`${selectClass} flex items-center gap-1.5`}
+            >
+              {modality.length === 0 ? t.allModalities : `${modality.length} ${t.selected}`}
+            </button>
+            {modalityOpen && (
+              <div
+                className={`absolute left-0 top-full z-30 mt-1 max-h-64 w-48 overflow-y-auto rounded-lg border p-1 shadow-lg ${isDark ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
+              >
+                {modalities.map((m) => {
+                  const checked = modality.includes(m)
+                  return (
+                    <label
+                      key={m}
+                      className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm ${isDark ? "text-gray-300 hover:bg-white/5" : "text-gray-700 hover:bg-gray-100"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleModality(m)}
+                        className="accent-brand-500"
+                      />
+                      {m}
+                    </label>
+                  )
+                })}
+                {modality.length > 0 && (
+                  <button
+                    onClick={() => setModality([])}
+                    className={`mt-1 w-full rounded-md px-2 py-1.5 text-xs ${isDark ? "text-gray-500 hover:bg-white/5" : "text-gray-400 hover:bg-gray-100"}`}
+                  >
+                    {t.clear}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
@@ -167,4 +254,3 @@ export function FilterBar({
     </div>
   )
 }
-

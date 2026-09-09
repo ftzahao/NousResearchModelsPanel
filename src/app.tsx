@@ -110,8 +110,8 @@ export function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
-  const [provider, setProvider] = useState("")
-  const [modality, setModality] = useState("")
+  const [provider, setProvider] = useState<string[]>([])
+  const [modality, setModality] = useState<string[]>([])
   const [sortBy, setSortBy] = useState("newest")
   const [showReasoning, setShowReasoning] = useState(false)
   const [showFree, setShowFree] = useState(false)
@@ -181,9 +181,11 @@ export function App() {
           m.description?.toLowerCase().includes(q)
       )
     }
-    if (provider) result = result.filter((m) => getProvider(m.id) === provider)
-    if (modality)
-      result = result.filter((m) => m.architecture?.input_modalities?.includes(modality))
+    if (provider.length) result = result.filter((m) => provider.includes(getProvider(m.id)))
+    if (modality.length)
+      result = result.filter((m) =>
+        modality.some((mod) => m.architecture?.input_modalities?.includes(mod))
+      )
     if (showReasoning) result = result.filter((m) => m.reasoning)
     if (showFree) result = result.filter((m) => bn(m.pricing?.prompt).isZero())
 
