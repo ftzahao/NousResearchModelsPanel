@@ -103,7 +103,13 @@ export const translations = {
     export: "导出",
     configurationFormat: "配置格式",
     download: "下载",
-    codexCatalog: "Codex model_catalog_json"
+    preview: "预览",
+    copy: "复制",
+    copied: "已复制",
+    close: "关闭",
+    exportPreview: "导出预览",
+    codexCatalog: "Codex model_catalog_json",
+    gcmpCompatible: "GitHub Copilot gcmp.compatibleModels"
   },
   en: {
     title: "NousResearch Models",
@@ -206,7 +212,13 @@ export const translations = {
     export: "Export",
     configurationFormat: "Configuration format",
     download: "Download",
-    codexCatalog: "Codex model_catalog_json"
+    preview: "Preview",
+    copy: "Copy",
+    copied: "Copied",
+    close: "Close",
+    exportPreview: "Export preview",
+    codexCatalog: "Codex model_catalog_json",
+    gcmpCompatible: "GitHub Copilot gcmp.compatibleModels"
   }
 }
 
@@ -225,4 +237,3 @@ export const LangContext = createContext<{
 export function useLang() {
   return useContext(LangContext)
 }
-

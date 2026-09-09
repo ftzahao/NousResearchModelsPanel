@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react"
 import BigNumber from "bignumber.js"
-import { buildModelCatalogJson } from "../model-export"
+import { buildGcmpCompatibleModels, buildModelCatalogJson } from "../model-export"
 import type { Model, ExportableModel, ModelConfigExporter, Lang, Theme, Currency } from "./types"
 import { translations, LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
@@ -24,7 +24,11 @@ import {
   Sparkles,
   Activity,
   Search,
-  Download
+  Download,
+  Eye,
+  Copy,
+  Check,
+  X
 } from "lucide-react"
 
 export function App() {
@@ -117,6 +121,8 @@ export function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [exporterId, setExporterId] = useState("codex")
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [previewPayload, setPreviewPayload] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const [tab, setTab] = useState<"models" | "charts">("models")
 
   const toggleTheme = () => {
@@ -222,6 +228,12 @@ export function App() {
         label: t.codexCatalog,
         fileName: "models.json",
         build: (items) => buildModelCatalogJson(items)
+      },
+      {
+        id: "github-copilot-gcmp",
+        label: t.gcmpCompatible,
+        fileName: "gcmp-compatible-models.json",
+        build: (items) => buildGcmpCompatibleModels(items)
       }
     ],
     [t]
@@ -232,21 +244,40 @@ export function App() {
   )
   const activeExporter = exporters.find((exporter) => exporter.id === exporterId) ?? exporters[0]
 
-  const downloadExport = () => {
+  const openExportPreview = () => {
     if (!activeExporter || selectedModels.length === 0) return
-    const payload = JSON.stringify(
-      activeExporter.build(selectedModels as ExportableModel[]),
-      null,
-      2
+    setPreviewPayload(
+      JSON.stringify(activeExporter.build(selectedModels as ExportableModel[]), null, 2)
     )
-    const blob = new Blob([payload], { type: "application/json" })
+    setShowExportMenu(false)
+  }
+
+  const closeExportPreview = () => {
+    setPreviewPayload(null)
+    setCopied(false)
+  }
+
+  const handleCopyExport = async () => {
+    if (!previewPayload) return
+    try {
+      await navigator.clipboard.writeText(previewPayload)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard unavailable (e.g. permissions denied)
+    }
+  }
+
+  const handleExportDownload = () => {
+    if (!activeExporter || !previewPayload) return
+    const blob = new Blob([previewPayload], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement("a")
     anchor.href = url
     anchor.download = activeExporter.fileName
     anchor.click()
     URL.revokeObjectURL(url)
-    setShowExportMenu(false)
+    closeExportPreview()
   }
 
   const stats = useMemo(
@@ -610,10 +641,10 @@ export function App() {
                             </select>
                             <button
                               type="button"
-                              onClick={downloadExport}
-                              className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${theme === "dark" ? "!bg-blue-600 !border-blue-500 !text-white hover:!bg-blue-500" : "!bg-blue-700 !border-blue-800 !text-white shadow-sm hover:!bg-blue-800"}`}
+                              onClick={openExportPreview}
+                              className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${theme === "dark" ? "bg-brand-500/20 border-brand-500/30 text-brand-300 hover:bg-brand-500/30" : "bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100"}`}
                             >
-                              {t.download} {activeExporter?.fileName}
+                              <Eye size={12} /> {t.preview}
                             </button>
                           </div>
                         )}
@@ -687,6 +718,73 @@ export function App() {
                 </div>
               )}
             </main>
+
+            {/* Export preview modal */}
+            {previewPayload && activeExporter && (
+              <div
+                className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6"
+                onClick={closeExportPreview}
+              >
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                <div
+                  className={`relative w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${theme === "dark" ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div
+                    className={`flex items-center justify-between gap-2 px-4 py-3 border-b ${theme === "dark" ? "border-white/10" : "border-gray-200"}`}
+                  >
+                    <div className="min-w-0">
+                      <h3
+                        className={`text-sm font-bold truncate ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                      >
+                        {t.exportPreview} · {activeExporter.fileName}
+                      </h3>
+                      <p
+                        className={`text-[10px] ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                      >
+                        {selectedModels.length} {t.selected}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeExportPreview}
+                      title={t.close}
+                      className={`p-1.5 rounded-lg transition-colors ${theme === "dark" ? "text-gray-400 hover:text-white hover:bg-white/10" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div
+                    className={`flex-1 overflow-auto p-4 min-h-0 ${theme === "dark" ? "bg-gray-950" : "bg-gray-50"}`}
+                  >
+                    <pre
+                      className={`text-[11px] leading-relaxed font-mono whitespace-pre ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}
+                    >
+                      {previewPayload}
+                    </pre>
+                  </div>
+                  <div
+                    className={`flex items-center justify-end gap-2 px-4 py-3 border-t ${theme === "dark" ? "border-white/10" : "border-gray-200"}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleCopyExport}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${theme === "dark" ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                    >
+                      {copied ? <Check size={12} /> : <Copy size={12} />}{" "}
+                      {copied ? t.copied : t.copy}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportDownload}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-500/20 text-brand-300 hover:bg-brand-500/30 transition-colors"
+                    >
+                      <Download size={12} /> {t.download} {activeExporter.fileName}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Footer */}
             <footer

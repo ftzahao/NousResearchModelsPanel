@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test"
-import { buildModelCatalogJson, type ExportableModel } from "./model-export"
+import {
+  buildGcmpCompatibleModels,
+  buildModelCatalogJson,
+  type ExportableModel
+} from "./model-export"
 
 const model = {
   id: "qwen/qwen3-coder",
@@ -7,7 +11,7 @@ const model = {
   description: "A coding model",
   context_length: 131072,
   architecture: { input_modalities: ["text"], output_modalities: ["text"] },
-  supported_parameters: ["reasoning", "temperature"],
+  supported_parameters: ["reasoning", "temperature", "tools"],
   top_provider: { context_length: 131072 },
   reasoning: {
     mandatory: false,
@@ -53,5 +57,62 @@ test("keeps catalog models JSON serializable and handles missing optional fields
         support_verbosity: false
       }
     ]
+  })
+})
+
+test("builds GitHub Copilot gcmp compatible model entries", () => {
+  expect(buildGcmpCompatibleModels([model])).toEqual([
+    {
+      baseUrl: "https://inference-api.nousresearch.com/v1",
+      capabilities: { imageInput: false, toolCalling: true },
+      contextWindow: 131072,
+      endpoint: "/chat/completions",
+      id: "qwen/qwen3-coder",
+      limit: { rpm: 180, tpm: 720000 },
+      maxInputTokens: 131072,
+      maxOutputTokens: 0,
+      model: "qwen/qwen3-coder",
+      modelsEndpoint: "/models",
+      name: "Qwen3 Coder",
+      provider: "Hermes Agent",
+      reasoningEffort: ["low", "high"],
+      sdkMode: "openai",
+      tooltip: "A coding model"
+    }
+  ])
+})
+
+test("omits tokenPricing for free models and includes it for priced ones", () => {
+  const priced = {
+    ...model,
+    pricing: {
+      prompt: "0.0000002",
+      completion: "0.0000012",
+      input_cache_read: "0.00000002",
+      input_cache_write: "0.00000025"
+    },
+    architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] }
+  } as unknown as ExportableModel
+  const pricedEntries = buildGcmpCompatibleModels([priced])
+  expect(pricedEntries[0]!.tokenPricing).toEqual({ USD: [0.2, 1.2, 0.02, 0.25] })
+  expect(pricedEntries[0]!.capabilities.imageInput).toBe(true)
+
+  const freeEntries = buildGcmpCompatibleModels([
+    {
+      id: "free/model",
+      name: "Free",
+      pricing: { prompt: "0", completion: "0" }
+    } as unknown as ExportableModel
+  ])
+  expect(freeEntries[0]!.tokenPricing).toBeUndefined()
+})
+
+test("tokenPricing.USD only appends cache prices that exist", () => {
+  const cacheReadOnly = {
+    ...model,
+    pricing: { prompt: "0.00000006", completion: "0.0000002", input_cache_read: "0.000000012" }
+  } as unknown as ExportableModel
+  expect(buildGcmpCompatibleModels([cacheReadOnly])[0]!.tokenPricing).toEqual({
+    USD: [0.06, 0.2, 0.012]
   })
 })
