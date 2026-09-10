@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react"
 import BigNumber from "bignumber.js"
-import { buildGcmpCompatibleModels, buildModelCatalogJson } from "./model-export"
+import {
+  buildGcmpCompatibleModels,
+  buildGithubCopilotLanguageModels,
+  buildModelCatalogJson
+} from "./model-export"
 import type { Model, ExportableModel, ModelConfigExporter, Lang, Theme } from "./types"
 import { translations, LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
@@ -142,6 +146,12 @@ export function App() {
         label: t.gcmpCompatible,
         fileName: "gcmp-compatible-models.json",
         build: (items) => buildGcmpCompatibleModels(items)
+      },
+      {
+        id: "github-copilot-language-models",
+        label: t.githubCopilotLanguageModels,
+        fileName: "chatLanguageModels.json",
+        build: (items) => buildGithubCopilotLanguageModels(items)
       }
     ],
     [t]

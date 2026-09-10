@@ -116,17 +116,26 @@ export function buildModelCatalogJson(models: ExportableModel[]): ModelCatalog {
 const GCMP_BASE_URL = "https://inference-api.nousresearch.com/v1"
 const GCMP_LIMIT = { rpm: 180, tpm: 720000 }
 
+function deriveContextTokens(model: ExportableModel): {
+  maxInputTokens: number
+  maxOutputTokens: number
+} {
+  const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+  // reserve 1/8 of the context window for output, capped at the provider's max output
+  const context = new BigNumber(contextWindow)
+  const declaredMaxOutput = model.top_provider?.max_completion_tokens ?? 0
+  const maxOutputTokens =
+    contextWindow > 0
+      ? BigNumber.min(context.dividedToIntegerBy(8), declaredMaxOutput || Infinity).toNumber()
+      : 0
+  const maxInputTokens = BigNumber.max(context.minus(maxOutputTokens), 0).toNumber()
+  return { maxInputTokens, maxOutputTokens }
+}
+
 export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompatibleModelEntry[] {
   return models.map((model) => {
     const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
-    // reserve 1/8 of the context window for output, capped at the provider's max output
-    const context = new BigNumber(contextWindow)
-    const declaredMaxOutput = model.top_provider?.max_completion_tokens ?? 0
-    const maxOutputTokens =
-      contextWindow > 0
-        ? BigNumber.min(context.dividedToIntegerBy(8), declaredMaxOutput || Infinity).toNumber()
-        : 0
-    const maxInputTokens = BigNumber.max(context.minus(maxOutputTokens), 0).toNumber()
+    const { maxInputTokens, maxOutputTokens } = deriveContextTokens(model)
     const pricing = (model.pricing ?? {}) as Record<string, string | undefined>
     // API prices are per-token; gcmp expects USD per 1M tokens
     const toPerMillion = (perToken: string) =>
@@ -160,4 +169,51 @@ export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompat
       ...(model.description ? { tooltip: model.description } : {})
     }
   })
+}
+
+export interface GithubCopilotLanguageModelEntry {
+  id: string
+  name: string
+  url: string
+  toolCalling: boolean
+  vision: boolean
+  maxInputTokens: number
+  maxOutputTokens: number
+  thinking?: boolean
+  supportsReasoningEffort?: string[]
+}
+
+export interface GithubCopilotLanguageModelsProvider {
+  name: string
+  vendor: "customendpoint"
+  apiType: "chat-completions"
+  apiKey: string
+  models: GithubCopilotLanguageModelEntry[]
+}
+
+export function buildGithubCopilotLanguageModels(
+  models: ExportableModel[]
+): GithubCopilotLanguageModelsProvider[] {
+  return [
+    {
+      name: "Nous Research",
+      vendor: "customendpoint",
+      apiType: "chat-completions",
+      apiKey: "${input:nousApiKey}",
+      models: models.map((model) => {
+        const { maxInputTokens, maxOutputTokens } = deriveContextTokens(model)
+        const efforts = model.reasoning?.supported_efforts
+        return {
+          id: model.id,
+          name: model.name,
+          url: `${GCMP_BASE_URL}/chat/completions`,
+          toolCalling: model.supported_parameters?.includes("tools") ?? false,
+          vision: model.architecture?.input_modalities?.includes("image") ?? false,
+          maxInputTokens,
+          maxOutputTokens,
+          ...(efforts?.length ? { thinking: true, supportsReasoningEffort: efforts } : {})
+        }
+      })
+    }
+  ]
 }

@@ -110,7 +110,8 @@ export const translations = {
     close: "关闭",
     exportPreview: "导出预览",
     codexCatalog: "Codex model_catalog_json",
-    gcmpCompatible: "GitHub Copilot gcmp.compatibleModels"
+    gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
+    githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json"
   },
   en: {
     title: "NousResearch Models",
@@ -220,7 +221,8 @@ export const translations = {
     close: "Close",
     exportPreview: "Export preview",
     codexCatalog: "Codex model_catalog_json",
-    gcmpCompatible: "GitHub Copilot gcmp.compatibleModels"
+    gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
+    githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json"
   }
 }
 
