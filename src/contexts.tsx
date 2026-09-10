@@ -15,6 +15,8 @@ export function useTheme() {
   return useContext(ThemeContext)
 }
 
+export type RateStatus = "idle" | "fetching" | "success" | "error"
+
 export const CurrencyContext = createContext<{
   currency: Currency
   setCurrency: (c: Currency) => void
@@ -24,6 +26,8 @@ export const CurrencyContext = createContext<{
   setCustomRate: (r: string) => void
   showCustomInput: boolean
   setShowCustomInput: (v: boolean) => void
+  rateStatus: RateStatus
+  fetchExchangeRate: () => Promise<void>
 }>({
   currency: "USD",
   setCurrency: () => {},
@@ -32,7 +36,9 @@ export const CurrencyContext = createContext<{
   customRate: "",
   setCustomRate: () => {},
   showCustomInput: false,
-  setShowCustomInput: () => {}
+  setShowCustomInput: () => {},
+  rateStatus: "idle",
+  fetchExchangeRate: async () => {}
 })
 
 export function useCurrency() {

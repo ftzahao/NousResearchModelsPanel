@@ -1,4 +1,4 @@
-import type { ExportableModel, ModelConfigExporter } from "../model-export"
+import type { ExportableModel, ModelConfigExporter } from "./model-export"
 
 export type Lang = "zh" | "en"
 export type Theme = "dark" | "light"
@@ -79,4 +79,3 @@ export interface Model {
   alias_target?: { name: string; slug: string }
   aliases?: string[]
 }
-

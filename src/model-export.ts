@@ -1,3 +1,5 @@
+import BigNumber from "bignumber.js"
+
 export interface ExportableModel {
   id: string
   canonical_slug: string
@@ -117,10 +119,18 @@ const GCMP_LIMIT = { rpm: 180, tpm: 720000 }
 export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompatibleModelEntry[] {
   return models.map((model) => {
     const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
-    const maxOutputTokens = model.top_provider?.max_completion_tokens ?? 0
+    // reserve 1/8 of the context window for output, capped at the provider's max output
+    const context = new BigNumber(contextWindow)
+    const declaredMaxOutput = model.top_provider?.max_completion_tokens ?? 0
+    const maxOutputTokens =
+      contextWindow > 0
+        ? BigNumber.min(context.dividedToIntegerBy(8), declaredMaxOutput || Infinity).toNumber()
+        : 0
+    const maxInputTokens = BigNumber.max(context.minus(maxOutputTokens), 0).toNumber()
     const pricing = (model.pricing ?? {}) as Record<string, string | undefined>
     // API prices are per-token; gcmp expects USD per 1M tokens
-    const toPerMillion = (perToken: string) => Math.round(Number(perToken) * 1e12) / 1e6
+    const toPerMillion = (perToken: string) =>
+      new BigNumber(perToken).times(1e6).decimalPlaces(6).toNumber()
     const promptPrice = pricing.prompt != null ? toPerMillion(pricing.prompt) : 0
     const completionPrice = pricing.completion != null ? toPerMillion(pricing.completion) : 0
     const usd: number[] = [promptPrice, completionPrice]
@@ -136,7 +146,7 @@ export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompat
       endpoint: "/chat/completions",
       id: model.id,
       limit: GCMP_LIMIT,
-      maxInputTokens: Math.max(contextWindow - maxOutputTokens, 0),
+      maxInputTokens,
       maxOutputTokens,
       model: model.id,
       modelsEndpoint: "/models",
