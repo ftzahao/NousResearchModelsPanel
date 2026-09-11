@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* Dark mode is class-driven (body.dark), not prefers-color-scheme */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Nous Research signature blue ramp (#0000F2 core) */
+  --color-brand-50: #efeffd;
+  --color-brand-100: #dedefc;
+  --color-brand-200: #b8b8fa;
+  --color-brand-300: #a3a3f8;
+  --color-brand-400: #4d4df7;
+  --color-brand-500: #0000f2;
+  --color-brand-600: #0000ce;
+  --color-brand-700: #0000a8;
+  --color-brand-800: #00007a;
+  --color-brand-900: #00005d;
+  --color-brand-950: #000034;
+
+  /* Blue-cast neutral ramp (portal slate-lilac #575380 family) */
+  --color-gray-50: #f5f5f8;
+  --color-gray-100: #e9e9f2;
+  --color-gray-200: #d6d6e5;
+  --color-gray-300: #bebedc;
+  --color-gray-400: #8484b0;
+  --color-gray-500: #6e6ba6;
+  --color-gray-600: #514e88;
+  --color-gray-700: #3a3768;
+  --color-gray-800: #24224e;
+  --color-gray-900: #12112f;
+  --color-gray-950: #070722;
+
+  --font-display: "Archivo Narrow", "Inter", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  --radius: 2px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-3xl: 10px;
+}

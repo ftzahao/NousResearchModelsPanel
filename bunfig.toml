@@ -1,0 +1,4 @@
+# Tailwind v4 is compiled by Bun's built-in plugin in the dev server;
+# production builds pass the plugin explicitly via build.ts (Bun.build JS API).
+[serve.static]
+plugins = ["bun-plugin-tailwind"]

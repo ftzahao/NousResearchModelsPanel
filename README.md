@@ -23,24 +23,24 @@ Live demo: **https://ftzahao.github.io/NousResearchModelsPanel/**
 
 Select models, then choose a format in the export menu. Each format targets one tool's config schema and can be previewed before download:
 
-| Format | Output file | Target |
-| --- | --- | --- |
-| Codex `model_catalog_json` | `models.json` | Codex model catalog |
-| GitHub Copilot `gcmp.compatibleModels` | `gcmp-compatible-models.json` | Copilot GCMP-compatible model entries |
-| GitHub Copilot `chatLanguageModels.json` | `chatLanguageModels.json` | Copilot custom-endpoint provider (`customendpoint` / `chat-completions`) |
-| ZCode `v2/config.json` provider | `zcode-providers.json` | ZCode OpenAI-compatible provider entry |
-| DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml` | DeepSeek Harness `llm-pi-ai` provider (YAML) |
+| Format                                    | Output file                   | Target                                                                   |
+| ----------------------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
+| Codex `model_catalog_json`                | `models.json`                 | Codex model catalog                                                      |
+| GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json` | Copilot GCMP-compatible model entries                                    |
+| GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`     | Copilot custom-endpoint provider (`customendpoint` / `chat-completions`) |
+| ZCode `v2/config.json` provider           | `zcode-providers.json`        | ZCode OpenAI-compatible provider entry                                   |
+| DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`          | DeepSeek Harness `llm-pi-ai` provider (YAML)                             |
 
 All conversion logic lives in `src/model-export.ts`. The ZCode and DeepSeek Harness exports use a fixed provider id (`nous`) so re-importing replaces the same entry instead of duplicating it.
 
 ## Tech Stack
 
-Bun + React 19 + Recharts + Tailwind CSS (CDN) + Lucide Icons + BigNumber.js + YAML
+Bun + React 19 + Recharts + Tailwind CSS v4 (compiled locally via `bun-plugin-tailwind`) + Lucide Icons + BigNumber.js + YAML
 
 ## Project Structure
 
 - `index.ts` — Bun server (port 8092, hot reload) with a cached `/api/models` proxy for the upstream API
-- `index.html` — HTML entry: Tailwind CDN config, theme CSS variables, responsive overrides
+- `index.html` — HTML entry: Tailwind stylesheet link, theme CSS variables, responsive overrides
 - `src/root.tsx` — React mount point
 - `src/app.tsx` — Main `App` component: state, filtering/sorting, selection, exporter registry
 - `src/components/` — `Header`, `StatsGrid`/`StatCard`, `FilterBar`, `ModelCard`, `ExportToolbar`, `ExportPreviewModal`, `SelectedModelsModal`, `Footer`, `charts.tsx`
@@ -72,7 +72,7 @@ bun run typecheck
 bun run build
 ```
 
-Runs `build.sh`, which bundles `src/root.tsx` into a single minified `docs/root.js` and writes `docs/index.html`. The `docs/` output is gitignored and built in CI, not committed.
+Runs `build.sh`, which bundles `index.html`, `src/root.tsx`, and the Tailwind CSS into static assets in `docs/` via `build.ts` (`Bun.build` + `bun-plugin-tailwind`). The `docs/` output is gitignored and built in CI, not committed.
 
 ## Deployment to GitHub Pages
 

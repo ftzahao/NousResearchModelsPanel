@@ -1,4 +1,3 @@
-
 # NousResearch Models Dashboard
 
 Bun + React 19 single-page dashboard for browsing the [NousResearch Inference API](https://inference-api.nousresearch.com) model list. The section below is project-specific; the Bun conventions that follow still apply.
@@ -9,7 +8,7 @@ Bun + React 19 single-page dashboard for browsing the [NousResearch Inference AP
 - `bun run dev` — Bun server on port 8092 with HMR (`bun --hot index.ts`)
 - `bun test` — run `src/model-export.test.ts`
 - `bun run typecheck` — `tsc --noEmit`
-- `bun run build` — runs `build.sh`, emitting a minified `docs/root.js` + `docs/index.html`
+- `bun run build` — runs `build.sh`, bundling `index.html` + `src/root.tsx` + Tailwind CSS into static assets in `docs/`
 
 ## Architecture
 
@@ -23,7 +22,7 @@ Bun + React 19 single-page dashboard for browsing the [NousResearch Inference AP
 ## Conventions
 
 - Every user-facing string must exist in both the `zh` and `en` sections of `src/i18n.ts`
-- Themes are driven by CSS variables in `index.html` plus `theme === "dark"` conditional classes; there is no Tailwind build step (Tailwind loads from the CDN in `index.html`)
+- Themes are driven by CSS variables in `index.html` plus `theme === "dark"` conditional classes; Tailwind v4 compiles locally (`src/tailwind.css` with `@theme`/`@custom-variant dark`, `bun-plugin-tailwind` via `bunfig.toml` in dev and `build.ts` in prod) — never load it from a CDN
 - Adding an export format means adding a builder in `src/model-export.ts`, a registry entry in `src/app.tsx`, i18n labels for both languages, and tests in `src/model-export.test.ts`
 - `docs/` is gitignored and built by CI (`.github/workflows/deploy.yml` calls `bash build.sh`); never commit its contents
 

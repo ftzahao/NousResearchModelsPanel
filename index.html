@@ -4,71 +4,51 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NousResearch Models Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                50: "#f0f9ff",
-                100: "#e0f2fe",
-                200: "#bae6fd",
-                300: "#7dd3fc",
-                400: "#38bdf8",
-                500: "#0ea5e9",
-                600: "#0284c7",
-                700: "#0369a1",
-                800: "#075985",
-                900: "#0c4a6e",
-                950: "#082f49"
-              }
-            }
-          }
-        }
-      }
-    </script>
+    <link rel="stylesheet" href="./src/tailwind.css" />
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300..800&display=swap");
       * {
         font-family: "Inter", system-ui, sans-serif;
       }
 
-      /* Light theme variables */
+      /* Light theme variables — Portal look: paper surface, ink text, slate-lilac borders */
       :root {
-        --bg-primary: #ffffff;
-        --bg-secondary: #f8fafc;
-        --bg-tertiary: #f1f5f9;
-        --text-primary: #0f172a;
-        --text-secondary: #475569;
-        --text-muted: #94a3b8;
-        --border-primary: #e2e8f0;
-        --border-subtle: #f1f5f9;
-        --glass-bg: rgba(255, 255, 255, 0.7);
-        --glass-border: rgba(0, 0, 0, 0.08);
+        --bg-primary: #f5f5f8;
+        --bg-secondary: #ffffff;
+        --bg-tertiary: #e9e9f2;
+        --text-primary: #12112f;
+        --text-secondary: #514e88;
+        --text-muted: #6e6ba6;
+        --border-primary: #d6d6e5;
+        --border-subtle: #e9e9f2;
+        --glass-bg: rgba(255, 255, 255, 0.75);
+        --glass-border: rgba(18, 17, 47, 0.1);
         --card-bg: #ffffff;
-        --card-hover-bg: #f8fafc;
+        --card-hover-bg: #f5f5f8;
         --input-bg: #ffffff;
-        --badge-bg: #f1f5f9;
+        --badge-bg: #e9e9f2;
+        --accent: #0000f2;
+        --acid: #edff45;
       }
 
-      /* Dark theme variables */
+      /* Dark theme variables — Hermes look: ink-blue field lit by Nous blue */
       .dark {
-        --bg-primary: #030712;
-        --bg-secondary: #111827;
-        --bg-tertiary: #1f2937;
-        --text-primary: #f9fafb;
-        --text-secondary: #d1d5db;
-        --text-muted: #6b7280;
-        --border-primary: rgba(255, 255, 255, 0.1);
-        --border-subtle: rgba(255, 255, 255, 0.05);
-        --glass-bg: rgba(255, 255, 255, 0.03);
-        --glass-border: rgba(255, 255, 255, 0.06);
-        --card-bg: rgba(255, 255, 255, 0.03);
-        --card-hover-bg: rgba(255, 255, 255, 0.05);
-        --input-bg: rgba(0, 0, 0, 0.3);
-        --badge-bg: rgba(255, 255, 255, 0.05);
+        --bg-primary: #070722;
+        --bg-secondary: #0c0b30;
+        --bg-tertiary: #12112f;
+        --text-primary: #f5f5f8;
+        --text-secondary: #bebedc;
+        --text-muted: #8484b0;
+        --border-primary: rgba(190, 190, 220, 0.14);
+        --border-subtle: rgba(190, 190, 220, 0.07);
+        --glass-bg: rgba(190, 190, 220, 0.045);
+        --glass-border: rgba(190, 190, 220, 0.12);
+        --card-bg: rgba(190, 190, 220, 0.045);
+        --card-hover-bg: rgba(190, 190, 220, 0.08);
+        --input-bg: rgba(7, 7, 34, 0.6);
+        --badge-bg: rgba(190, 190, 220, 0.08);
+        --accent: #0000f2;
+        --acid: #edff45;
       }
 
       body {
@@ -79,38 +59,68 @@
           color 0.2s;
       }
 
-      .glass {
-        background: var(--glass-bg);
-        backdrop-filter: blur(12px);
-        border: 1px solid var(--glass-border);
+      /* Nous blue glow rising from the top edge, like the portal's blue frame */
+      body.dark {
+        background-image: radial-gradient(
+          1100px 340px at 50% -80px,
+          rgba(0, 0, 242, 0.5),
+          transparent 70%
+        );
+        background-attachment: fixed;
       }
 
-      .dark .glass {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.06);
+      ::selection {
+        background: #edff45;
+        color: #070722;
+      }
+
+      h1,
+      h2,
+      h3,
+      .font-display {
+        font-family: "Archivo Narrow", "Inter", system-ui, sans-serif;
+        letter-spacing: 0.01em;
+      }
+
+      .font-mono,
+      code,
+      kbd {
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+      }
+
+      .select-arrow {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        padding-right: 2rem !important;
       }
 
       .card-glow:hover {
-        box-shadow: 0 4px 24px rgba(14, 165, 233, 0.12);
+        box-shadow: 0 4px 24px rgba(0, 0, 242, 0.14);
       }
 
       .dark .card-glow:hover {
-        box-shadow: 0 0 30px rgba(14, 165, 233, 0.15);
+        box-shadow: 0 0 30px rgba(0, 0, 242, 0.35);
       }
 
-      ::-webkit-scrollbar {
-        width: 6px;
+      /* ── Surfaces ── */
+      .glass {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
       }
-      ::-webkit-scrollbar-track {
-        background: transparent;
+      .dark .glass {
+        background: rgba(190, 190, 220, 0.045);
+        border: 1px solid rgba(190, 190, 220, 0.12);
       }
-      ::-webkit-scrollbar-thumb {
-        background: var(--border-primary);
-        border-radius: 3px;
+      .modality-tag {
+        font-size: 0.65rem;
+        padding: 1px 6px;
+        border-radius: 4px;
       }
-      .animate-fade-in {
-        animation: fadeIn 0.3s ease-out;
-      }
+
+      /* ── Motion system: motion answers actions, one staggered load moment ── */
       @keyframes fadeIn {
         from {
           opacity: 0;
@@ -121,22 +131,155 @@
           transform: translateY(0);
         }
       }
-      .modality-tag {
-        font-size: 0.65rem;
-        padding: 1px 6px;
-        border-radius: 4px;
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes popIn {
+        from {
+          opacity: 0;
+          transform: scale(0.4);
+        }
+        70% {
+          transform: scale(1.15);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      @keyframes overlayIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes panelIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px) scale(0.985);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
 
-      .select-arrow {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-        background-position: right 0.5rem center;
-        background-repeat: no-repeat;
-        padding-right: 2rem !important;
+      .animate-fade-in {
+        animation: fadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+      }
+      .animate-slide-down {
+        animation: slideDown 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .pop-check {
+        animation: popIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+      .overlay-in {
+        animation: overlayIn 0.2s ease-out both;
+      }
+      .panel-in {
+        animation: panelIn 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      /* Staggered card entrance + gentle hover lift */
+      .model-grid > *,
+      .card-grid > * {
+        animation: fadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+        transition:
+          transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+          box-shadow 0.25s ease;
+      }
+      .model-grid > *:nth-child(2),
+      .card-grid > *:nth-child(2) {
+        animation-delay: 28ms;
+      }
+      .model-grid > *:nth-child(3),
+      .card-grid > *:nth-child(3) {
+        animation-delay: 56ms;
+      }
+      .model-grid > *:nth-child(4),
+      .card-grid > *:nth-child(4) {
+        animation-delay: 84ms;
+      }
+      .model-grid > *:nth-child(5),
+      .card-grid > *:nth-child(5) {
+        animation-delay: 112ms;
+      }
+      .model-grid > *:nth-child(6),
+      .card-grid > *:nth-child(6) {
+        animation-delay: 140ms;
+      }
+      .model-grid > *:nth-child(7),
+      .card-grid > *:nth-child(7) {
+        animation-delay: 168ms;
+      }
+      .model-grid > *:nth-child(8),
+      .card-grid > *:nth-child(8) {
+        animation-delay: 196ms;
+      }
+      .model-grid > *:nth-child(9),
+      .card-grid > *:nth-child(9) {
+        animation-delay: 224ms;
+      }
+      .model-grid > *:nth-child(10),
+      .card-grid > *:nth-child(10) {
+        animation-delay: 252ms;
+      }
+      .model-grid > *:nth-child(11),
+      .card-grid > *:nth-child(11) {
+        animation-delay: 280ms;
+      }
+      .model-grid > *:nth-child(12),
+      .card-grid > *:nth-child(12) {
+        animation-delay: 308ms;
+      }
+      .model-grid > *:nth-child(13),
+      .card-grid > *:nth-child(13) {
+        animation-delay: 336ms;
+      }
+      .model-grid > *:nth-child(14),
+      .card-grid > *:nth-child(14) {
+        animation-delay: 364ms;
+      }
+      .model-grid > *:nth-child(15),
+      .card-grid > *:nth-child(15) {
+        animation-delay: 392ms;
+      }
+      .model-grid > *:nth-child(16),
+      .card-grid > *:nth-child(16) {
+        animation-delay: 420ms;
+      }
+      .model-grid > *:nth-child(n + 17),
+      .card-grid > *:nth-child(n + 17) {
+        animation-delay: 440ms;
+      }
+      .model-grid > *:hover,
+      .card-grid > *:hover {
+        transform: translateY(-2px);
+      }
+
+      /* Respect users who prefer reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-delay: 0ms !important;
+          transition-duration: 0.01ms !important;
+        }
       }
 
       /* Light mode scrollbar */
       :root::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+        background: #c9c9dc;
       }
 
       /* ── Responsive overrides ─────────────────────────── */

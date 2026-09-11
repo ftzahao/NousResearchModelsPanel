@@ -23,24 +23,24 @@
 
 勾选模型后，在导出菜单中选择格式。每种格式对应一个工具的配置结构，下载前均可预览：
 
-| 格式 | 输出文件 | 目标工具 |
-| --- | --- | --- |
-| Codex `model_catalog_json` | `models.json` | Codex 模型目录 |
-| GitHub Copilot `gcmp.compatibleModels` | `gcmp-compatible-models.json` | Copilot GCMP 兼容模型条目 |
-| GitHub Copilot `chatLanguageModels.json` | `chatLanguageModels.json` | Copilot 自定义端点提供商（`customendpoint` / `chat-completions`） |
-| ZCode `v2/config.json` provider | `zcode-providers.json` | ZCode OpenAI 兼容提供商条目 |
-| DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml` | DeepSeek Harness `llm-pi-ai` 提供商（YAML） |
+| 格式                                      | 输出文件                      | 目标工具                                                          |
+| ----------------------------------------- | ----------------------------- | ----------------------------------------------------------------- |
+| Codex `model_catalog_json`                | `models.json`                 | Codex 模型目录                                                    |
+| GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json` | Copilot GCMP 兼容模型条目                                         |
+| GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`     | Copilot 自定义端点提供商（`customendpoint` / `chat-completions`） |
+| ZCode `v2/config.json` provider           | `zcode-providers.json`        | ZCode OpenAI 兼容提供商条目                                       |
+| DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`          | DeepSeek Harness `llm-pi-ai` 提供商（YAML）                       |
 
 所有转换逻辑集中在 `src/model-export.ts`。ZCode 与 DeepSeek Harness 导出使用固定提供商 id（`nous`），重复导入时覆盖同一条目而非新增。
 
 ## 技术栈
 
-Bun + React 19 + Recharts + Tailwind CSS（CDN）+ Lucide Icons + BigNumber.js + YAML
+Bun + React 19 + Recharts + Tailwind CSS v4（通过 `bun-plugin-tailwind` 本地编译）+ Lucide Icons + BigNumber.js + YAML
 
 ## 项目结构
 
 - `index.ts` — Bun 服务器（8092 端口，热重载），提供带缓存的 `/api/models` 上游代理
-- `index.html` — HTML 入口：Tailwind CDN 配置、主题 CSS 变量、响应式覆盖样式
+- `index.html` — HTML 入口：Tailwind 样式表引用、主题 CSS 变量、响应式覆盖样式
 - `src/root.tsx` — React 挂载入口
 - `src/app.tsx` — 主 `App` 组件：状态、筛选/排序、选择逻辑、导出器注册
 - `src/components/` — `Header`、`StatsGrid`/`StatCard`、`FilterBar`、`ModelCard`、`ExportToolbar`、`ExportPreviewModal`、`SelectedModelsModal`、`Footer`、`charts.tsx`
@@ -72,7 +72,7 @@ bun run typecheck
 bun run build
 ```
 
-执行 `build.sh`，将 `src/root.tsx` 打包为单个压缩文件 `docs/root.js`，并生成 `docs/index.html`。`docs/` 输出已被 gitignore，由 CI 构建，不提交到仓库。
+执行 `build.sh`，通过 `build.ts`（`Bun.build` + `bun-plugin-tailwind`）将 `index.html`、`src/root.tsx` 与 Tailwind CSS 打包为静态资源输出到 `docs/`。`docs/` 输出已被 gitignore，由 CI 构建，不提交到仓库。
 
 ## 部署到 GitHub Pages
 

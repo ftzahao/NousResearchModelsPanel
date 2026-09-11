@@ -7,10 +7,7 @@ set -e
 rm -rf docs
 mkdir -p docs
 
-# Bundle the TSX frontend into a single minified JS file (src/root.tsx is the entry point)
-bun build src/root.tsx --outdir docs --target browser --minify
-
-# Copy index.html for the static build, pointing the module script at the bundled output
-sed 's|src="./src/root.tsx"|src="./root.js"|g' index.html > docs/index.html
+# Bundle index.html + src/root.tsx + Tailwind CSS into static assets (build.ts wires the Tailwind plugin)
+bun build.ts
 
 echo "Build complete: docs/"
