@@ -116,7 +116,8 @@ export const translations = {
     exportPreview: "导出预览",
     codexCatalog: "Codex model_catalog_json",
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
-    githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json"
+    githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
+    zcodeProviders: "ZCode v2/config.json provider"
   },
   en: {
     title: "NousResearch Models",
@@ -232,7 +233,8 @@ export const translations = {
     exportPreview: "Export preview",
     codexCatalog: "Codex model_catalog_json",
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
-    githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json"
+    githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
+    zcodeProviders: "ZCode v2/config.json provider"
   }
 }
 

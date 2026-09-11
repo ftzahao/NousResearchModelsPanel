@@ -3,6 +3,7 @@ import {
   buildGcmpCompatibleModels,
   buildGithubCopilotLanguageModels,
   buildModelCatalogJson,
+  buildZcodeConfig,
   type ExportableModel
 } from "./model-export"
 
@@ -218,4 +219,55 @@ test("omits thinking and supportsReasoningEffort for models without reasoning su
   expect(entry).not.toHaveProperty("supportsReasoningEffort")
   expect(entry.maxInputTokens).toBe(3584)
   expect(entry.maxOutputTokens).toBe(512)
+})
+
+test("builds a ZCode provider entry for the Hermes Agent channel", () => {
+  expect(buildZcodeConfig([model])).toEqual({
+    nous: {
+      name: "Hermes Agent",
+      kind: "openai-compatible",
+      source: "custom",
+      options: {
+        apiKey: "${input:nousApiKey}",
+        baseURL: "https://inference-api.nousresearch.com/v1",
+        apiKeyRequired: true
+      },
+      models: {
+        "qwen/qwen3-coder": {
+          limit: { context: 131072, output: 16384 },
+          modalities: { input: ["text"], output: ["text"] },
+          reasoning: { enabled: true, variants: ["low", "high"], defaultVariant: "low" }
+        }
+      }
+    }
+  })
+})
+
+test("omits reasoning and defaults modalities in the ZCode export", () => {
+  const provider = buildZcodeConfig([
+    {
+      id: "free/model",
+      name: "Free",
+      context_length: 4096,
+      supported_parameters: []
+    } as unknown as ExportableModel
+  ])["nous"]!
+  expect(provider.models["free/model"]).toEqual({
+    limit: { context: 4096, output: 512 },
+    modalities: { input: ["text"], output: ["text"] }
+  })
+})
+
+test("keeps ZCode reasoning variants without a default effort", () => {
+  const entry = buildZcodeConfig([
+    {
+      id: "r/model",
+      name: "R",
+      context_length: 8192,
+      architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] },
+      reasoning: { mandatory: false, supported_efforts: ["high", "max"] }
+    } as unknown as ExportableModel
+  ])["nous"]!.models["r/model"]!
+  expect(entry.reasoning).toEqual({ enabled: true, variants: ["high", "max"] })
+  expect(entry.modalities).toEqual({ input: ["text", "image"], output: ["text"] })
 })

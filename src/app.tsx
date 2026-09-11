@@ -3,7 +3,8 @@ import BigNumber from "bignumber.js"
 import {
   buildGcmpCompatibleModels,
   buildGithubCopilotLanguageModels,
-  buildModelCatalogJson
+  buildModelCatalogJson,
+  buildZcodeConfig
 } from "./model-export"
 import type { Model, ExportableModel, ModelConfigExporter, Lang, Theme } from "./types"
 import { translations, LangContext } from "./i18n"
@@ -154,6 +155,12 @@ export function App() {
         label: t.githubCopilotLanguageModels,
         fileName: "chatLanguageModels.json",
         build: (items) => buildGithubCopilotLanguageModels(items)
+      },
+      {
+        id: "zcode",
+        label: t.zcodeProviders,
+        fileName: "zcode-providers.json",
+        build: (items) => buildZcodeConfig(items)
       }
     ],
     [t]

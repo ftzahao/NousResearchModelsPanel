@@ -217,3 +217,65 @@ export function buildGithubCopilotLanguageModels(
     }
   ]
 }
+
+export interface ZcodeModelEntry {
+  limit: { context: number; output: number }
+  modalities: { input: string[]; output: string[] }
+  reasoning?: { enabled: true; variants: string[]; defaultVariant?: string }
+}
+
+export interface ZcodeProviderEntry {
+  name: string
+  kind: "openai-compatible"
+  source: "custom"
+  options: { apiKey: string; baseURL: string; apiKeyRequired: boolean }
+  models: Record<string, ZcodeModelEntry>
+}
+
+// fixed id so every export replaces the same provider entry in ~/.zcode/v2/config.json
+const ZCODE_PROVIDER_ID = "nous"
+
+export function buildZcodeConfig(models: ExportableModel[]): Record<string, ZcodeProviderEntry> {
+  return {
+    [ZCODE_PROVIDER_ID]: {
+      name: "Hermes Agent",
+      kind: "openai-compatible",
+      source: "custom",
+      options: {
+        apiKey: "${input:nousApiKey}",
+        baseURL: GCMP_BASE_URL,
+        apiKeyRequired: true
+      },
+      models: Object.fromEntries(
+        models.map((model) => {
+          const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+          const { maxOutputTokens } = deriveContextTokens(model)
+          const efforts = model.reasoning?.supported_efforts
+          const entry: ZcodeModelEntry = {
+            limit: { context: contextWindow, output: maxOutputTokens },
+            modalities: {
+              input: model.architecture?.input_modalities?.length
+                ? model.architecture.input_modalities
+                : ["text"],
+              output: model.architecture?.output_modalities?.length
+                ? model.architecture.output_modalities
+                : ["text"]
+            },
+            ...(efforts?.length
+              ? {
+                  reasoning: {
+                    enabled: true as const,
+                    variants: efforts,
+                    ...(model.reasoning?.default_effort
+                      ? { defaultVariant: model.reasoning.default_effort }
+                      : {})
+                  }
+                }
+              : {})
+          }
+          return [model.id, entry] as const
+        })
+      )
+    }
+  }
+}
