@@ -10,6 +10,7 @@ export function ExportToolbar({
   exporterId,
   setExporterId,
   onSelectVisible,
+  onAppendVisible,
   onClearSelection,
   onPreview,
   onViewSelected
@@ -19,6 +20,7 @@ export function ExportToolbar({
   exporterId: string
   setExporterId: (id: string) => void
   onSelectVisible: () => void
+  onAppendVisible: () => void
   onClearSelection: () => void
   onPreview: () => void
   onViewSelected: () => void
@@ -47,6 +49,13 @@ export function ExportToolbar({
           className={`px-2 py-1.5 rounded-lg text-[10px] ${theme === "dark" ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
         >
           {t.selectVisible}
+        </button>
+        <button
+          type="button"
+          onClick={onAppendVisible}
+          className={`px-2 py-1.5 rounded-lg text-[10px] ${theme === "dark" ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+        >
+          {t.appendVisible}
         </button>
         <button
           type="button"

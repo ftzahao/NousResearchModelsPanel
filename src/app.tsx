@@ -299,6 +299,13 @@ export function App() {
                     onSelectVisible={() =>
                       setSelectedIds(new Set(filtered.map((model) => model.id)))
                     }
+                    onAppendVisible={() =>
+                      setSelectedIds((current) => {
+                        const next = new Set(current)
+                        filtered.forEach((model) => next.add(model.id))
+                        return next
+                      })
+                    }
                     onClearSelection={() => setSelectedIds(new Set())}
                     onPreview={openExportPreview}
                     onViewSelected={() => setShowSelectedModels(true)}
