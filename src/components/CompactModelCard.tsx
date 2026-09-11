@@ -2,9 +2,9 @@ import { Brain, Shield, Sparkles, Eye } from "lucide-react"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
-import { formatCtx, formatPriceShort, getProviderColor, daysSince } from "../utils"
+import { bn, formatCtx, formatPriceShort, getProviderColor, daysSince } from "../utils"
 import { SelectCheckbox } from "./SelectCheckbox"
-
+import { IntelligenceBar } from "./IntelligenceBar"
 export function CompactModelCard({
   model,
   selected,
@@ -28,7 +28,9 @@ export function CompactModelCard({
       onClick={onSelect}
       className={`glass rounded-xl p-2.5 cursor-pointer transition-all duration-200 ${
         selected
-          ? "ring-1 ring-brand-500 shadow-[0_0_0_2px_rgba(37,99,235,0.25)]"
+          ? isDark
+            ? "ring-1 ring-[#edff45]/80 shadow-[0_0_0_2px_rgba(237,255,69,0.2)]"
+            : "ring-1 ring-brand-600 shadow-[0_0_0_2px_rgba(0,0,242,0.2)]"
           : isDark
             ? "hover:bg-white/[0.03]"
             : "hover:bg-gray-50"
@@ -62,7 +64,7 @@ export function CompactModelCard({
             {model.reasoning?.mandatory && (
               <Brain
                 size={11}
-                className={`flex-shrink-0 ${isDark ? "text-violet-400" : "text-violet-600"}`}
+                className={`flex-shrink-0 ${isDark ? "text-brand-400" : "text-brand-600"}`}
               />
             )}
             {model.top_provider?.is_moderated && (
@@ -97,23 +99,34 @@ export function CompactModelCard({
       >
         <span title={t.context}>{formatCtx(model.context_length)}</span>
         <span
-          className={isDark ? "text-emerald-400" : "text-emerald-600"}
+          className={isDark ? "text-brand-300" : "text-brand-700"}
           title={`${t.promptPrice} (${t.perM})`}
         >
-          {formatPriceShort(model.pricing.prompt, currency, exchangeRate)}
+          {bn(model.pricing.prompt).isZero() ? (
+            <span className={`font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}>
+              {t.freeLabel}
+            </span>
+          ) : (
+            formatPriceShort(model.pricing.prompt, currency, exchangeRate)
+          )}
         </span>
         <span
-          className={isDark ? "text-sky-400" : "text-sky-600"}
+          className={isDark ? "text-brand-400" : "text-brand-600"}
           title={`${t.completePrice} (${t.perM})`}
         >
-          {formatPriceShort(model.pricing.completion, currency, exchangeRate)}
+          {bn(model.pricing.completion).isZero() ? (
+            <span className={`font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}>
+              {t.freeLabel}
+            </span>
+          ) : (
+            formatPriceShort(model.pricing.completion, currency, exchangeRate)
+          )}
         </span>
-        <span
-          className={`font-semibold ${isDark ? "text-gray-200" : "text-gray-700"}`}
-          title={t.intelligence}
-        >
-          {intelligence ?? "—"}
-        </span>
+        {intelligence != null ? (
+          <IntelligenceBar score={intelligence} color={color} theme={theme} width="w-8" />
+        ) : (
+          <span className="opacity-50">—</span>
+        )}
       </div>
     </div>
   )

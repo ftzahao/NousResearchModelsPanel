@@ -36,9 +36,9 @@ export function SelectedModelsModal({
       className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm overlay-in" />
       <div
-        className={`relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${isDark ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
+        className={`panel-in relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${isDark ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -98,10 +98,10 @@ export function SelectedModelsModal({
                   <span className={isDark ? "text-gray-500" : "text-gray-400"}>
                     {t.context} {formatCtx(model.context_length)}
                   </span>
-                  <span className={isDark ? "text-emerald-400" : "text-emerald-600"}>
+                  <span className={`font-mono ${isDark ? "text-brand-300" : "text-brand-700"}`}>
                     {formatPrice(model.pricing?.prompt, lang, currency, exchangeRate)}
                   </span>
-                  <span className={isDark ? "text-sky-400" : "text-sky-600"}>
+                  <span className={`font-mono ${isDark ? "text-brand-400" : "text-brand-600"}`}>
                     {formatPrice(model.pricing?.completion, lang, currency, exchangeRate)}
                   </span>
                   <span className={isDark ? "text-gray-600" : "text-gray-400"}>

@@ -14,21 +14,27 @@ export function StatCard({
 }) {
   const { theme } = useTheme()
   return (
-    <div className="glass rounded-xl p-4 flex items-center gap-3 animate-fade-in">
+    <div className="glass p-4 flex items-center gap-3 animate-fade-in">
       <div
-        className={`w-10 h-10 rounded-lg flex items-center justify-center ${theme === "dark" ? "bg-brand-500/10 text-brand-400" : "bg-brand-50 text-brand-600"}`}
+        className={`w-10 h-10 flex items-center justify-center flex-shrink-0 border ${theme === "dark" ? "bg-brand-500/15 border-brand-500/40 text-brand-300" : "bg-brand-50 border-brand-200 text-brand-600"}`}
       >
         {icon}
       </div>
-      <div>
-        <div className={`text-2xl font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
+      <div className="min-w-0">
+        <div
+          className={`text-2xl font-display font-semibold leading-none ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+        >
           {value}
         </div>
-        <div className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+        <div
+          className={`text-[10px] font-mono uppercase tracking-wider mt-1.5 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+        >
           {label}
         </div>
         {sub && (
-          <div className={`text-[10px] ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+          <div
+            className={`text-[10px] font-mono ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+          >
             {sub}
           </div>
         )}

@@ -211,8 +211,8 @@ export function FilterBar({
             className={`px-2 sm:px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
               showReasoning
                 ? isDark
-                  ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
-                  : "bg-violet-100 text-violet-700 border-violet-300"
+                  ? "bg-brand-500/20 text-brand-300 border-brand-500/40"
+                  : "bg-brand-100 text-brand-700 border-brand-300"
                 : isDark
                   ? "bg-gray-900/50 text-gray-400 border-white/5"
                   : "bg-gray-100 text-gray-500 border-gray-200"

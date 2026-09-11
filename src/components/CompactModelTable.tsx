@@ -2,8 +2,9 @@ import { Brain, Shield, Sparkles, Eye } from "lucide-react"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
-import { formatCtx, formatPriceShort, getProviderColor, daysSince } from "../utils"
+import { bn, formatCtx, formatPriceShort, getProviderColor, daysSince } from "../utils"
 import { SelectCheckbox } from "./SelectCheckbox"
+import { IntelligenceBar } from "./IntelligenceBar"
 
 export function CompactModelTable({
   models,
@@ -56,7 +57,7 @@ export function CompactModelTable({
                     isDark
                       ? "border-white/5 hover:bg-white/[0.03]"
                       : "border-gray-100 hover:bg-gray-50"
-                  } ${selected ? (isDark ? "bg-brand-500/10" : "bg-brand-50") : ""}`}
+                  } ${selected ? (isDark ? "bg-[#edff45]/[0.08] hover:bg-[#edff45]/[0.1]" : "bg-brand-50") : ""}`}
                 >
                   <td className={td}>
                     <SelectCheckbox
@@ -88,16 +89,43 @@ export function CompactModelTable({
                   </td>
                   <td className={`${td} font-mono`}>{formatCtx(model.context_length)}</td>
                   <td
-                    className={`${td} text-right font-mono ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
+                    className={`${td} text-right font-mono ${isDark ? "text-brand-300" : "text-brand-700"}`}
                   >
-                    {formatPriceShort(model.pricing.prompt, currency, exchangeRate)}
+                    {bn(model.pricing.prompt).isZero() ? (
+                      <span
+                        className={`font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}
+                      >
+                        {t.freeLabel}
+                      </span>
+                    ) : (
+                      formatPriceShort(model.pricing.prompt, currency, exchangeRate)
+                    )}
                   </td>
                   <td
-                    className={`${td} text-right font-mono ${isDark ? "text-sky-400" : "text-sky-600"}`}
+                    className={`${td} text-right font-mono ${isDark ? "text-brand-400" : "text-brand-600"}`}
                   >
-                    {formatPriceShort(model.pricing.completion, currency, exchangeRate)}
+                    {bn(model.pricing.completion).isZero() ? (
+                      <span
+                        className={`font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}
+                      >
+                        {t.freeLabel}
+                      </span>
+                    ) : (
+                      formatPriceShort(model.pricing.completion, currency, exchangeRate)
+                    )}
                   </td>
-                  <td className={`${td} text-right font-medium`}>{intelligence ?? "—"}</td>
+                  <td className={`${td} text-right`}>
+                    {intelligence != null ? (
+                      <IntelligenceBar
+                        score={intelligence}
+                        color={color}
+                        theme={theme}
+                        width="w-12"
+                      />
+                    ) : (
+                      <span className="text-gray-500">—</span>
+                    )}
+                  </td>
                   <td className={`${td} text-right`}>
                     <div className="flex items-center justify-end gap-1">
                       {daysSince(model.created) < 7 && (
@@ -112,7 +140,7 @@ export function CompactModelTable({
                         <span title={t.reasoningLabel}>
                           <Brain
                             size={12}
-                            className={isDark ? "text-violet-400" : "text-violet-600"}
+                            className={isDark ? "text-brand-400" : "text-brand-600"}
                           />
                         </span>
                       )}

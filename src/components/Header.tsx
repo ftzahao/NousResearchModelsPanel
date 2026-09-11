@@ -6,8 +6,7 @@ import {
   Moon,
   Globe,
   DollarSign,
-  ChevronDown,
-  Cpu
+  ChevronDown
 } from "lucide-react"
 import { useTheme, useCurrency } from "../contexts"
 import { useLang } from "../i18n"
@@ -45,17 +44,19 @@ export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab)
       <div className="max-w-[1600px] mx-auto px-3 sm:px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center flex-shrink-0">
-              <Cpu size={16} className="text-white" />
+            <div className="w-8 h-8 bg-brand-500 flex items-center justify-center flex-shrink-0">
+              <span className="font-mono font-semibold text-white text-sm leading-none select-none">
+                //
+              </span>
             </div>
             <div className="min-w-0">
               <h1
-                className={`text-sm sm:text-base font-bold truncate ${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                className={`text-sm sm:text-base font-bold uppercase tracking-wide truncate ${theme === "dark" ? "text-white" : "text-brand-700"}`}
               >
-                {t.title}
+                <span className="text-brand-500 dark:text-brand-400">//</span> {t.title}
               </h1>
               <p
-                className={`text-[10px] truncate ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                className={`text-[10px] truncate font-mono ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
               >
                 {t.subtitle}
               </p>
@@ -64,14 +65,12 @@ export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab)
           <div className="header-controls flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             <button
               onClick={() => onTabChange("models")}
-              className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-2 sm:px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border transition-colors ${
                 tab === "models"
-                  ? theme === "dark"
-                    ? "bg-brand-500/20 text-brand-300"
-                    : "bg-brand-100 text-brand-700"
+                  ? "bg-brand-500 text-white border-brand-500"
                   : theme === "dark"
-                    ? "text-gray-400 hover:text-gray-200"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "text-gray-400 border-gray-500/40 hover:text-gray-200 hover:border-gray-400"
+                    : "text-gray-500 border-gray-400/50 hover:text-brand-600 hover:border-brand-500"
               }`}
             >
               <Grid3X3 size={12} className="inline sm:mr-1" />{" "}
@@ -79,14 +78,12 @@ export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab)
             </button>
             <button
               onClick={() => onTabChange("charts")}
-              className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-2 sm:px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border transition-colors ${
                 tab === "charts"
-                  ? theme === "dark"
-                    ? "bg-brand-500/20 text-brand-300"
-                    : "bg-brand-100 text-brand-700"
+                  ? "bg-brand-500 text-white border-brand-500"
                   : theme === "dark"
-                    ? "text-gray-400 hover:text-gray-200"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "text-gray-400 border-gray-500/40 hover:text-gray-200 hover:border-gray-400"
+                    : "text-gray-500 border-gray-400/50 hover:text-brand-600 hover:border-brand-500"
               }`}
             >
               <BarChart3 size={12} className="inline sm:mr-1" />{" "}

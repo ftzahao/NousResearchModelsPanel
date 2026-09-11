@@ -68,9 +68,16 @@ export function ModelCard({
   return (
     <div
       id={`model-card-${model.id}`}
-      className={`glass rounded-2xl overflow-hidden transition-all duration-300 card-glow animate-fade-in
-        ${expanded ? "col-span-full" : ""}`}
+      className={`glass rounded-2xl overflow-hidden transition-all duration-300 card-glow animate-fade-in relative
+        ${expanded ? "col-span-full" : ""}
+        ${selected ? `ring-1 ${isDark ? "ring-[#edff45]/70" : "ring-brand-600"}` : ""}`}
     >
+      {/* Provider color edge */}
+      <span
+        aria-hidden="true"
+        className="absolute left-0 top-0 bottom-0 w-[3px] flex-shrink-0"
+        style={{ background: color }}
+      />
       {/* Header */}
       <div
         className={`p-4 cursor-pointer transition-colors ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-gray-50"}`}
@@ -103,7 +110,7 @@ export function ModelCard({
               )}
               {isBatch && (
                 <span
-                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? "bg-amber-500/20 text-amber-300" : "bg-amber-100 text-amber-700"}`}
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? "bg-[#edff45]/15 text-[#edff45]" : "bg-brand-100 text-brand-700"}`}
                 >
                   {t.batchLabel}
                 </span>
@@ -132,7 +139,7 @@ export function ModelCard({
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {model.reasoning?.mandatory && (
               <span title="Reasoning mandatory">
-                <Brain size={14} className={isDark ? "text-violet-400" : "text-violet-600"} />
+                <Brain size={14} className={isDark ? "text-brand-400" : "text-brand-600"} />
               </span>
             )}
             {model.top_provider?.is_moderated && (
@@ -189,12 +196,14 @@ export function ModelCard({
             <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
               {t.context}
             </div>
-            <div className={`text-xs font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
-              {model.context_length}
+            <div
+              className={`text-xs font-medium font-mono ${isDark ? "text-gray-200" : "text-gray-700"}`}
+            >
+              {formatCtx(model.context_length)}
               {model.top_provider?.context_length &&
                 model.top_provider.context_length !== model.context_length && (
                   <span className={isDark ? "text-gray-500 ml-1" : "text-gray-400 ml-1"}>
-                    ({model.top_provider.context_length})
+                    ({formatCtx(model.top_provider.context_length)})
                   </span>
                 )}
             </div>
@@ -204,8 +213,10 @@ export function ModelCard({
               <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
                 {t.maxOutput}
               </div>
-              <div className={`text-xs font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
-                {model.top_provider.max_completion_tokens}
+              <div
+                className={`text-xs font-medium font-mono ${isDark ? "text-gray-200" : "text-gray-700"}`}
+              >
+                {formatCtx(model.top_provider.max_completion_tokens)}
               </div>
             </div>
           ) : null}
@@ -213,19 +224,37 @@ export function ModelCard({
             <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
               {t.promptPrice} <span className="opacity-60">{currencyUnit(lang, currency)}</span>
             </div>
-            <div
-              className={`text-xs font-medium ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
-            >
-              {formatPrice(model.pricing.prompt, lang, currency, exchangeRate)}
-            </div>
+            {isFree ? (
+              <div
+                className={`text-xs font-mono font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}
+              >
+                {t.freeLabel}
+              </div>
+            ) : (
+              <div
+                className={`text-xs font-medium font-mono ${isDark ? "text-brand-300" : "text-brand-700"}`}
+              >
+                {formatPrice(model.pricing.prompt, lang, currency, exchangeRate)}
+              </div>
+            )}
           </div>
           <div>
             <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
               {t.completePrice} <span className="opacity-60">{currencyUnit(lang, currency)}</span>
             </div>
-            <div className={`text-xs font-medium ${isDark ? "text-sky-400" : "text-sky-600"}`}>
-              {formatPrice(model.pricing.completion, lang, currency, exchangeRate)}
-            </div>
+            {isFree ? (
+              <div
+                className={`text-xs font-mono font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}
+              >
+                {t.freeLabel}
+              </div>
+            ) : (
+              <div
+                className={`text-xs font-medium font-mono ${isDark ? "text-brand-400" : "text-brand-600"}`}
+              >
+                {formatPrice(model.pricing.completion, lang, currency, exchangeRate)}
+              </div>
+            )}
           </div>
         </div>
 
@@ -256,7 +285,7 @@ export function ModelCard({
       {/* Expanded Details */}
       {expanded && (
         <div
-          className={`border-t p-4 space-y-4 animate-fade-in ${isDark ? "border-white/5" : "border-gray-200"}`}
+          className={`border-t p-4 space-y-4 animate-slide-down ${isDark ? "border-white/5" : "border-gray-200"}`}
         >
           <div className="flex items-center justify-between gap-2">
             <div

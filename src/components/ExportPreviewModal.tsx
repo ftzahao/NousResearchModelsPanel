@@ -44,9 +44,9 @@ export function ExportPreviewModal({
       className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm overlay-in" />
       <div
-        className={`relative w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${theme === "dark" ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
+        className={`panel-in relative w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${theme === "dark" ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div

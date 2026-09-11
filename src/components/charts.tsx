@@ -1,10 +1,30 @@
 import React, { useMemo } from "react"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, Cell, PieChart, Pie } from "recharts"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ScatterChart,
+  Scatter,
+  Cell,
+  PieChart,
+  Pie
+} from "recharts"
 import { DollarSign, Brain, Layers, Globe } from "lucide-react"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
-import { bn, currencyUnit, formatCtx, getProvider, getProviderColor, providerColors } from "../utils"
+import {
+  bn,
+  currencyUnit,
+  formatCtx,
+  getProvider,
+  getProviderColor,
+  providerColors
+} from "../utils"
 
 export function PricingChart({ models }: { models: Model[] }) {
   const { lang, t } = useLang()
@@ -39,7 +59,7 @@ export function PricingChart({ models }: { models: Model[] }) {
       <h3
         className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-gray-200" : "text-gray-700"}`}
       >
-        <DollarSign size={14} className={isDark ? "text-emerald-400" : "text-emerald-600"} />{" "}
+        <DollarSign size={14} className={isDark ? "text-brand-400" : "text-brand-600"} />{" "}
         {t.promptPriceChart} <span className="opacity-60">({currencyUnit(lang, currency)})</span>
       </h3>
       <ResponsiveContainer width="100%" height={320}>
@@ -50,22 +70,22 @@ export function PricingChart({ models }: { models: Model[] }) {
           />
           <XAxis
             type="number"
-            tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 10 }}
+            tick={{ fill: isDark ? "#8484b0" : "#6e6ba6", fontSize: 10 }}
             tickFormatter={(v) => `${currency === "CNY" ? "¥" : "$"}${v.toFixed(2)}`}
           />
           <YAxis
             type="category"
             dataKey="name"
-            tick={{ fill: isDark ? "#D1D5DB" : "#374151", fontSize: 10 }}
+            tick={{ fill: isDark ? "#bebedc" : "#514e88", fontSize: 10 }}
             width={60}
           />
           <Tooltip
             contentStyle={{
-              background: isDark ? "#1F2937" : "#ffffff",
-              border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid #e5e7eb",
+              background: isDark ? "#12112f" : "#ffffff",
+              border: isDark ? "1px solid rgba(190,190,220,0.15)" : "1px solid #d6d6e5",
               borderRadius: 8,
               fontSize: 12,
-              color: isDark ? "#f3f4f6" : "#111827"
+              color: isDark ? "#f5f5f8" : "#12112f"
             }}
             formatter={(v) => [`$${Number(v).toFixed(4)}/M`, "Prompt Price"]}
           />
@@ -112,7 +132,7 @@ export function BenchmarkScatter({ models }: { models: Model[] }) {
       <h3
         className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-gray-200" : "text-gray-700"}`}
       >
-        <Brain size={14} className={isDark ? "text-violet-400" : "text-violet-600"} />{" "}
+        <Brain size={14} className={isDark ? "text-brand-400" : "text-brand-600"} />{" "}
         {t.intelligenceVsCoding}
       </h3>
       <ResponsiveContainer width="100%" height={300}>
@@ -125,11 +145,11 @@ export function BenchmarkScatter({ models }: { models: Model[] }) {
             type="number"
             dataKey="coding"
             name="Coding"
-            tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 10 }}
+            tick={{ fill: isDark ? "#8484b0" : "#6e6ba6", fontSize: 10 }}
             label={{
               value: "Coding Index",
               position: "bottom",
-              fill: isDark ? "#6B7280" : "#9CA3AF",
+              fill: isDark ? "#6e6ba6" : "#8484b0",
               fontSize: 10
             }}
           />
@@ -137,22 +157,22 @@ export function BenchmarkScatter({ models }: { models: Model[] }) {
             type="number"
             dataKey="intelligence"
             name="Intelligence"
-            tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 10 }}
+            tick={{ fill: isDark ? "#8484b0" : "#6e6ba6", fontSize: 10 }}
             label={{
               value: "Intelligence",
               angle: -90,
               position: "insideLeft",
-              fill: isDark ? "#6B7280" : "#9CA3AF",
+              fill: isDark ? "#6e6ba6" : "#8484b0",
               fontSize: 10
             }}
           />
           <Tooltip
             contentStyle={{
-              background: isDark ? "#1F2937" : "#ffffff",
-              border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid #e5e7eb",
+              background: isDark ? "#12112f" : "#ffffff",
+              border: isDark ? "1px solid rgba(190,190,220,0.15)" : "1px solid #d6d6e5",
               borderRadius: 8,
               fontSize: 12,
-              color: isDark ? "#f3f4f6" : "#111827"
+              color: isDark ? "#f5f5f8" : "#12112f"
             }}
             formatter={(v, n) => [Number(v).toFixed(1), String(n)]}
             labelFormatter={() => ""}
@@ -172,7 +192,7 @@ export function BenchmarkScatter({ models }: { models: Model[] }) {
           >
             <span
               className="w-2 h-2 rounded-full"
-              style={{ background: providerColors[p] ?? "#6B7280" }}
+              style={{ background: providerColors[p] ?? "#6e6ba6" }}
             />
             {p}
           </span>
@@ -216,7 +236,7 @@ export function ContextChart({ models }: { models: Model[] }) {
       <h3
         className={`text-sm font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-gray-200" : "text-gray-700"}`}
       >
-        <Layers size={14} className={isDark ? "text-cyan-400" : "text-cyan-600"} />{" "}
+        <Layers size={14} className={isDark ? "text-brand-400" : "text-brand-600"} />{" "}
         {t.maxContextByProvider}
       </h3>
       <ResponsiveContainer width="100%" height={220}>
@@ -227,22 +247,22 @@ export function ContextChart({ models }: { models: Model[] }) {
           />
           <XAxis
             dataKey="provider"
-            tick={{ fill: isDark ? "#D1D5DB" : "#374151", fontSize: 10 }}
+            tick={{ fill: isDark ? "#8484b0" : "#6e6ba6", fontSize: 10 }}
             angle={-30}
             textAnchor="end"
             height={50}
           />
           <YAxis
-            tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 10 }}
+            tick={{ fill: isDark ? "#bebedc" : "#514e88", fontSize: 10 }}
             tickFormatter={(v) => formatCtx(v)}
           />
           <Tooltip
             contentStyle={{
-              background: isDark ? "#1F2937" : "#ffffff",
-              border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid #e5e7eb",
+              background: isDark ? "#12112f" : "#ffffff",
+              border: isDark ? "1px solid rgba(190,190,220,0.15)" : "1px solid #d6d6e5",
               borderRadius: 8,
               fontSize: 12,
-              color: isDark ? "#f3f4f6" : "#111827"
+              color: isDark ? "#f5f5f8" : "#12112f"
             }}
             formatter={(v) => [Number(v).toLocaleString() + " tokens", "Max Context"]}
           />
@@ -270,7 +290,7 @@ export function ProviderPie({ models }: { models: Model[] }) {
         counts.set(p, (counts.get(p) ?? 0) + 1)
       })
     return Array.from(counts.entries())
-      .map(([name, value]) => ({ name, value, color: providerColors[name] ?? "#6B7280" }))
+      .map(([name, value]) => ({ name, value, color: providerColors[name] ?? "#6e6ba6" }))
       .sort((a, b) => b.value - a.value)
   }, [models])
 
@@ -301,11 +321,11 @@ export function ProviderPie({ models }: { models: Model[] }) {
           </Pie>
           <Tooltip
             contentStyle={{
-              background: isDark ? "#1F2937" : "#ffffff",
-              border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid #e5e7eb",
+              background: isDark ? "#12112f" : "#ffffff",
+              border: isDark ? "1px solid rgba(190,190,220,0.15)" : "1px solid #d6d6e5",
               borderRadius: 8,
               fontSize: 12,
-              color: isDark ? "#f3f4f6" : "#111827"
+              color: isDark ? "#f5f5f8" : "#12112f"
             }}
           />
         </PieChart>
@@ -324,4 +344,3 @@ export function ProviderPie({ models }: { models: Model[] }) {
     </div>
   )
 }
-
