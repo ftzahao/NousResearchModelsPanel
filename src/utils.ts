@@ -76,6 +76,20 @@ export function formatPriceRaw(val: string | undefined, currency: Currency = "US
   return `${sym}${stripZeros(n.toFixed(10))}`
 }
 
+export function formatPriceShort(
+  val: string | undefined,
+  currency: Currency = "USD",
+  exchangeRate: number = 7.25
+): string {
+  if (!val) return "—"
+  const n = bn(val)
+  const sym = currency === "CNY" ? "¥" : "$"
+  if (n.isZero()) return `${sym}0`
+  return currency === "CNY"
+    ? `¥${stripZeros(n.times(1e6).times(exchangeRate).toFixed(2))}`
+    : `$${stripZeros(n.times(1e6).toFixed(2))}`
+}
+
 export function formatCtx(n: number): string {
   const bnN = new BigNumber(n)
   if (bnN.gte(1_000_000)) {

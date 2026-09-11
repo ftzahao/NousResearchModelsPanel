@@ -20,6 +20,7 @@ import {
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
+import { SelectCheckbox } from "./SelectCheckbox"
 import {
   bn,
   formatPrice,
@@ -78,31 +79,12 @@ export function ModelCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                aria-label={selected ? `Deselect ${model.name}` : `Select ${model.name}`}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onSelect()
-                }}
-                className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                  selected
-                    ? "!bg-blue-700 !border-blue-900 text-white shadow-[0_0_0_2px_rgba(37,99,235,0.35)]"
-                    : isDark
-                      ? "border-gray-500 bg-gray-800/80 text-transparent hover:border-brand-400"
-                      : "border-gray-400 bg-white text-transparent shadow-sm hover:border-brand-500"
-                }`}
-              >
-                {selected && (
-                  <span
-                    aria-hidden="true"
-                    className="text-white font-black text-[12px] leading-none"
-                    style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff" }}
-                  >
-                    ✓
-                  </span>
-                )}
-              </button>
+              <SelectCheckbox
+                checked={selected}
+                onToggle={onSelect}
+                ariaLabel={selected ? `Deselect ${model.name}` : `Select ${model.name}`}
+                theme={theme}
+              />
               <span
                 className="inline-block w-2 h-2 rounded-full flex-shrink-0"
                 style={{ background: color }}

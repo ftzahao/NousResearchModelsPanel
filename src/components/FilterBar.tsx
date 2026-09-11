@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
-import { Search, Brain, Sparkles, Grid3X3, List, X } from "lucide-react"
+import { Search, Brain, Sparkles, Grid3X3, List, Table, LayoutGrid, X } from "lucide-react"
+import type { ViewMode } from "../types"
 import { useLang } from "../i18n"
 import { useTheme } from "../contexts"
 
@@ -33,8 +34,8 @@ export function FilterBar({
   setShowReasoning: (v: boolean) => void
   showFree: boolean
   setShowFree: (v: boolean) => void
-  viewMode: "grid" | "list"
-  setViewMode: (v: "grid" | "list") => void
+  viewMode: ViewMode
+  setViewMode: (v: ViewMode) => void
   providers: string[]
   modalities: string[]
 }) {
@@ -238,15 +239,31 @@ export function FilterBar({
           >
             <button
               onClick={() => setViewMode("grid")}
+              title={t.gridView}
               className={`p-2 ${viewMode === "grid" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
             >
               <Grid3X3 size={14} />
             </button>
             <button
               onClick={() => setViewMode("list")}
+              title={t.listView}
               className={`p-2 ${viewMode === "list" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
             >
               <List size={14} />
+            </button>
+            <button
+              onClick={() => setViewMode("compact-table")}
+              title={t.compactTable}
+              className={`p-2 ${viewMode === "compact-table" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+            >
+              <Table size={14} />
+            </button>
+            <button
+              onClick={() => setViewMode("compact-cards")}
+              title={t.compactCards}
+              className={`p-2 ${viewMode === "compact-cards" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+            >
+              <LayoutGrid size={14} />
             </button>
           </div>
         </div>

@@ -8,7 +8,7 @@ import {
   buildModelCatalogJson,
   buildZcodeConfig
 } from "./model-export"
-import type { Model, ExportableModel, ModelConfigExporter, Lang, Theme } from "./types"
+import type { Model, ExportableModel, ModelConfigExporter, Lang, Theme, ViewMode } from "./types"
 import { translations, LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
 import { useModels } from "./hooks/useModels"
@@ -18,6 +18,9 @@ import { Header, type Tab } from "./components/Header"
 import { StatsGrid, type AppStats } from "./components/StatsGrid"
 import { FilterBar } from "./components/FilterBar"
 import { ModelCard } from "./components/ModelCard"
+import { CompactModelTable } from "./components/CompactModelTable"
+import { CompactModelCard } from "./components/CompactModelCard"
+import { ModelDetailModal } from "./components/ModelDetailModal"
 import { ExportToolbar } from "./components/ExportToolbar"
 import { ExportPreviewModal } from "./components/ExportPreviewModal"
 import { SelectedModelsModal } from "./components/SelectedModelsModal"
@@ -64,13 +67,22 @@ export function App() {
   const [sortBy, setSortBy] = useState("newest")
   const [showReasoning, setShowReasoning] = useState(false)
   const [showFree, setShowFree] = useState(false)
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem("viewMode")
+    if (saved === "list" || saved === "compact-table" || saved === "compact-cards") return saved
+    return "grid"
+  })
+  const handleSetViewMode = (v: ViewMode) => {
+    setViewMode(v)
+    localStorage.setItem("viewMode", v)
+  }
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [rawDetails, setRawDetails] = useState<Record<string, boolean>>({})
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [exporterId, setExporterId] = useState("codex")
   const [previewPayload, setPreviewPayload] = useState<string | null>(null)
   const [showSelectedModels, setShowSelectedModels] = useState(false)
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>("models")
 
   const providers = useMemo(
@@ -178,6 +190,7 @@ export function App() {
     () => models.filter((model) => selectedIds.has(model.id)),
     [models, selectedIds]
   )
+  const detailModel = detailId ? (models.find((m) => m.id === detailId) ?? null) : null
   const activeExporter = exporters.find((exporter) => exporter.id === exporterId) ?? exporters[0]
 
   const openExportPreview = () => {
@@ -189,6 +202,14 @@ export function App() {
   }
 
   const closeExportPreview = () => setPreviewPayload(null)
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   const removeSelected = (id: string) =>
     setSelectedIds((current) => {
@@ -286,7 +307,7 @@ export function App() {
                     showFree={showFree}
                     setShowFree={setShowFree}
                     viewMode={viewMode}
-                    setViewMode={setViewMode}
+                    setViewMode={handleSetViewMode}
                     providers={providers}
                     modalities={modalities}
                   />
@@ -323,38 +344,52 @@ export function App() {
                     )}
                   </div>
 
-                  <div
-                    className={`grid gap-3 ${
-                      viewMode === "grid"
-                        ? "model-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
-                        : "grid-cols-1"
-                    }`}
-                  >
-                    {filtered.map((m) => (
-                      <ModelCard
-                        key={m.id}
-                        model={m}
-                        expanded={expandedId === m.id}
-                        onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
-                        selected={selectedIds.has(m.id)}
-                        onSelect={() =>
-                          setSelectedIds((current) => {
-                            const next = new Set(current)
-                            if (next.has(m.id)) next.delete(m.id)
-                            else next.add(m.id)
-                            return next
-                          })
-                        }
-                        rawDetails={rawDetails[m.id] ?? false}
-                        onToggleRawDetails={() =>
-                          setRawDetails((current) => ({
-                            ...current,
-                            [m.id]: !(current[m.id] ?? false)
-                          }))
-                        }
-                      />
-                    ))}
-                  </div>
+                  {viewMode === "compact-table" ? (
+                    <CompactModelTable
+                      models={filtered}
+                      selectedIds={selectedIds}
+                      onSelect={toggleSelect}
+                      onShowDetails={setDetailId}
+                    />
+                  ) : viewMode === "compact-cards" ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
+                      {filtered.map((m) => (
+                        <CompactModelCard
+                          key={m.id}
+                          model={m}
+                          selected={selectedIds.has(m.id)}
+                          onSelect={() => toggleSelect(m.id)}
+                          onShowDetails={() => setDetailId(m.id)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      className={`grid gap-3 ${
+                        viewMode === "grid"
+                          ? "model-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+                          : "grid-cols-1"
+                      }`}
+                    >
+                      {filtered.map((m) => (
+                        <ModelCard
+                          key={m.id}
+                          model={m}
+                          expanded={expandedId === m.id}
+                          onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
+                          selected={selectedIds.has(m.id)}
+                          onSelect={() => toggleSelect(m.id)}
+                          rawDetails={rawDetails[m.id] ?? false}
+                          onToggleRawDetails={() =>
+                            setRawDetails((current) => ({
+                              ...current,
+                              [m.id]: !(current[m.id] ?? false)
+                            }))
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
 
                   {filtered.length === 0 && (
                     <div
@@ -391,6 +426,22 @@ export function App() {
                 onClear={() => setSelectedIds(new Set())}
                 onLocate={locateSelected}
                 onClose={() => setShowSelectedModels(false)}
+              />
+            )}
+
+            {detailModel && (
+              <ModelDetailModal
+                model={detailModel}
+                selected={selectedIds.has(detailModel.id)}
+                onSelect={() => toggleSelect(detailModel.id)}
+                rawDetails={rawDetails[detailModel.id] ?? false}
+                onToggleRawDetails={() =>
+                  setRawDetails((current) => ({
+                    ...current,
+                    [detailModel.id]: !(current[detailModel.id] ?? false)
+                  }))
+                }
+                onClose={() => setDetailId(null)}
               />
             )}
 

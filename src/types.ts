@@ -3,6 +3,7 @@ import type { ExportableModel, ModelConfigExporter } from "./model-export"
 export type Lang = "zh" | "en"
 export type Theme = "dark" | "light"
 export type Currency = "USD" | "CNY"
+export type ViewMode = "grid" | "list" | "compact-table" | "compact-cards"
 export type { ExportableModel, ModelConfigExporter }
 
 export interface Model {
