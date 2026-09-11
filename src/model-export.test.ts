@@ -78,7 +78,7 @@ test("builds GitHub Copilot gcmp compatible model entries", () => {
       model: "qwen/qwen3-coder",
       modelsEndpoint: "/models",
       name: "Qwen3 Coder",
-      provider: "Hermes Agent",
+      provider: "nous",
       reasoningEffort: ["low", "high"],
       sdkMode: "openai",
       tooltip: "A coding model"
@@ -175,7 +175,7 @@ test("keeps full price precision for long decimal per-token prices", () => {
 test("builds a GitHub Copilot chatLanguageModels.json provider config", () => {
   expect(buildGithubCopilotLanguageModels([model])).toEqual([
     {
-      name: "Nous Research",
+      name: "nous",
       vendor: "customendpoint",
       apiType: "chat-completions",
       apiKey: "${input:nousApiKey}",
@@ -223,10 +223,10 @@ test("omits thinking and supportsReasoningEffort for models without reasoning su
   expect(entry.maxOutputTokens).toBe(512)
 })
 
-test("builds a ZCode provider entry for the Hermes Agent channel", () => {
+test("builds a ZCode provider entry for the nous channel", () => {
   expect(buildZcodeConfig([model])).toEqual({
     nous: {
-      name: "Hermes Agent",
+      name: "nous",
       kind: "openai-compatible",
       source: "custom",
       options: {
@@ -279,7 +279,7 @@ test("builds a DeepSeek Harness llm-pi-ai provider config", () => {
     "llm-pi-ai": {
       providers: {
         nous: {
-          displayName: "Nous Research",
+          displayName: "nous",
           apiKeyEnv: "NOUS_API_KEY",
           api: "openai-completions",
           baseURL: "https://inference-api.nousresearch.com/v1",

@@ -161,7 +161,7 @@ export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompat
       model: model.id,
       modelsEndpoint: "/models",
       name: model.name,
-      provider: "Hermes Agent",
+      provider: "nous",
       ...(model.reasoning?.supported_efforts?.length
         ? { reasoningEffort: model.reasoning.supported_efforts }
         : {}),
@@ -197,7 +197,7 @@ export function buildGithubCopilotLanguageModels(
 ): GithubCopilotLanguageModelsProvider[] {
   return [
     {
-      name: "Nous Research",
+      name: "nous",
       vendor: "customendpoint",
       apiType: "chat-completions",
       apiKey: "${input:nousApiKey}",
@@ -239,7 +239,7 @@ const ZCODE_PROVIDER_ID = "nous"
 export function buildZcodeConfig(models: ExportableModel[]): Record<string, ZcodeProviderEntry> {
   return {
     [ZCODE_PROVIDER_ID]: {
-      name: "Hermes Agent",
+      name: "nous",
       kind: "openai-compatible",
       source: "custom",
       options: {
@@ -333,7 +333,7 @@ export function buildDshProviderConfig(models: ExportableModel[]): DshSettings {
     "llm-pi-ai": {
       providers: {
         [DSH_PROVIDER_ID]: {
-          displayName: "Nous Research",
+          displayName: "nous",
           apiKeyEnv: DSH_API_KEY_ENV,
           api: "openai-completions",
           baseURL: GCMP_BASE_URL,
