@@ -18,9 +18,10 @@
   },
   "dependencies": {
     "bignumber.js": "^11.1.5",
-    "lucide-react": "^1.43.0",
+    "lucide-react": "^1.44.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "yaml": "^2.9.0"
   }
 }

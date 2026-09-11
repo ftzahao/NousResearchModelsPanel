@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react"
 import BigNumber from "bignumber.js"
+import { stringify } from "yaml"
 import {
+  buildDshProviderConfig,
   buildGcmpCompatibleModels,
   buildGithubCopilotLanguageModels,
   buildModelCatalogJson,
@@ -161,6 +163,13 @@ export function App() {
         label: t.zcodeProviders,
         fileName: "zcode-providers.json",
         build: (items) => buildZcodeConfig(items)
+      },
+      {
+        id: "deepseek-harness",
+        label: t.deepseekHarnessProviders,
+        fileName: "dsh-llm-pi-ai.yaml",
+        format: "yaml",
+        build: (items) => buildDshProviderConfig(items)
       }
     ],
     [t]
@@ -173,8 +182,9 @@ export function App() {
 
   const openExportPreview = () => {
     if (!activeExporter || selectedModels.length === 0) return
+    const payload = activeExporter.build(selectedModels as ExportableModel[])
     setPreviewPayload(
-      JSON.stringify(activeExporter.build(selectedModels as ExportableModel[]), null, 2)
+      activeExporter.format === "yaml" ? stringify(payload) : JSON.stringify(payload, null, 2)
     )
   }
 

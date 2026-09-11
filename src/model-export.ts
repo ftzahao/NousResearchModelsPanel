@@ -81,6 +81,7 @@ export interface ModelConfigExporter {
   id: string
   label: string
   fileName: string
+  format?: "yaml"
   build: (models: ExportableModel[]) => unknown
 }
 
@@ -276,6 +277,78 @@ export function buildZcodeConfig(models: ExportableModel[]): Record<string, Zcod
           return [model.id, entry] as const
         })
       )
+    }
+  }
+}
+
+export type DshModality = "text" | "image"
+
+export interface DshModelProfile {
+  id: string
+  name: string
+  contextWindow: number
+  maxTokens: number
+  input?: DshModality[]
+  reasoningEfforts?: Record<string, string | null>
+}
+
+export interface DshProviderProfile {
+  displayName: string
+  apiKeyEnv: string
+  api: "openai-completions"
+  baseURL: string
+  compat: { supportsDeveloperRole: false; maxTokensField: "max_tokens" }
+  models: DshModelProfile[]
+}
+
+export interface DshSettings {
+  "llm-pi-ai": { providers: Record<string, DshProviderProfile> }
+}
+
+// fixed route id so every export replaces the same provider in $DSH_HOME/settings.yaml
+const DSH_PROVIDER_ID = "nous"
+const DSH_API_KEY_ENV = "NOUS_API_KEY"
+
+export function buildDshProviderConfig(models: ExportableModel[]): DshSettings {
+  return {
+    "llm-pi-ai": {
+      providers: {
+        [DSH_PROVIDER_ID]: {
+          displayName: "Nous Research",
+          apiKeyEnv: DSH_API_KEY_ENV,
+          api: "openai-completions",
+          baseURL: GCMP_BASE_URL,
+          // pi-ai treats an unrecognized gateway URL as plain OpenAI; these are the docs' first corrections
+          compat: { supportsDeveloperRole: false, maxTokensField: "max_tokens" },
+          models: models.map((model) => {
+            const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+            const { maxOutputTokens } = deriveContextTokens(model)
+            const input = (model.architecture?.input_modalities ?? []).filter(
+              (modality): modality is DshModality => modality === "text" || modality === "image"
+            )
+            const efforts = model.reasoning?.supported_efforts
+            const entry: DshModelProfile = {
+              id: model.id,
+              name: model.name,
+              contextWindow,
+              maxTokens: maxOutputTokens,
+              // only images need declaring: text is the route's default input
+              ...(input.includes("image") ? { input } : {}),
+              ...(efforts?.length
+                ? {
+                    reasoningEfforts: Object.fromEntries(
+                      efforts.map((effort): [string, string | null] => [
+                        effort,
+                        effort === "off" ? null : effort
+                      ])
+                    )
+                  }
+                : {})
+            }
+            return entry
+          })
+        }
+      }
     }
   }
 }

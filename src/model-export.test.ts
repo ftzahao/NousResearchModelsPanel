@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test"
+import { parse, stringify } from "yaml"
 import {
+  buildDshProviderConfig,
   buildGcmpCompatibleModels,
   buildGithubCopilotLanguageModels,
   buildModelCatalogJson,
@@ -270,4 +272,74 @@ test("keeps ZCode reasoning variants without a default effort", () => {
   ])["nous"]!.models["r/model"]!
   expect(entry.reasoning).toEqual({ enabled: true, variants: ["high", "max"] })
   expect(entry.modalities).toEqual({ input: ["text", "image"], output: ["text"] })
+})
+
+test("builds a DeepSeek Harness llm-pi-ai provider config", () => {
+  expect(buildDshProviderConfig([model])).toEqual({
+    "llm-pi-ai": {
+      providers: {
+        nous: {
+          displayName: "Nous Research",
+          apiKeyEnv: "NOUS_API_KEY",
+          api: "openai-completions",
+          baseURL: "https://inference-api.nousresearch.com/v1",
+          compat: { supportsDeveloperRole: false, maxTokensField: "max_tokens" },
+          models: [
+            {
+              id: "qwen/qwen3-coder",
+              name: "Qwen3 Coder",
+              contextWindow: 131072,
+              maxTokens: 16384,
+              reasoningEfforts: { low: "low", high: "high" }
+            }
+          ]
+        }
+      }
+    }
+  })
+})
+
+test("declares filtered input modalities for DeepSeek Harness vision models", () => {
+  const entry = buildDshProviderConfig([
+    {
+      ...model,
+      architecture: {
+        input_modalities: ["text", "image", "audio"],
+        output_modalities: ["text"]
+      }
+    } as unknown as ExportableModel
+  ])["llm-pi-ai"].providers.nous!.models[0]!
+  expect(entry.input).toEqual(["text", "image"])
+})
+
+test("omits input and reasoningEfforts when a DeepSeek Harness model declares neither", () => {
+  const entry = buildDshProviderConfig([
+    {
+      id: "free/model",
+      name: "Free",
+      context_length: 4096,
+      supported_parameters: []
+    } as unknown as ExportableModel
+  ])["llm-pi-ai"].providers.nous!.models[0]!
+  expect(entry).toEqual({
+    id: "free/model",
+    name: "Free",
+    contextWindow: 4096,
+    maxTokens: 512
+  })
+})
+
+test("maps the off level to an empty wire value in DeepSeek Harness reasoningEfforts", () => {
+  const entry = buildDshProviderConfig([
+    {
+      ...model,
+      reasoning: { mandatory: false, supported_efforts: ["off", "high"] }
+    } as unknown as ExportableModel
+  ])["llm-pi-ai"].providers.nous!.models[0]!
+  expect(entry.reasoningEfforts).toEqual({ off: null, high: "high" })
+})
+
+test("serializes the DeepSeek Harness export as parseable YAML", () => {
+  const config = buildDshProviderConfig([model])
+  expect(parse(stringify(config))).toEqual(config)
 })

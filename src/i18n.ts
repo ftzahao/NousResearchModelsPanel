@@ -117,7 +117,8 @@ export const translations = {
     codexCatalog: "Codex model_catalog_json",
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
-    zcodeProviders: "ZCode v2/config.json provider"
+    zcodeProviders: "ZCode v2/config.json provider",
+    deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider"
   },
   en: {
     title: "NousResearch Models",
@@ -234,7 +235,8 @@ export const translations = {
     codexCatalog: "Codex model_catalog_json",
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
-    zcodeProviders: "ZCode v2/config.json provider"
+    zcodeProviders: "ZCode v2/config.json provider",
+    deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider"
   }
 }
 
