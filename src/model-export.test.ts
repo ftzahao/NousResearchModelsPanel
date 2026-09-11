@@ -329,14 +329,34 @@ test("omits input and reasoningEfforts when a DeepSeek Harness model declares ne
   })
 })
 
-test("maps the off level to an empty wire value in DeepSeek Harness reasoningEfforts", () => {
+test("renames the API's none effort to the off thinking level in the DeepSeek Harness export", () => {
   const entry = buildDshProviderConfig([
     {
       ...model,
-      reasoning: { mandatory: false, supported_efforts: ["off", "high"] }
+      reasoning: { mandatory: false, supported_efforts: ["none", "low", "high"] }
     } as unknown as ExportableModel
   ])["llm-pi-ai"].providers.nous!.models[0]!
-  expect(entry.reasoningEfforts).toEqual({ off: null, high: "high" })
+  expect(entry.reasoningEfforts).toEqual({ off: "none", low: "low", high: "high" })
+})
+
+test("drops effort names pi-ai has no thinking level for in the DeepSeek Harness export", () => {
+  const entry = buildDshProviderConfig([
+    {
+      ...model,
+      reasoning: { mandatory: false, supported_efforts: ["none", "medium", "turbo"] }
+    } as unknown as ExportableModel
+  ])["llm-pi-ai"].providers.nous!.models[0]!
+  expect(entry.reasoningEfforts).toEqual({ off: "none", medium: "medium" })
+})
+
+test("marks a DeepSeek Harness model that only offers none as non-reasoning", () => {
+  const entry = buildDshProviderConfig([
+    {
+      ...model,
+      reasoning: { mandatory: false, supported_efforts: ["none"] }
+    } as unknown as ExportableModel
+  ])["llm-pi-ai"].providers.nous!.models[0]!
+  expect(entry.reasoningEfforts).toBe(false)
 })
 
 test("serializes the DeepSeek Harness export as parseable YAML", () => {
