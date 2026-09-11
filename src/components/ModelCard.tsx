@@ -66,6 +66,7 @@ export function ModelCard({
 
   return (
     <div
+      id={`model-card-${model.id}`}
       className={`glass rounded-2xl overflow-hidden transition-all duration-300 card-glow animate-fade-in
         ${expanded ? "col-span-full" : ""}`}
     >

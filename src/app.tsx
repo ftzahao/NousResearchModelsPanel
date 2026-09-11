@@ -17,6 +17,7 @@ import { FilterBar } from "./components/FilterBar"
 import { ModelCard } from "./components/ModelCard"
 import { ExportToolbar } from "./components/ExportToolbar"
 import { ExportPreviewModal } from "./components/ExportPreviewModal"
+import { SelectedModelsModal } from "./components/SelectedModelsModal"
 import { Footer } from "./components/Footer"
 import { PricingChart, BenchmarkScatter, ContextChart, ProviderPie } from "./components/charts"
 import { Search } from "lucide-react"
@@ -66,6 +67,7 @@ export function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [exporterId, setExporterId] = useState("codex")
   const [previewPayload, setPreviewPayload] = useState<string | null>(null)
+  const [showSelectedModels, setShowSelectedModels] = useState(false)
   const [tab, setTab] = useState<Tab>("models")
 
   const providers = useMemo(
@@ -171,6 +173,24 @@ export function App() {
 
   const closeExportPreview = () => setPreviewPayload(null)
 
+  const removeSelected = (id: string) =>
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      next.delete(id)
+      return next
+    })
+
+  const locateSelected = (id: string) => {
+    setShowSelectedModels(false)
+    setExpandedId(id)
+    setTab("models")
+    requestAnimationFrame(() => {
+      document
+        .getElementById(`model-card-${id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" })
+    })
+  }
+
   const stats = useMemo<AppStats>(
     () => ({
       total: models.length,
@@ -264,6 +284,7 @@ export function App() {
                     }
                     onClearSelection={() => setSelectedIds(new Set())}
                     onPreview={openExportPreview}
+                    onViewSelected={() => setShowSelectedModels(true)}
                   />
 
                   <div
@@ -336,6 +357,16 @@ export function App() {
                 fileName={activeExporter.fileName}
                 selectedCount={selectedModels.length}
                 onClose={closeExportPreview}
+              />
+            )}
+
+            {showSelectedModels && (
+              <SelectedModelsModal
+                models={selectedModels}
+                onRemove={removeSelected}
+                onClear={() => setSelectedIds(new Set())}
+                onLocate={locateSelected}
+                onClose={() => setShowSelectedModels(false)}
               />
             )}
 

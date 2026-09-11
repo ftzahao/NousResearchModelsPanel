@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Download, Eye } from "lucide-react"
+import { Download, Eye, ListChecks } from "lucide-react"
 import { useTheme } from "../contexts"
 import { useLang } from "../i18n"
 import type { ModelConfigExporter } from "../types"
@@ -11,7 +11,8 @@ export function ExportToolbar({
   setExporterId,
   onSelectVisible,
   onClearSelection,
-  onPreview
+  onPreview,
+  onViewSelected
 }: {
   selectedCount: number
   exporters: ModelConfigExporter[]
@@ -20,6 +21,7 @@ export function ExportToolbar({
   onSelectVisible: () => void
   onClearSelection: () => void
   onPreview: () => void
+  onViewSelected: () => void
 }) {
   const { theme } = useTheme()
   const { t } = useLang()
@@ -29,9 +31,15 @@ export function ExportToolbar({
     <div
       className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-2 ${theme === "dark" ? "border-white/10 bg-gray-900/40" : "border-gray-200 bg-white"}`}
     >
-      <div className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+      <button
+        type="button"
+        disabled={!selectedCount}
+        onClick={onViewSelected}
+        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40 ${theme === "dark" ? "text-gray-400 hover:text-white hover:bg-white/10" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`}
+      >
+        <ListChecks size={12} />
         {selectedCount} {t.selected}
-      </div>
+      </button>
       <div className="flex items-center gap-2">
         <button
           type="button"
