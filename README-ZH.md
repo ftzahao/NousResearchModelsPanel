@@ -23,13 +23,13 @@
 
 勾选模型后，在导出菜单中选择格式。每种格式对应一个工具的配置结构，下载前均可预览：
 
-| 格式                                      | 输出文件                      | 目标工具                                                          |
-| ----------------------------------------- | ----------------------------- | ----------------------------------------------------------------- |
-| Codex `model_catalog_json`                | `models.json`                 | Codex 模型目录                                                    |
-| GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json` | Copilot GCMP 兼容模型条目                                         |
-| GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`     | Copilot 自定义端点提供商（`customendpoint` / `chat-completions`） |
-| ZCode `v2/config.json` provider           | `zcode-providers.json`        | ZCode OpenAI 兼容提供商条目                                       |
-| DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`          | DeepSeek Harness `llm-pi-ai` 提供商（YAML）                       |
+| 格式                                      | 输出文件                            | 目标工具                                                          |
+| ----------------------------------------- | ----------------------------------- | ----------------------------------------------------------------- |
+| Codex 接入配置                            | `codex-config.toml` + `models.json` | Codex CLI 服务商配置 + 模型目录（已针对 CLI 0.154.0 实测验证）    |
+| GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json`       | Copilot GCMP 兼容模型条目                                         |
+| GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`           | Copilot 自定义端点提供商（`customendpoint` / `chat-completions`） |
+| ZCode `v2/config.json` provider           | `zcode-providers.json`              | ZCode OpenAI 兼容提供商条目                                       |
+| DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`                | DeepSeek Harness `llm-pi-ai` 提供商（YAML）                       |
 
 所有转换逻辑集中在 `src/model-export.ts`。ZCode 与 DeepSeek Harness 导出使用固定提供商 id（`nous`），重复导入时覆盖同一条目而非新增。
 

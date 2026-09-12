@@ -23,13 +23,13 @@ Live demo: **https://ftzahao.github.io/NousResearchModelsPanel/**
 
 Select models, then choose a format in the export menu. Each format targets one tool's config schema and can be previewed before download:
 
-| Format                                    | Output file                   | Target                                                                   |
-| ----------------------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
-| Codex `model_catalog_json`                | `models.json`                 | Codex model catalog                                                      |
-| GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json` | Copilot GCMP-compatible model entries                                    |
-| GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`     | Copilot custom-endpoint provider (`customendpoint` / `chat-completions`) |
-| ZCode `v2/config.json` provider           | `zcode-providers.json`        | ZCode OpenAI-compatible provider entry                                   |
-| DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`          | DeepSeek Harness `llm-pi-ai` provider (YAML)                             |
+| Format                                    | Output file                         | Target                                                                   |
+| ----------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| Codex setup                               | `codex-config.toml` + `models.json` | Codex CLI provider config + model catalog (verified against CLI 0.154.0) |
+| GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json`       | Copilot GCMP-compatible model entries                                    |
+| GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`           | Copilot custom-endpoint provider (`customendpoint` / `chat-completions`) |
+| ZCode `v2/config.json` provider           | `zcode-providers.json`              | ZCode OpenAI-compatible provider entry                                   |
+| DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`                | DeepSeek Harness `llm-pi-ai` provider (YAML)                             |
 
 All conversion logic lives in `src/model-export.ts`. The ZCode and DeepSeek Harness exports use a fixed provider id (`nous`) so re-importing replaces the same entry instead of duplicating it.
 

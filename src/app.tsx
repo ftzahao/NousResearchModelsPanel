@@ -5,10 +5,19 @@ import {
   buildDshProviderConfig,
   buildGcmpCompatibleModels,
   buildGithubCopilotLanguageModels,
+  buildCodexConfigToml,
   buildModelCatalogJson,
   buildZcodeConfig
 } from "./model-export"
-import type { Model, ExportableModel, ModelConfigExporter, Lang, Theme, ViewMode } from "./types"
+import type {
+  Model,
+  ExportableModel,
+  ModelConfigExporter,
+  ExportPreviewFile,
+  Lang,
+  Theme,
+  ViewMode
+} from "./types"
 import { translations, LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
 import { useModels } from "./hooks/useModels"
@@ -80,7 +89,7 @@ export function App() {
   const [rawDetails, setRawDetails] = useState<Record<string, boolean>>({})
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [exporterId, setExporterId] = useState("codex")
-  const [previewPayload, setPreviewPayload] = useState<string | null>(null)
+  const [previewFiles, setPreviewFiles] = useState<ExportPreviewFile[] | null>(null)
   const [showSelectedModels, setShowSelectedModels] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>("models")
@@ -154,9 +163,12 @@ export function App() {
     () => [
       {
         id: "codex",
-        label: t.codexCatalog,
-        fileName: "models.json",
-        build: (items) => buildModelCatalogJson(items)
+        label: t.codexSetup,
+        fileName: "codex-config.toml",
+        format: "toml",
+        usage: t.codexUsage,
+        build: (items) => buildCodexConfigToml(items),
+        extraFiles: [{ fileName: "models.json", build: (items) => buildModelCatalogJson(items) }]
       },
       {
         id: "github-copilot-gcmp",
@@ -193,15 +205,29 @@ export function App() {
   const detailModel = detailId ? (models.find((m) => m.id === detailId) ?? null) : null
   const activeExporter = exporters.find((exporter) => exporter.id === exporterId) ?? exporters[0]
 
+  const serializeExport = (payload: unknown, format?: "yaml" | "toml") =>
+    format === "yaml"
+      ? stringify(payload)
+      : format === "toml"
+        ? String(payload)
+        : JSON.stringify(payload, null, 2)
+
   const openExportPreview = () => {
     if (!activeExporter || selectedModels.length === 0) return
-    const payload = activeExporter.build(selectedModels as ExportableModel[])
-    setPreviewPayload(
-      activeExporter.format === "yaml" ? stringify(payload) : JSON.stringify(payload, null, 2)
-    )
+    const items = selectedModels as ExportableModel[]
+    setPreviewFiles([
+      {
+        fileName: activeExporter.fileName,
+        content: serializeExport(activeExporter.build(items), activeExporter.format)
+      },
+      ...(activeExporter.extraFiles ?? []).map((file) => ({
+        fileName: file.fileName,
+        content: serializeExport(file.build(items), file.format)
+      }))
+    ])
   }
 
-  const closeExportPreview = () => setPreviewPayload(null)
+  const closeExportPreview = () => setPreviewFiles(null)
 
   const toggleSelect = (id: string) =>
     setSelectedIds((current) => {
@@ -410,10 +436,10 @@ export function App() {
               )}
             </main>
 
-            {previewPayload && activeExporter && (
+            {previewFiles && activeExporter && (
               <ExportPreviewModal
-                payload={previewPayload}
-                fileName={activeExporter.fileName}
+                files={previewFiles}
+                usage={activeExporter.usage}
                 selectedCount={selectedModels.length}
                 onClose={closeExportPreview}
               />

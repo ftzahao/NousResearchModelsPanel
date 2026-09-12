@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test"
 import { parse, stringify } from "yaml"
 import {
+  buildCodexConfigToml,
   buildDshProviderConfig,
   buildGcmpCompatibleModels,
   buildGithubCopilotLanguageModels,
   buildModelCatalogJson,
   buildZcodeConfig,
+  CODEX_MODEL_INSTRUCTIONS,
   type ExportableModel
 } from "./model-export"
 
@@ -36,9 +38,17 @@ test("builds a Codex model catalog from selected API models", () => {
         input_modalities: ["text"],
         supported_in_api: true,
         visibility: "list",
+        shell_type: "unified_exec",
+        priority: 10,
+        truncation_policy: { mode: "tokens", limit: 10000 },
         default_reasoning_level: "low",
-        supported_reasoning_levels: [{ effort: "low" }, { effort: "high" }],
-        support_verbosity: false
+        supported_reasoning_levels: [
+          { effort: "low", description: "Fast responses with lighter reasoning" },
+          { effort: "high", description: "Greater reasoning depth for complex problems" }
+        ],
+        support_verbosity: false,
+        experimental_supported_tools: [],
+        model_messages: { instructions_template: CODEX_MODEL_INSTRUCTIONS }
       }
     ]
   })
@@ -54,14 +64,55 @@ test("keeps catalog models JSON serializable and handles missing optional fields
       {
         slug: "free/model",
         display_name: "Free",
+        description: "Free",
         context_window: 0,
         max_context_window: 0,
         supported_in_api: true,
         visibility: "list",
-        support_verbosity: false
+        shell_type: "unified_exec",
+        priority: 10,
+        truncation_policy: { mode: "tokens", limit: 10000 },
+        default_reasoning_level: "medium",
+        supported_reasoning_levels: [
+          {
+            effort: "medium",
+            description: "Balances speed and reasoning depth for everyday tasks"
+          }
+        ],
+        support_verbosity: false,
+        experimental_supported_tools: [],
+        model_messages: { instructions_template: CODEX_MODEL_INSTRUCTIONS }
       }
     ]
   })
+})
+
+test("drops reasoning efforts outside Codex's enum and keeps the default inside it", () => {
+  const exotic = {
+    ...model,
+    reasoning: {
+      mandatory: false,
+      supported_efforts: ["disable", "high"],
+      default_effort: "disable"
+    }
+  } as unknown as ExportableModel
+  const catalog = buildModelCatalogJson([exotic])
+  const entry = catalog.models[0]!
+  expect(entry.supported_reasoning_levels).toEqual([
+    { effort: "high", description: "Greater reasoning depth for complex problems" }
+  ])
+  expect(entry.default_reasoning_level).toBe("high")
+})
+
+test("builds a Codex config.toml snippet wired to the Nous provider", () => {
+  const toml = buildCodexConfigToml([model])
+  expect(toml).toContain('model_provider = "nous"')
+  expect(toml).toContain('model = "qwen/qwen3-coder"')
+  expect(toml).toContain('base_url = "https://inference-api.nousresearch.com/v1"')
+  expect(toml).toContain('env_key = "NOUS_API_KEY"')
+  expect(toml).toContain('wire_api = "responses"')
+  // top-level keys must precede table headers in TOML
+  expect(toml.indexOf("model_catalog_json")).toBeLessThan(toml.indexOf("[model_providers.nous]"))
 })
 
 test("builds GitHub Copilot gcmp compatible model entries", () => {
