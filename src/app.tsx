@@ -37,6 +37,26 @@ import { Footer } from "./components/Footer"
 import { PricingChart, BenchmarkScatter, ContextChart, ProviderPie } from "./components/charts"
 import { Search } from "lucide-react"
 
+function AppProviders({
+  themeValue,
+  langValue,
+  currency,
+  children
+}: {
+  themeValue: { theme: Theme; setTheme: (t: Theme) => void; toggleTheme: () => void }
+  langValue: { lang: Lang; t: (typeof translations)["zh"]; setLang: (l: Lang) => void }
+  currency: ReturnType<typeof useCurrencyState>
+  children: React.ReactNode
+}) {
+  return (
+    <ThemeContext.Provider value={themeValue}>
+      <LangContext.Provider value={langValue}>
+        <CurrencyContext.Provider value={currency}>{children}</CurrencyContext.Provider>
+      </LangContext.Provider>
+    </ThemeContext.Provider>
+  )
+}
+
 export function App() {
   const [lang, setLang] = useState<Lang>(() => {
     const saved = localStorage.getItem("lang")
@@ -69,6 +89,9 @@ export function App() {
 
   const currency = useCurrencyState()
   const { models, loading, error } = useModels()
+
+  const themeValue = { theme, setTheme, toggleTheme }
+  const langValue = { lang, t, setLang: handleSetLang }
 
   const [search, setSearch] = useState("")
   const [provider, setProvider] = useState<string[]>([])
@@ -231,19 +254,22 @@ export function App() {
 
   const closeExportPreview = () => setPreviewFiles(null)
 
-  const toggleSelect = (id: string) =>
+  const updateSelection = (mutate: (next: Set<string>) => void) =>
     setSelectedIds((current) => {
       const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      mutate(next)
       return next
     })
 
+  const toggleSelect = (id: string) =>
+    updateSelection((next) => {
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+    })
+
   const removeSelected = (id: string) =>
-    setSelectedIds((current) => {
-      const next = new Set(current)
+    updateSelection((next) => {
       next.delete(id)
-      return next
     })
 
   const locateSelected = (id: string) => {
@@ -277,208 +303,194 @@ export function App() {
 
   if (loading) {
     return (
-      <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
-        <LangContext.Provider value={{ lang, t, setLang: handleSetLang }}>
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-12 h-12 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                {t.loading}
-              </p>
-            </div>
+      <AppProviders themeValue={themeValue} langValue={langValue} currency={currency}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+              {t.loading}
+            </p>
           </div>
-        </LangContext.Provider>
-      </ThemeContext.Provider>
+        </div>
+      </AppProviders>
     )
   }
 
   if (error) {
     return (
-      <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
-        <LangContext.Provider value={{ lang, t, setLang: handleSetLang }}>
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center glass rounded-2xl p-8">
-              <p className="text-red-400 text-sm mb-2">{t.loadFailed}</p>
-              <p className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
-                {error}
-              </p>
-            </div>
+      <AppProviders themeValue={themeValue} langValue={langValue} currency={currency}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center glass rounded-2xl p-8">
+            <p className="text-red-400 text-sm mb-2">{t.loadFailed}</p>
+            <p className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+              {error}
+            </p>
           </div>
-        </LangContext.Provider>
-      </ThemeContext.Provider>
+        </div>
+      </AppProviders>
     )
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
-      <LangContext.Provider value={{ lang, t, setLang: handleSetLang }}>
-        <CurrencyContext.Provider value={currency}>
-          <div className="min-h-screen overflow-x-hidden">
-            <Header tab={tab} onTabChange={setTab} />
+    <AppProviders themeValue={themeValue} langValue={langValue} currency={currency}>
+      <div className="min-h-screen overflow-x-hidden">
+        <Header tab={tab} onTabChange={setTab} />
 
-            <main className="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 space-y-4">
-              <StatsGrid stats={stats} />
+        <main className="max-w-[1600px] mx-auto px-3 sm:px-4 py-4 space-y-4">
+          <StatsGrid stats={stats} />
 
-              {tab === "models" ? (
-                <>
-                  <FilterBar
-                    search={search}
-                    setSearch={setSearch}
-                    provider={provider}
-                    setProvider={setProvider}
-                    modality={modality}
-                    setModality={setModality}
-                    sortBy={sortBy}
-                    setSortBy={setSortBy}
-                    showReasoning={showReasoning}
-                    setShowReasoning={setShowReasoning}
-                    showFree={showFree}
-                    setShowFree={setShowFree}
-                    showDiscount={showDiscount}
-                    setShowDiscount={setShowDiscount}
-                    viewMode={viewMode}
-                    setViewMode={handleSetViewMode}
-                    providers={providers}
-                    modalities={modalities}
-                  />
+          {tab === "models" ? (
+            <>
+              <FilterBar
+                search={search}
+                setSearch={setSearch}
+                provider={provider}
+                setProvider={setProvider}
+                modality={modality}
+                setModality={setModality}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                showReasoning={showReasoning}
+                setShowReasoning={setShowReasoning}
+                showFree={showFree}
+                setShowFree={setShowFree}
+                showDiscount={showDiscount}
+                setShowDiscount={setShowDiscount}
+                viewMode={viewMode}
+                setViewMode={handleSetViewMode}
+                providers={providers}
+                modalities={modalities}
+              />
 
-                  <ExportToolbar
-                    selectedCount={selectedModels.length}
-                    exporters={exporters}
-                    exporterId={exporterId}
-                    setExporterId={setExporterId}
-                    onSelectVisible={() =>
-                      setSelectedIds(new Set(filtered.map((model) => model.id)))
-                    }
-                    onAppendVisible={() =>
-                      setSelectedIds((current) => {
-                        const next = new Set(current)
-                        filtered.forEach((model) => next.add(model.id))
-                        return next
-                      })
-                    }
-                    onClearSelection={() => setSelectedIds(new Set())}
-                    onPreview={openExportPreview}
-                    onViewSelected={() => setShowSelectedModels(true)}
-                  />
+              <ExportToolbar
+                selectedCount={selectedModels.length}
+                exporters={exporters}
+                exporterId={exporterId}
+                setExporterId={setExporterId}
+                onSelectVisible={() => setSelectedIds(new Set(filtered.map((model) => model.id)))}
+                onAppendVisible={() =>
+                  updateSelection((next) => {
+                    filtered.forEach((model) => next.add(model.id))
+                  })
+                }
+                onClearSelection={() => setSelectedIds(new Set())}
+                onPreview={openExportPreview}
+                onViewSelected={() => setShowSelectedModels(true)}
+              />
 
-                  <div
-                    className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
-                  >
-                    {t.showing} {filtered.length} {t.of} {models.length} {t.modelsCount}
-                    {search && (
-                      <span>
-                        {" "}
-                        {t.matching} "{search}"
-                      </span>
-                    )}
-                  </div>
+              <div className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+                {t.showing} {filtered.length} {t.of} {models.length} {t.modelsCount}
+                {search && (
+                  <span>
+                    {" "}
+                    {t.matching} "{search}"
+                  </span>
+                )}
+              </div>
 
-                  {viewMode === "compact-table" ? (
-                    <CompactModelTable
-                      models={filtered}
-                      selectedIds={selectedIds}
-                      onSelect={toggleSelect}
-                      onShowDetails={setDetailId}
+              {viewMode === "compact-table" ? (
+                <CompactModelTable
+                  models={filtered}
+                  selectedIds={selectedIds}
+                  onSelect={toggleSelect}
+                  onShowDetails={setDetailId}
+                />
+              ) : viewMode === "compact-cards" ? (
+                <div className="card-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
+                  {filtered.map((m) => (
+                    <CompactModelCard
+                      key={m.id}
+                      model={m}
+                      selected={selectedIds.has(m.id)}
+                      onSelect={() => toggleSelect(m.id)}
+                      onShowDetails={() => setDetailId(m.id)}
                     />
-                  ) : viewMode === "compact-cards" ? (
-                    <div className="card-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
-                      {filtered.map((m) => (
-                        <CompactModelCard
-                          key={m.id}
-                          model={m}
-                          selected={selectedIds.has(m.id)}
-                          onSelect={() => toggleSelect(m.id)}
-                          onShowDetails={() => setDetailId(m.id)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div
-                      className={`grid gap-3 ${
-                        viewMode === "grid"
-                          ? "model-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
-                          : "grid-cols-1"
-                      }`}
-                    >
-                      {filtered.map((m) => (
-                        <ModelCard
-                          key={m.id}
-                          model={m}
-                          expanded={expandedId === m.id}
-                          onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
-                          selected={selectedIds.has(m.id)}
-                          onSelect={() => toggleSelect(m.id)}
-                          rawDetails={rawDetails[m.id] ?? false}
-                          onToggleRawDetails={() =>
-                            setRawDetails((current) => ({
-                              ...current,
-                              [m.id]: !(current[m.id] ?? false)
-                            }))
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {filtered.length === 0 && (
-                    <div
-                      className={`text-center py-16 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
-                    >
-                      <Search size={32} className="mx-auto mb-3 opacity-30" />
-                      <p className="text-sm">{t.noModels}</p>
-                    </div>
-                  )}
-                </>
+                  ))}
+                </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                  <PricingChart models={models} />
-                  <BenchmarkScatter models={models} />
-                  <ContextChart models={models} />
-                  <ProviderPie models={models} />
+                <div
+                  className={`grid gap-3 ${
+                    viewMode === "grid"
+                      ? "model-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+                      : "grid-cols-1"
+                  }`}
+                >
+                  {filtered.map((m) => (
+                    <ModelCard
+                      key={m.id}
+                      model={m}
+                      expanded={expandedId === m.id}
+                      onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
+                      selected={selectedIds.has(m.id)}
+                      onSelect={() => toggleSelect(m.id)}
+                      rawDetails={rawDetails[m.id] ?? false}
+                      onToggleRawDetails={() =>
+                        setRawDetails((current) => ({
+                          ...current,
+                          [m.id]: !(current[m.id] ?? false)
+                        }))
+                      }
+                    />
+                  ))}
                 </div>
               )}
-            </main>
 
-            {previewFiles && activeExporter && (
-              <ExportPreviewModal
-                files={previewFiles}
-                usage={activeExporter.usage}
-                selectedCount={selectedModels.length}
-                onClose={closeExportPreview}
-              />
-            )}
+              {filtered.length === 0 && (
+                <div
+                  className={`text-center py-16 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                >
+                  <Search size={32} className="mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">{t.noModels}</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <PricingChart models={models} />
+              <BenchmarkScatter models={models} />
+              <ContextChart models={models} />
+              <ProviderPie models={models} />
+            </div>
+          )}
+        </main>
 
-            {showSelectedModels && (
-              <SelectedModelsModal
-                models={selectedModels}
-                onRemove={removeSelected}
-                onClear={() => setSelectedIds(new Set())}
-                onLocate={locateSelected}
-                onClose={() => setShowSelectedModels(false)}
-              />
-            )}
+        {previewFiles && activeExporter && (
+          <ExportPreviewModal
+            files={previewFiles}
+            usage={activeExporter.usage}
+            selectedCount={selectedModels.length}
+            onClose={closeExportPreview}
+          />
+        )}
 
-            {detailModel && (
-              <ModelDetailModal
-                model={detailModel}
-                selected={selectedIds.has(detailModel.id)}
-                onSelect={() => toggleSelect(detailModel.id)}
-                rawDetails={rawDetails[detailModel.id] ?? false}
-                onToggleRawDetails={() =>
-                  setRawDetails((current) => ({
-                    ...current,
-                    [detailModel.id]: !(current[detailModel.id] ?? false)
-                  }))
-                }
-                onClose={() => setDetailId(null)}
-              />
-            )}
+        {showSelectedModels && (
+          <SelectedModelsModal
+            models={selectedModels}
+            onRemove={removeSelected}
+            onClear={() => setSelectedIds(new Set())}
+            onLocate={locateSelected}
+            onClose={() => setShowSelectedModels(false)}
+          />
+        )}
 
-            <Footer />
-          </div>
-        </CurrencyContext.Provider>
-      </LangContext.Provider>
-    </ThemeContext.Provider>
+        {detailModel && (
+          <ModelDetailModal
+            model={detailModel}
+            selected={selectedIds.has(detailModel.id)}
+            onSelect={() => toggleSelect(detailModel.id)}
+            rawDetails={rawDetails[detailModel.id] ?? false}
+            onToggleRawDetails={() =>
+              setRawDetails((current) => ({
+                ...current,
+                [detailModel.id]: !(current[detailModel.id] ?? false)
+              }))
+            }
+            onClose={() => setDetailId(null)}
+          />
+        )}
+
+        <Footer />
+      </div>
+    </AppProviders>
   )
 }
