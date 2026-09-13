@@ -67,6 +67,7 @@ test("keeps catalog models JSON serializable and handles missing optional fields
         description: "Free",
         context_window: 0,
         max_context_window: 0,
+        input_modalities: ["text"],
         supported_in_api: true,
         visibility: "list",
         shell_type: "unified_exec",
@@ -102,6 +103,18 @@ test("drops reasoning efforts outside Codex's enum and keeps the default inside 
     { effort: "high", description: "Greater reasoning depth for complex problems" }
   ])
   expect(entry.default_reasoning_level).toBe("high")
+})
+
+test("filters input modalities to Codex's closed InputModality enum", () => {
+  const exotic = {
+    ...model,
+    architecture: {
+      input_modalities: ["text", "image", "audio", "video", "file", "image"],
+      output_modalities: ["text"]
+    }
+  } as unknown as ExportableModel
+  const entry = buildModelCatalogJson([exotic]).models[0]!
+  expect(entry.input_modalities).toEqual(["text", "image", "audio"])
 })
 
 test("builds a Codex config.toml snippet wired to the Nous provider", () => {

@@ -51,7 +51,7 @@ export interface ModelCatalogEntry {
   description: string
   context_window: number
   max_context_window: number
-  input_modalities?: string[]
+  input_modalities: string[]
   supported_in_api: boolean
   visibility: "list"
   shell_type: "unified_exec"
@@ -110,6 +110,18 @@ export interface ModelConfigExporter {
 // Codex's ReasoningEffort enum; efforts outside this set would make the whole catalog fail to parse
 const CODEX_KNOWN_EFFORTS = ["minimal", "low", "medium", "high", "xhigh", "max", "ultra"]
 
+// Codex's InputModality enum is closed (no unknown-value fallback), so anything outside
+// this set fails the whole catalog parse
+const CODEX_KNOWN_MODALITIES = ["text", "image", "audio"]
+
+function buildCodexInputModalities(model: ExportableModel): string[] {
+  const known = [...new Set(model.architecture?.input_modalities ?? [])].filter((modality) =>
+    CODEX_KNOWN_MODALITIES.includes(modality)
+  )
+  // a dropped field defaults Codex to [text, image], so text-only models must say so explicitly
+  return known.length ? known : ["text"]
+}
+
 const CODEX_EFFORT_DESCRIPTIONS: Record<string, string> = {
   minimal: "Minimal reasoning depth",
   low: "Fast responses with lighter reasoning",
@@ -139,9 +151,7 @@ export function buildModelCatalogJson(models: ExportableModel[]): ModelCatalog {
         description: model.description || model.name,
         context_window: contextWindow,
         max_context_window: contextWindow,
-        ...(model.architecture?.input_modalities?.length
-          ? { input_modalities: model.architecture.input_modalities }
-          : {}),
+        input_modalities: buildCodexInputModalities(model),
         supported_in_api: true,
         visibility: "list" as const,
         shell_type: "unified_exec" as const,
