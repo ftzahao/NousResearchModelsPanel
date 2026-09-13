@@ -1,8 +1,16 @@
-import { Brain, Shield, Sparkles, Eye } from "lucide-react"
+import { Brain, Shield, Sparkles, Eye, BadgePercent } from "lucide-react"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
-import { bn, formatCtx, formatPriceShort, getProviderColor, daysSince } from "../utils"
+import {
+  bn,
+  formatCtx,
+  formatPriceShort,
+  getProviderColor,
+  daysSince,
+  getDiscount,
+  formatDiscount
+} from "../utils"
 import { SelectCheckbox } from "./SelectCheckbox"
 import { IntelligenceBar } from "./IntelligenceBar"
 
@@ -17,7 +25,7 @@ export function CompactModelTable({
   onSelect: (id: string) => void
   onShowDetails: (id: string) => void
 }) {
-  const { t } = useLang()
+  const { lang, t } = useLang()
   const { theme } = useTheme()
   const { currency, exchangeRate } = useCurrency()
   const isDark = theme === "dark"
@@ -49,6 +57,7 @@ export function CompactModelTable({
               const selected = selectedIds.has(model.id)
               const color = getProviderColor(model.id)
               const intelligence = model.benchmarks?.artificial_analysis?.intelligence_index
+              const discount = getDiscount(model)
               return (
                 <tr
                   key={model.id}
@@ -133,6 +142,16 @@ export function CompactModelTable({
                           <Sparkles
                             size={12}
                             className={isDark ? "text-emerald-400" : "text-emerald-600"}
+                          />
+                        </span>
+                      )}
+                      {discount && (
+                        <span
+                          title={`${formatDiscount(discount.ratio, lang)} · ${t.originalPrice}: ${formatPriceShort(discount.originalPrompt, currency, exchangeRate)}`}
+                        >
+                          <BadgePercent
+                            size={12}
+                            className={isDark ? "text-amber-400" : "text-amber-600"}
                           />
                         </span>
                       )}

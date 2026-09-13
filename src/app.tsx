@@ -22,7 +22,7 @@ import { translations, LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
 import { useModels } from "./hooks/useModels"
 import { useCurrencyState } from "./hooks/useCurrency"
-import { bn, getProvider } from "./utils"
+import { bn, getProvider, getDiscount } from "./utils"
 import { Header, type Tab } from "./components/Header"
 import { StatsGrid, type AppStats } from "./components/StatsGrid"
 import { FilterBar } from "./components/FilterBar"
@@ -76,6 +76,7 @@ export function App() {
   const [sortBy, setSortBy] = useState("newest")
   const [showReasoning, setShowReasoning] = useState(false)
   const [showFree, setShowFree] = useState(false)
+  const [showDiscount, setShowDiscount] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem("viewMode")
     if (saved === "list" || saved === "compact-table" || saved === "compact-cards") return saved
@@ -124,6 +125,7 @@ export function App() {
       )
     if (showReasoning) result = result.filter((m) => m.reasoning)
     if (showFree) result = result.filter((m) => bn(m.pricing?.prompt).isZero())
+    if (showDiscount) result = result.filter((m) => getDiscount(m) !== null)
 
     result = [...result].sort((a, b) => {
       switch (sortBy) {
@@ -157,7 +159,7 @@ export function App() {
     })
 
     return result
-  }, [models, search, provider, modality, sortBy, showReasoning, showFree])
+  }, [models, search, provider, modality, sortBy, showReasoning, showFree, showDiscount])
 
   const exporters = useMemo<ModelConfigExporter[]>(
     () => [
@@ -332,6 +334,8 @@ export function App() {
                     setShowReasoning={setShowReasoning}
                     showFree={showFree}
                     setShowFree={setShowFree}
+                    showDiscount={showDiscount}
+                    setShowDiscount={setShowDiscount}
                     viewMode={viewMode}
                     setViewMode={handleSetViewMode}
                     providers={providers}

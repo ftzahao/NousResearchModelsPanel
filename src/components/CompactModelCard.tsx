@@ -1,8 +1,16 @@
-import { Brain, Shield, Sparkles, Eye } from "lucide-react"
+import { Brain, Shield, Sparkles, Eye, BadgePercent } from "lucide-react"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
-import { bn, formatCtx, formatPriceShort, getProviderColor, daysSince } from "../utils"
+import {
+  bn,
+  formatCtx,
+  formatPriceShort,
+  getProviderColor,
+  daysSince,
+  getDiscount,
+  formatDiscount
+} from "../utils"
 import { SelectCheckbox } from "./SelectCheckbox"
 import { IntelligenceBar } from "./IntelligenceBar"
 export function CompactModelCard({
@@ -16,12 +24,13 @@ export function CompactModelCard({
   onSelect: () => void
   onShowDetails: () => void
 }) {
-  const { t } = useLang()
+  const { lang, t } = useLang()
   const { theme } = useTheme()
   const { currency, exchangeRate } = useCurrency()
   const isDark = theme === "dark"
   const color = getProviderColor(model.id)
   const intelligence = model.benchmarks?.artificial_analysis?.intelligence_index
+  const discount = getDiscount(model)
 
   return (
     <div
@@ -60,6 +69,14 @@ export function CompactModelCard({
                 size={11}
                 className={`flex-shrink-0 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
               />
+            )}
+            {discount && (
+              <span
+                title={`${formatDiscount(discount.ratio, lang)} · ${t.originalPrice}: ${formatPriceShort(discount.originalPrompt, currency, exchangeRate)}`}
+                className={`flex-shrink-0 ${isDark ? "text-amber-400" : "text-amber-600"}`}
+              >
+                <BadgePercent size={11} />
+              </span>
             )}
             {model.reasoning?.mandatory && (
               <Brain

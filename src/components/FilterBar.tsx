@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState } from "react"
-import { Search, Brain, Sparkles, Grid3X3, List, Table, LayoutGrid, X } from "lucide-react"
+import {
+  Search,
+  Brain,
+  Sparkles,
+  Grid3X3,
+  List,
+  Table,
+  LayoutGrid,
+  X,
+  BadgePercent
+} from "lucide-react"
 import type { ViewMode } from "../types"
 import { useLang } from "../i18n"
 import { useTheme } from "../contexts"
@@ -17,6 +27,8 @@ export function FilterBar({
   setShowReasoning,
   showFree,
   setShowFree,
+  showDiscount,
+  setShowDiscount,
   viewMode,
   setViewMode,
   providers,
@@ -34,6 +46,8 @@ export function FilterBar({
   setShowReasoning: (v: boolean) => void
   showFree: boolean
   setShowFree: (v: boolean) => void
+  showDiscount: boolean
+  setShowDiscount: (v: boolean) => void
   viewMode: ViewMode
   setViewMode: (v: ViewMode) => void
   providers: string[]
@@ -233,6 +247,20 @@ export function FilterBar({
             }`}
           >
             <Sparkles size={12} /> {t.free}
+          </button>
+          <button
+            onClick={() => setShowDiscount(!showDiscount)}
+            className={`px-2 sm:px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
+              showDiscount
+                ? isDark
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                  : "bg-amber-100 text-amber-700 border-amber-300"
+                : isDark
+                  ? "bg-gray-900/50 text-gray-400 border-white/5"
+                  : "bg-gray-100 text-gray-500 border-gray-200"
+            }`}
+          >
+            <BadgePercent size={12} /> {t.discount}
           </button>
           <div
             className={`flex rounded-lg border overflow-hidden ${isDark ? "bg-gray-900/50 border-white/5" : "bg-gray-100 border-gray-200"}`}

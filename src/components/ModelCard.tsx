@@ -32,7 +32,9 @@ import {
   modalityColors,
   getProvider,
   getProviderColor,
-  stripZeros
+  stripZeros,
+  getDiscount,
+  formatDiscount
 } from "../utils"
 
 export function ModelCard({
@@ -63,6 +65,7 @@ export function ModelCard({
   const isBatch = model.id.includes(":batch")
   const isFree = bn(model.pricing?.prompt).isZero()
   const isRouter = model.id.startsWith("~")
+  const discount = getDiscount(model)
   const isDark = theme === "dark"
 
   return (
@@ -120,6 +123,14 @@ export function ModelCard({
                   className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? "bg-green-500/20 text-green-300" : "bg-green-100 text-green-700"}`}
                 >
                   {t.freeLabel}
+                </span>
+              )}
+              {discount && (
+                <span
+                  title={`${t.originalPrice}: ${formatPrice(discount.originalPrompt, lang, currency, exchangeRate)}`}
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${isDark ? "bg-amber-500/20 text-amber-300" : "bg-amber-100 text-amber-700"}`}
+                >
+                  {formatDiscount(discount.ratio, lang)}
                 </span>
               )}
               {isRouter && (

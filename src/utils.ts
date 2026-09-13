@@ -1,7 +1,7 @@
 import React from "react"
 import BigNumber from "bignumber.js"
 import { FileText, Image as ImageIcon, Mic, Video, Layers, Cpu } from "lucide-react"
-import type { Lang, Currency } from "./types"
+import type { Lang, Currency, Model } from "./types"
 
 export const providerColors: Record<string, string> = {
   anthropic: "#D97706",
@@ -110,6 +110,39 @@ export function formatDate(ts: number, lang: Lang = "zh"): string {
 
 export function daysSince(ts: number): number {
   return Math.floor((Date.now() / 1000 - ts) / 86400)
+}
+
+export interface DiscountInfo {
+  ratio: number
+  originalPrompt?: string
+  originalCompletion?: string
+}
+
+export function getDiscount(model: Model): DiscountInfo | null {
+  const p = model.pricing
+  const orig = p?.original
+  if (!p || !orig) return null
+  const origPrompt = orig.prompt ? bn(orig.prompt) : null
+  const origCompletion = orig.completion ? bn(orig.completion) : null
+  if (origPrompt && origPrompt.gt(0) && bn(p.prompt).lt(origPrompt)) {
+    const ratio = bn(p.prompt).div(origPrompt).toNumber()
+    if (ratio < 0.995)
+      return { ratio, originalPrompt: orig.prompt, originalCompletion: orig.completion }
+  }
+  if (origCompletion && origCompletion.gt(0) && bn(p.completion).lt(origCompletion)) {
+    const ratio = bn(p.completion).div(origCompletion).toNumber()
+    if (ratio < 0.995)
+      return { ratio, originalPrompt: orig.prompt, originalCompletion: orig.completion }
+  }
+  return null
+}
+
+export function formatDiscount(ratio: number, lang: Lang): string {
+  if (lang === "zh") {
+    const zhe = Math.round(ratio * 100) / 10
+    return `${stripZeros(zhe.toFixed(1))}折`
+  }
+  return `${Math.round(ratio * 100)}% OFF`
 }
 
 export const modalityIcons: Record<string, React.ReactNode> = {
