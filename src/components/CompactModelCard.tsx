@@ -13,16 +13,21 @@ import {
 } from "../utils"
 import { SelectCheckbox } from "./SelectCheckbox"
 import { IntelligenceBar } from "./IntelligenceBar"
+import { FavoriteButton } from "./FavoriteButton"
 export function CompactModelCard({
   model,
   selected,
   onSelect,
-  onShowDetails
+  onShowDetails,
+  favorite,
+  onToggleFavorite
 }: {
   model: Model
   selected: boolean
   onSelect: () => void
   onShowDetails: () => void
+  favorite: boolean
+  onToggleFavorite: () => void
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
@@ -90,6 +95,7 @@ export function CompactModelCard({
                 className={`flex-shrink-0 ${isDark ? "text-blue-400" : "text-blue-600"}`}
               />
             )}
+            <FavoriteButton active={favorite} onToggle={onToggleFavorite} size={12} />
             <button
               type="button"
               title={t.viewDetails}

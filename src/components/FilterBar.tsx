@@ -8,8 +8,10 @@ import {
   Table,
   LayoutGrid,
   X,
-  BadgePercent
+  BadgePercent,
+  Star
 } from "lucide-react"
+import { XCircle } from "lucide-react"
 import type { ViewMode } from "../types"
 import { useLang } from "../i18n"
 import { useTheme } from "../contexts"
@@ -29,6 +31,10 @@ export function FilterBar({
   setShowFree,
   showDiscount,
   setShowDiscount,
+  showFavorites,
+  setShowFavorites,
+  favoriteCount,
+  onClearFavorites,
   viewMode,
   setViewMode,
   providers,
@@ -48,6 +54,10 @@ export function FilterBar({
   setShowFree: (v: boolean) => void
   showDiscount: boolean
   setShowDiscount: (v: boolean) => void
+  showFavorites: boolean
+  setShowFavorites: (v: boolean) => void
+  favoriteCount: number
+  onClearFavorites: () => void
   viewMode: ViewMode
   setViewMode: (v: ViewMode) => void
   providers: string[]
@@ -262,6 +272,35 @@ export function FilterBar({
           >
             <BadgePercent size={12} /> {t.discount}
           </button>
+          <button
+            onClick={() => setShowFavorites(!showFavorites)}
+            className={`px-2 sm:px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
+              showFavorites
+                ? isDark
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                  : "bg-amber-100 text-amber-700 border-amber-300"
+                : isDark
+                  ? "bg-gray-900/50 text-gray-400 border-white/5"
+                  : "bg-gray-100 text-gray-500 border-gray-200"
+            }`}
+          >
+            <Star size={12} fill={showFavorites ? "currentColor" : "none"} /> {t.favorites}
+            {favoriteCount > 0 && <span className="opacity-70">({favoriteCount})</span>}
+          </button>
+          {favoriteCount > 0 && (
+            <button
+              onClick={onClearFavorites}
+              title={t.clearFavorites}
+              aria-label={t.clearFavorites}
+              className={`p-2 rounded-lg border transition-colors ${
+                isDark
+                  ? "bg-gray-900/50 text-gray-500 border-white/5 hover:text-red-400 hover:border-red-400/30"
+                  : "bg-gray-100 text-gray-400 border-gray-200 hover:text-red-600 hover:border-red-300"
+              }`}
+            >
+              <XCircle size={14} />
+            </button>
+          )}
           <div
             className={`flex rounded-lg border overflow-hidden ${isDark ? "bg-gray-900/50 border-white/5" : "bg-gray-100 border-gray-200"}`}
           >

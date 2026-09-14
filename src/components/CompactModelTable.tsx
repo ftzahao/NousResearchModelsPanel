@@ -13,17 +13,22 @@ import {
 } from "../utils"
 import { SelectCheckbox } from "./SelectCheckbox"
 import { IntelligenceBar } from "./IntelligenceBar"
+import { FavoriteButton } from "./FavoriteButton"
 
 export function CompactModelTable({
   models,
   selectedIds,
   onSelect,
-  onShowDetails
+  onShowDetails,
+  favorites,
+  onToggleFavorite
 }: {
   models: Model[]
   selectedIds: Set<string>
   onSelect: (id: string) => void
   onShowDetails: (id: string) => void
+  favorites: Set<string>
+  onToggleFavorite: (id: string) => void
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
@@ -137,6 +142,10 @@ export function CompactModelTable({
                   </td>
                   <td className={`${td} text-right`}>
                     <div className="flex items-center justify-end gap-1">
+                      <FavoriteButton
+                        active={favorites.has(model.id)}
+                        onToggle={() => onToggleFavorite(model.id)}
+                      />
                       {daysSince(model.created) < 7 && (
                         <span title={t.newLabel}>
                           <Sparkles

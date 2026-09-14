@@ -11,6 +11,8 @@ export function ModelDetailModal({
   onSelect,
   rawDetails,
   onToggleRawDetails,
+  favorite,
+  onToggleFavorite,
   onClose
 }: {
   model: Model
@@ -18,6 +20,8 @@ export function ModelDetailModal({
   onSelect: () => void
   rawDetails: boolean
   onToggleRawDetails: () => void
+  favorite: boolean
+  onToggleFavorite: () => void
   onClose: () => void
 }) {
   const { t } = useLang()
@@ -66,6 +70,8 @@ export function ModelDetailModal({
             onSelect={onSelect}
             rawDetails={rawDetails}
             onToggleRawDetails={onToggleRawDetails}
+            favorite={favorite}
+            onToggleFavorite={onToggleFavorite}
           />
         </div>
       </div>

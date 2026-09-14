@@ -4,6 +4,7 @@ import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
 import { SelectCheckbox } from "./SelectCheckbox"
 import { CardBadge } from "./CardBadge"
+import { FavoriteButton } from "./FavoriteButton"
 import { ModalityFlow } from "./ModalityFlow"
 import { ModelExpandedDetails } from "./ModelExpandedDetails"
 import {
@@ -24,7 +25,9 @@ export function ModelCard({
   selected,
   onSelect,
   rawDetails,
-  onToggleRawDetails
+  onToggleRawDetails,
+  favorite,
+  onToggleFavorite
 }: {
   model: Model
   expanded: boolean
@@ -33,6 +36,8 @@ export function ModelCard({
   onSelect: () => void
   rawDetails: boolean
   onToggleRawDetails: () => void
+  favorite: boolean
+  onToggleFavorite: () => void
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
@@ -126,6 +131,7 @@ export function ModelCard({
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            <FavoriteButton active={favorite} onToggle={onToggleFavorite} />
             {model.reasoning?.mandatory && (
               <span title="Reasoning mandatory">
                 <Brain size={14} className={isDark ? "text-brand-400" : "text-brand-600"} />

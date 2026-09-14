@@ -107,6 +107,25 @@ export function App() {
   const [showReasoning, setShowReasoning] = useState(false)
   const [showFree, setShowFree] = useState(false)
   const [showDiscount, setShowDiscount] = useState(false)
+  const [showFavorites, setShowFavorites] = useState(false)
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("favorites")
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
+  useEffect(() => {
+    localStorage.setItem("favorites", JSON.stringify([...favorites]))
+  }, [favorites])
+  const toggleFavorite = (id: string) =>
+    setFavorites((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem("viewMode")
     if (saved === "list" || saved === "compact-table" || saved === "compact-cards") return saved
@@ -156,6 +175,7 @@ export function App() {
     if (showReasoning) result = result.filter((m) => m.reasoning)
     if (showFree) result = result.filter((m) => bn(m.pricing?.prompt).isZero())
     if (showDiscount) result = result.filter((m) => getDiscount(m) !== null)
+    if (showFavorites) result = result.filter((m) => favorites.has(m.id))
 
     result = [...result].sort((a, b) => {
       switch (sortBy) {
@@ -189,7 +209,7 @@ export function App() {
     })
 
     return result
-  }, [models, search, provider, modality, sortBy, showReasoning, showFree, showDiscount])
+  }, [models, search, provider, modality, sortBy, showReasoning, showFree, showDiscount, showFavorites, favorites])
 
   const exporters = useMemo<ModelConfigExporter[]>(
     () => [
@@ -363,6 +383,10 @@ export function App() {
                 setShowFree={setShowFree}
                 showDiscount={showDiscount}
                 setShowDiscount={setShowDiscount}
+                showFavorites={showFavorites}
+                setShowFavorites={setShowFavorites}
+                favoriteCount={favorites.size}
+                onClearFavorites={() => setFavorites(new Set())}
                 viewMode={viewMode}
                 setViewMode={handleSetViewMode}
                 providers={providers}
@@ -401,6 +425,8 @@ export function App() {
                   selectedIds={selectedIds}
                   onSelect={toggleSelect}
                   onShowDetails={setDetailId}
+                  favorites={favorites}
+                  onToggleFavorite={toggleFavorite}
                 />
               ) : viewMode === "compact-cards" ? (
                 <div className="card-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
@@ -411,6 +437,8 @@ export function App() {
                       selected={selectedIds.has(m.id)}
                       onSelect={() => toggleSelect(m.id)}
                       onShowDetails={() => setDetailId(m.id)}
+                      favorite={favorites.has(m.id)}
+                      onToggleFavorite={() => toggleFavorite(m.id)}
                     />
                   ))}
                 </div>
@@ -437,6 +465,8 @@ export function App() {
                           [m.id]: !(current[m.id] ?? false)
                         }))
                       }
+                      favorite={favorites.has(m.id)}
+                      onToggleFavorite={() => toggleFavorite(m.id)}
                     />
                   ))}
                 </div>
@@ -498,6 +528,8 @@ export function App() {
                 [detailModel.id]: !(current[detailModel.id] ?? false)
               }))
             }
+            favorite={favorites.has(detailModel.id)}
+            onToggleFavorite={() => toggleFavorite(detailModel.id)}
             onClose={() => setDetailId(null)}
           />
         )}
