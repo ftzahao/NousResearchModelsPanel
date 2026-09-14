@@ -34,7 +34,14 @@ import { ExportToolbar } from "./components/ExportToolbar"
 import { ExportPreviewModal } from "./components/ExportPreviewModal"
 import { SelectedModelsModal } from "./components/SelectedModelsModal"
 import { Footer } from "./components/Footer"
-import { PricingChart, BenchmarkScatter, ContextChart, ProviderPie } from "./components/charts"
+import {
+  PricingChart,
+  BenchmarkScatter,
+  ValueScatter,
+  DiscountChart,
+  ContextChart,
+  ProviderPie
+} from "./components/charts"
 import { Search } from "lucide-react"
 
 function AppProviders({
@@ -446,8 +453,14 @@ export function App() {
             </>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div className="md:col-span-2">
+                <BenchmarkScatter models={models} onShowDetails={setDetailId} />
+              </div>
+              <div className="md:col-span-2">
+                <ValueScatter models={models} onShowDetails={setDetailId} />
+              </div>
               <PricingChart models={models} />
-              <BenchmarkScatter models={models} />
+              <DiscountChart models={models} />
               <ContextChart models={models} />
               <ProviderPie models={models} />
             </div>
