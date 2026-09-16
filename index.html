@@ -103,6 +103,14 @@
         box-shadow: 0 0 30px rgba(0, 0, 242, 0.35);
       }
 
+      .provider-stripe {
+        transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .model-grid > *:hover .provider-stripe,
+      .card-grid > *:hover .provider-stripe {
+        width: 4px;
+      }
+
       /* ── Surfaces ── */
       .glass {
         background: var(--glass-bg);
@@ -118,6 +126,38 @@
         font-size: 0.65rem;
         padding: 1px 6px;
         border-radius: 4px;
+      }
+
+      /* API JSON syntax colors (highlight.js tokens, scoped to the JSON pre) */
+      .hljs-json .hljs-attr {
+        color: #0369a1;
+      }
+      .hljs-json .hljs-string {
+        color: #047857;
+      }
+      .hljs-json .hljs-number {
+        color: #d97706;
+      }
+      .hljs-json .hljs-literal {
+        color: #7e22ce;
+      }
+      .hljs-json .hljs-punctuation {
+        color: #9ca3af;
+      }
+      .dark .hljs-json .hljs-attr {
+        color: #7dd3fc;
+      }
+      .dark .hljs-json .hljs-string {
+        color: #6ee7b7;
+      }
+      .dark .hljs-json .hljs-number {
+        color: #fcd34d;
+      }
+      .dark .hljs-json .hljs-literal {
+        color: #d8b4fe;
+      }
+      .dark .hljs-json .hljs-punctuation {
+        color: #6b7280;
       }
 
       /* ── Motion system: motion answers actions, one staggered load moment ── */

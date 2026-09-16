@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react"
+import React, { useState, useMemo, useEffect, useRef } from "react"
 import BigNumber from "bignumber.js"
 import { stringify } from "yaml"
 import {
@@ -49,6 +49,8 @@ import {
   ProviderPie
 } from "./components/charts"
 import { Search } from "lucide-react"
+
+const PAGE_SIZE = 60
 
 function AppProviders({
   themeValue,
@@ -150,6 +152,10 @@ export function App() {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>("models")
 
+  // Progressive rendering: only a slice of filtered models is mounted; scroll appends more
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+
   const providers = useMemo(
     () => [...new Set(models.map((m) => getProvider(m.id)))].sort(),
     [models]
@@ -227,6 +233,29 @@ export function App() {
     showFavorites,
     favorites
   ])
+
+  const visibleModels = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount])
+  const hasMore = filtered.length > visibleModels.length
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [search, provider, modality, sortBy, showReasoning, showFree, showDiscount, showFavorites])
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!hasMore || !el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleCount((count) => count + PAGE_SIZE)
+        }
+      },
+      { rootMargin: "600px 0px" }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+    // re-observe after each append so a still-visible sentinel keeps loading
+  }, [hasMore, visibleCount, viewMode])
 
   const exporters = useMemo<ModelConfigExporter[]>(
     () => [
@@ -471,7 +500,9 @@ export function App() {
               />
 
               <div className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
-                {t.showing} {filtered.length} {t.of} {models.length} {t.modelsCount}
+                {t.showing} {visibleModels.length}
+                {hasMore ? ` / ${filtered.length}` : ` ${t.of} ${models.length}`} {t.modelsCount}
+                {hasMore && <span className="ml-1.5">· {t.scrollForMore}</span>}
                 {search && (
                   <span>
                     {" "}
@@ -491,7 +522,7 @@ export function App() {
                 />
               ) : viewMode === "compact-cards" ? (
                 <div className="card-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
-                  {filtered.map((m) => (
+                  {visibleModels.map((m) => (
                     <CompactModelCard
                       key={m.id}
                       model={m}
@@ -511,7 +542,7 @@ export function App() {
                       : "grid-cols-1"
                   }`}
                 >
-                  {filtered.map((m) => (
+                  {visibleModels.map((m) => (
                     <ModelCard
                       key={m.id}
                       model={m}
@@ -530,6 +561,15 @@ export function App() {
                       onToggleFavorite={() => toggleFavorite(m.id)}
                     />
                   ))}
+                </div>
+              )}
+
+              {viewMode !== "compact-table" && hasMore && (
+                <div
+                  ref={sentinelRef}
+                  className={`py-3 text-center text-xs font-mono uppercase tracking-wider ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                >
+                  {t.scrollForMore}
                 </div>
               )}
 

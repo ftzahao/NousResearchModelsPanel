@@ -1,10 +1,15 @@
+import { useMemo } from "react"
 import { Copy, Clock, Zap, Brain, BarChart3, Sparkles } from "lucide-react"
+import hljs from "highlight.js/lib/core"
+import jsonLang from "highlight.js/lib/languages/json"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme } from "../contexts"
 import { ModelPricingDetails } from "./ModelPricingDetails"
 import { DetailBox } from "./DetailBox"
 import { formatDate, daysSince } from "../utils"
+
+hljs.registerLanguage("json", jsonLang)
 
 export function ModelExpandedDetails({
   model,
@@ -20,6 +25,8 @@ export function ModelExpandedDetails({
   const isDark = theme === "dark"
   const benchmarks = model.benchmarks?.artificial_analysis
   const arenas = model.benchmarks?.design_arena ?? []
+  const json = JSON.stringify(model, null, 2)
+  const highlightedJson = useMemo(() => hljs.highlight(json, { language: "json" }).value, [json])
 
   return (
     <div
@@ -47,7 +54,7 @@ export function ModelExpandedDetails({
         {rawDetails && (
           <button
             type="button"
-            onClick={() => navigator.clipboard?.writeText(JSON.stringify(model, null, 2))}
+            onClick={() => navigator.clipboard?.writeText(json)}
             className={`p-1.5 rounded ${isDark ? "text-gray-400 hover:bg-white/10" : "text-gray-500 hover:bg-gray-100"}`}
             title="Copy JSON"
           >
@@ -57,10 +64,9 @@ export function ModelExpandedDetails({
       </div>
       {rawDetails ? (
         <pre
-          className={`max-h-[520px] overflow-auto rounded-lg p-3 text-[10px] leading-relaxed whitespace-pre-wrap break-all ${isDark ? "bg-gray-950 text-gray-300" : "bg-gray-50 text-gray-700"}`}
-        >
-          {JSON.stringify(model, null, 2)}
-        </pre>
+          className={`hljs-json font-mono max-h-[520px] overflow-auto rounded-lg p-3 text-[11px] leading-relaxed whitespace-pre-wrap break-words ${isDark ? "bg-gray-950 text-gray-300" : "bg-gray-50 text-gray-700"}`}
+          dangerouslySetInnerHTML={{ __html: highlightedJson }}
+        />
       ) : (
         <>
           {/* Description */}

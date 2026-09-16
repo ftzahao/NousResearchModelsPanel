@@ -61,12 +61,12 @@ export function ModelCard({
       {/* Provider color edge */}
       <span
         aria-hidden="true"
-        className="absolute left-0 top-0 bottom-0 w-[3px] flex-shrink-0"
+        className="provider-stripe absolute left-0 top-0 bottom-0 w-[3px] flex-shrink-0"
         style={{ background: color }}
       />
       {/* Header */}
       <div
-        className={`p-4 cursor-pointer transition-colors ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-gray-50"}`}
+        className={`group p-4 cursor-pointer transition-colors ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-gray-50"}`}
         onClick={onToggle}
       >
         <div className="flex items-start justify-between gap-2">
@@ -83,6 +83,7 @@ export function ModelCard({
                 style={{ background: color }}
               />
               <span
+                title={model.id}
                 className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-gray-900"}`}
               >
                 {model.name}
@@ -124,11 +125,6 @@ export function ModelCard({
                 />
               )}
             </div>
-            <div
-              className={`text-[11px] mt-0.5 font-mono truncate ${isDark ? "text-gray-500" : "text-gray-400"}`}
-            >
-              {model.id}
-            </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <FavoriteButton active={favorite} onToggle={onToggleFavorite} />
@@ -143,24 +139,32 @@ export function ModelCard({
               </span>
             )}
             {expanded ? (
-              <ChevronUp size={16} className={isDark ? "text-gray-500" : "text-gray-400"} />
+              <ChevronUp
+                size={16}
+                className={`transition-transform group-hover:-translate-y-0.5 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              />
             ) : (
-              <ChevronDown size={16} className={isDark ? "text-gray-500" : "text-gray-400"} />
+              <ChevronDown
+                size={16}
+                className={`transition-transform group-hover:translate-y-0.5 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              />
             )}
           </div>
         </div>
 
-        {/* Modality tags */}
         <ModalityFlow model={model} />
 
         {/* Quick stats */}
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          <div>
-            <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+        <div className={`flex divide-x mt-3 ${isDark ? "divide-white/10" : "divide-gray-200"}`}>
+          <div className="flex-1 min-w-0 pr-3">
+            <div
+              className={`text-[10px] font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+            >
               {t.context}
             </div>
             <div
-              className={`text-xs font-medium font-mono ${isDark ? "text-gray-200" : "text-gray-700"}`}
+              title={`${t.context}: ${model.context_length.toLocaleString()}`}
+              className={`text-sm font-medium font-mono truncate ${isDark ? "text-gray-200" : "text-gray-700"}`}
             >
               {formatCtx(model.context_length)}
               {model.top_provider?.context_length &&
@@ -172,48 +176,54 @@ export function ModelCard({
             </div>
           </div>
           {model.top_provider?.max_completion_tokens ? (
-            <div>
-              <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+            <div className="flex-1 min-w-0 px-3">
+              <div
+                className={`text-[10px] font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              >
                 {t.maxOutput}
               </div>
               <div
-                className={`text-xs font-medium font-mono ${isDark ? "text-gray-200" : "text-gray-700"}`}
+                className={`text-sm font-medium font-mono truncate ${isDark ? "text-gray-200" : "text-gray-700"}`}
               >
                 {formatCtx(model.top_provider.max_completion_tokens)}
               </div>
             </div>
           ) : null}
-          <div>
-            <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+          <div className="flex-1 min-w-0 px-3">
+            <div
+              className={`text-[10px] font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+            >
               {t.promptPrice} <span className="opacity-60">{currencyUnit(lang, currency)}</span>
             </div>
             {isFree ? (
               <div
-                className={`text-xs font-mono font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}
+                className={`text-sm font-mono font-semibold truncate ${isDark ? "text-green-400" : "text-green-700"}`}
               >
                 {t.freeLabel}
               </div>
             ) : (
               <div
-                className={`text-xs font-medium font-mono ${isDark ? "text-brand-300" : "text-brand-700"}`}
+                className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-300" : "text-brand-700"}`}
               >
                 {formatPrice(model.pricing.prompt, lang, currency, exchangeRate)}
               </div>
             )}
           </div>
-          <div>
-            <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+          <div className="flex-1 min-w-0 pl-3">
+            <div
+              className={`text-[10px] font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+            >
               {t.completePrice} <span className="opacity-60">{currencyUnit(lang, currency)}</span>
             </div>
             {isFree ? (
               <div
-                className={`text-xs font-mono font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}
+                className={`text-sm font-mono font-semibold truncate ${isDark ? "text-green-400" : "text-green-700"}`}
               >
                 {t.freeLabel}
               </div>
             ) : (
               <div
-                className={`text-xs font-medium font-mono ${isDark ? "text-brand-400" : "text-brand-600"}`}
+                className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-400" : "text-brand-600"}`}
               >
                 {formatPrice(model.pricing.completion, lang, currency, exchangeRate)}
               </div>
@@ -225,8 +235,14 @@ export function ModelCard({
         {benchmarks?.intelligence_index != null && (
           <div className="mt-3">
             <div className="flex justify-between text-[10px] mb-0.5">
-              <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.intelligence}</span>
-              <span className={`font-medium ${isDark ? "text-gray-300" : "text-gray-600"}`}>
+              <span
+                className={`font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              >
+                {t.intelligence}
+              </span>
+              <span
+                className={`font-medium font-mono ${isDark ? "text-gray-300" : "text-gray-600"}`}
+              >
                 {benchmarks.intelligence_index}
               </span>
             </div>
