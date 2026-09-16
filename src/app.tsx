@@ -12,7 +12,8 @@ import {
   buildOpencodeConfig,
   buildCrushConfig,
   buildChatboxProviderConfig,
-  buildCherryStudioProvider
+  buildCherryStudioProvider,
+  buildZedSettings
 } from "./model-export"
 import type {
   Model,
@@ -299,6 +300,13 @@ export function App() {
         fileName: "cherry-studio-nous.json",
         usage: t.cherryStudioUsage,
         build: (items) => buildCherryStudioProvider(items)
+      },
+      {
+        id: "zed",
+        label: t.zedSettings,
+        fileName: "zed-language-models.json",
+        usage: t.zedUsage,
+        build: (items) => buildZedSettings(items)
       }
     ],
     [t]

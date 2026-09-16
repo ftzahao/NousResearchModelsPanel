@@ -180,6 +180,12 @@ export const translations = {
       "下载 cherry-studio-nous.json（或复制其内容）",
       "在 Cherry Studio 设置 → 模型服务中添加 OpenAI 兼容服务商：API Host 填 https://inference-api.nousresearch.com（不要带 /v1），或把该 JSON 合并进 settings.json 的 data.providers.nous",
       "填入 API Key，模型列表会按该文件预置"
+    ],
+    zedSettings: "Zed language_models 配置",
+    zedUsage: [
+      "下载 zed-language-models.json，把 language_models.openai_compatible.nous 合并进 Zed 的 settings.json",
+      "API Key 不要写入 settings.json：在 Zed 的 设置 → AI → LLM Providers 页面为 nous 填入 Key，或设置环境变量 NOUS_API_KEY",
+      "在 Agent Panel 的模型下拉中选择 nous 下的模型"
     ]
   },
   en: {
@@ -362,6 +368,12 @@ export const translations = {
       "Download cherry-studio-nous.json (or copy its contents)",
       "Add an OpenAI-compatible provider in Cherry Studio settings → Model Provider with API Host https://inference-api.nousresearch.com (no /v1), or merge this JSON into settings.json under data.providers.nous",
       "Fill in your API key; the model list comes pre-seeded from this file"
+    ],
+    zedSettings: "Zed language_models settings",
+    zedUsage: [
+      "Download zed-language-models.json and merge language_models.openai_compatible.nous into Zed's settings.json",
+      "Do not put the API key in settings.json: fill it in for nous under Zed settings → AI → LLM Providers, or set the NOUS_API_KEY environment variable",
+      "Pick a nous model from the Agent Panel model dropdown"
     ]
   }
 }
