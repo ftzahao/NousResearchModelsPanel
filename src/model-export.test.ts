@@ -7,6 +7,11 @@ import {
   buildGithubCopilotLanguageModels,
   buildModelCatalogJson,
   buildZcodeConfig,
+  buildLitellmConfig,
+  buildOpencodeConfig,
+  buildCrushConfig,
+  buildChatboxProviderConfig,
+  buildCherryStudioProvider,
   CODEX_MODEL_INSTRUCTIONS,
   type ExportableModel
 } from "./model-export"
@@ -425,5 +430,181 @@ test("marks a DeepSeek Harness model that only offers none as non-reasoning", ()
 
 test("serializes the DeepSeek Harness export as parseable YAML", () => {
   const config = buildDshProviderConfig([model])
+  expect(parse(stringify(config))).toEqual(config)
+})
+
+const imageModel = {
+  id: "glm-4.5v",
+  name: "GLM 4.5V",
+  description: "A vision model",
+  context_length: 65536,
+  architecture: { input_modalities: ["text", "image"], output_modalities: ["text"] },
+  supported_parameters: ["tools"],
+  top_provider: { context_length: 65536 }
+} as unknown as ExportableModel
+
+const pricedModel = {
+  ...model,
+  pricing: { prompt: "0.000001", completion: "0.000003", input_cache_read: "0.0000001" }
+} as unknown as ExportableModel
+
+test("builds LiteLLM proxy model_list entries", () => {
+  expect(buildLitellmConfig([model])).toEqual([
+    {
+      model_name: "nous/qwen/qwen3-coder",
+      litellm_params: {
+        model: "openai/qwen/qwen3-coder",
+        api_base: "https://inference-api.nousresearch.com/v1",
+        api_key: "os.environ/NOUS_API_KEY"
+      }
+    }
+  ])
+})
+
+test("builds an OpenCode provider map with capability flags", () => {
+  expect(buildOpencodeConfig([model])).toEqual({
+    $schema: "https://opencode.ai/config.json",
+    provider: {
+      nous: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "nous",
+        options: {
+          baseURL: "https://inference-api.nousresearch.com/v1",
+          apiKey: "{env:NOUS_API_KEY}"
+        },
+        models: {
+          "qwen/qwen3-coder": {
+            name: "Qwen3 Coder",
+            limit: { context: 131072, output: 16384 },
+            reasoning: true,
+            tool_call: true
+          }
+        }
+      }
+    }
+  })
+})
+
+test("marks attachment instead of reasoning for OpenCode vision models", () => {
+  const config = buildOpencodeConfig([imageModel])
+  expect(config.provider.nous?.models["glm-4.5v"]).toEqual({
+    name: "GLM 4.5V",
+    limit: { context: 65536, output: 8192 },
+    tool_call: true,
+    attachment: true
+  })
+})
+
+test("builds a Crush provider with the schema-required cost fields", () => {
+  expect(buildCrushConfig([pricedModel])).toEqual({
+    $schema: "https://charm.land/crush.json",
+    providers: {
+      nous: {
+        id: "nous",
+        name: "nous",
+        type: "openai",
+        base_url: "https://inference-api.nousresearch.com/v1",
+        api_key: "$NOUS_API_KEY",
+        models: [
+          {
+            id: "qwen/qwen3-coder",
+            name: "Qwen3 Coder",
+            context_window: 131072,
+            default_max_tokens: 16384,
+            cost_per_1m_in: 1,
+            cost_per_1m_out: 3,
+            cost_per_1m_in_cached: 0.1,
+            cost_per_1m_out_cached: 0,
+            can_reason: true,
+            supports_attachments: false
+          }
+        ]
+      }
+    }
+  })
+})
+
+test("zeroes Crush cost fields for unpriced models and flags image support", () => {
+  const entry = buildCrushConfig([imageModel]).providers.nous?.models[0]
+  expect(entry).toMatchObject({
+    id: "glm-4.5v",
+    context_window: 65536,
+    default_max_tokens: 8192,
+    cost_per_1m_in: 0,
+    cost_per_1m_out: 0,
+    cost_per_1m_in_cached: 0,
+    cost_per_1m_out_cached: 0,
+    can_reason: false,
+    supports_attachments: true
+  })
+})
+
+test("builds a Chatbox one-click provider import config", () => {
+  expect(buildChatboxProviderConfig([model])).toEqual({
+    id: "nous",
+    name: "nous",
+    type: "openai",
+    iconUrl: "https://nousresearch.com/favicon.ico",
+    urls: { website: "https://nousresearch.com" },
+    settings: {
+      apiHost: "https://inference-api.nousresearch.com",
+      models: [
+        {
+          modelId: "qwen/qwen3-coder",
+          nickname: "Qwen3 Coder",
+          type: "chat",
+          capabilities: ["reasoning", "tool_use"],
+          contextWindow: 131072,
+          maxOutput: 16384
+        }
+      ]
+    }
+  })
+})
+
+test("maps vision models to the Chatbox vision capability", () => {
+  const models = buildChatboxProviderConfig([imageModel]).settings.models
+  expect(models[0]).toEqual({
+    modelId: "glm-4.5v",
+    nickname: "GLM 4.5V",
+    type: "chat",
+    capabilities: ["vision", "tool_use"],
+    contextWindow: 65536,
+    maxOutput: 8192
+  })
+})
+
+test("builds a Cherry Studio provider entry with typed capabilities", () => {
+  expect(buildCherryStudioProvider([model, imageModel])).toEqual({
+    id: "nous",
+    type: "openai",
+    name: "nous",
+    apiKey: "",
+    apiHost: "https://inference-api.nousresearch.com",
+    models: [
+      {
+        id: "qwen/qwen3-coder",
+        name: "Qwen3 Coder",
+        provider: "nous",
+        group: "nous",
+        description: "A coding model",
+        capabilities: [{ type: "reasoning" }, { type: "function_calling" }]
+      },
+      {
+        id: "glm-4.5v",
+        name: "GLM 4.5V",
+        provider: "nous",
+        group: "nous",
+        description: "A vision model",
+        capabilities: [{ type: "vision" }, { type: "function_calling" }]
+      }
+    ],
+    enabled: true,
+    isSystem: false
+  })
+})
+
+test("serializes the LiteLLM export as parseable YAML", () => {
+  const config = buildLitellmConfig([model])
   expect(parse(stringify(config))).toEqual(config)
 })

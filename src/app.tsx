@@ -7,7 +7,12 @@ import {
   buildGithubCopilotLanguageModels,
   buildCodexConfigToml,
   buildModelCatalogJson,
-  buildZcodeConfig
+  buildZcodeConfig,
+  buildLitellmConfig,
+  buildOpencodeConfig,
+  buildCrushConfig,
+  buildChatboxProviderConfig,
+  buildCherryStudioProvider
 } from "./model-export"
 import type {
   Model,
@@ -209,7 +214,18 @@ export function App() {
     })
 
     return result
-  }, [models, search, provider, modality, sortBy, showReasoning, showFree, showDiscount, showFavorites, favorites])
+  }, [
+    models,
+    search,
+    provider,
+    modality,
+    sortBy,
+    showReasoning,
+    showFree,
+    showDiscount,
+    showFavorites,
+    favorites
+  ])
 
   const exporters = useMemo<ModelConfigExporter[]>(
     () => [
@@ -219,6 +235,7 @@ export function App() {
         fileName: "codex-config.toml",
         format: "toml",
         usage: t.codexUsage,
+        warning: t.codexWarning,
         build: (items) => buildCodexConfigToml(items),
         extraFiles: [{ fileName: "models.json", build: (items) => buildModelCatalogJson(items) }]
       },
@@ -246,6 +263,42 @@ export function App() {
         fileName: "dsh-llm-pi-ai.yaml",
         format: "yaml",
         build: (items) => buildDshProviderConfig(items)
+      },
+      {
+        id: "litellm",
+        label: t.litellmConfig,
+        fileName: "litellm-config.yaml",
+        format: "yaml",
+        usage: t.litellmUsage,
+        build: (items) => buildLitellmConfig(items)
+      },
+      {
+        id: "opencode",
+        label: t.opencodeConfig,
+        fileName: "opencode.json",
+        usage: t.opencodeUsage,
+        build: (items) => buildOpencodeConfig(items)
+      },
+      {
+        id: "crush",
+        label: t.crushConfig,
+        fileName: "crush.json",
+        usage: t.crushUsage,
+        build: (items) => buildCrushConfig(items)
+      },
+      {
+        id: "chatbox",
+        label: t.chatboxProvider,
+        fileName: "chatbox-nous-provider.json",
+        usage: t.chatboxUsage,
+        build: (items) => buildChatboxProviderConfig(items)
+      },
+      {
+        id: "cherry-studio",
+        label: t.cherryStudioProvider,
+        fileName: "cherry-studio-nous.json",
+        usage: t.cherryStudioUsage,
+        build: (items) => buildCherryStudioProvider(items)
       }
     ],
     [t]
@@ -501,6 +554,7 @@ export function App() {
           <ExportPreviewModal
             files={previewFiles}
             usage={activeExporter.usage}
+            warning={activeExporter.warning}
             selectedCount={selectedModels.length}
             onClose={closeExportPreview}
           />

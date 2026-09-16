@@ -90,9 +90,17 @@ export function ExportToolbar({
                 {exporters.map((exporter) => (
                   <option key={exporter.id} value={exporter.id}>
                     {exporter.label}
+                    {exporter.warning ? " ⚠️" : ""}
                   </option>
                 ))}
               </select>
+              {exporters.find((exporter) => exporter.id === exporterId)?.warning ? (
+                <p
+                  className={`mb-2 rounded-lg border px-2 py-1.5 text-[10px] leading-relaxed ${theme === "dark" ? "border-amber-500/30 bg-amber-500/10 text-amber-300" : "border-amber-300 bg-amber-50 text-amber-800"}`}
+                >
+                  {exporters.find((exporter) => exporter.id === exporterId)?.warning}
+                </p>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {

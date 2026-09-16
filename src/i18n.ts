@@ -148,7 +148,39 @@ export const translations = {
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
     zcodeProviders: "ZCode v2/config.json provider",
-    deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider"
+    deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider",
+    codexWarning: "官方 API 格式不支持此方式，可以尝试用 API 代理工具（如 LiteLLM）",
+    litellmConfig: "LiteLLM config.yaml",
+    litellmUsage: [
+      "下载 litellm-config.yaml，保存到合适位置（例如 ~/.litellm/config.yaml）",
+      '设置 API Key：export NOUS_API_KEY="你的 Nous API Key"',
+      "启动代理：litellm --config ~/.litellm/config.yaml --port 4000",
+      "客户端把 base URL 指向 http://localhost:4000/v1，model 填 nous/<模型ID>；它也可以当作其它工具的 API 代理"
+    ],
+    opencodeConfig: "OpenCode opencode.json",
+    opencodeUsage: [
+      "下载 opencode.json，把 provider.nous 合并进 ~/.config/opencode/opencode.json（项目级配置则放在项目根目录）",
+      '设置 API Key：export NOUS_API_KEY="你的 Nous API Key"（配置中通过 {env:NOUS_API_KEY} 引用）',
+      "重启 opencode，用 /models 选择 nous 下的模型"
+    ],
+    crushConfig: "Crush crush.json",
+    crushUsage: [
+      "下载 crush.json，把 providers.nous 合并进 ~/.config/crush/crush.json（或项目根目录 crush.json）",
+      '设置 API Key：export NOUS_API_KEY="你的 Nous API Key"（配置中通过 $NOUS_API_KEY 引用）',
+      "启动 crush，用 /models 切换 nous 下的模型"
+    ],
+    chatboxProvider: "Chatbox 服务商导入配置",
+    chatboxUsage: [
+      "下载 chatbox-nous-provider.json 并复制其内容",
+      "打开 Chatbox 设置 → 模型 → 模型提供方 → 添加自定义提供方，使用「导入」粘贴该 JSON 完成一键导入",
+      "导入后在提供方设置里填入你的 Nous API Key"
+    ],
+    cherryStudioProvider: "Cherry Studio 服务商配置",
+    cherryStudioUsage: [
+      "下载 cherry-studio-nous.json（或复制其内容）",
+      "在 Cherry Studio 设置 → 模型服务中添加 OpenAI 兼容服务商：API Host 填 https://inference-api.nousresearch.com（不要带 /v1），或把该 JSON 合并进 settings.json 的 data.providers.nous",
+      "填入 API Key，模型列表会按该文件预置"
+    ]
   },
   en: {
     title: "NousResearch Models",
@@ -297,7 +329,40 @@ export const translations = {
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
     zcodeProviders: "ZCode v2/config.json provider",
-    deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider"
+    deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider",
+    codexWarning:
+      "The official API format doesn't support this method; try an API proxy tool (e.g. LiteLLM)",
+    litellmConfig: "LiteLLM config.yaml",
+    litellmUsage: [
+      "Download litellm-config.yaml and save it somewhere sensible (e.g. ~/.litellm/config.yaml)",
+      'Set your API key: export NOUS_API_KEY="your Nous API key"',
+      "Start the proxy: litellm --config ~/.litellm/config.yaml --port 4000",
+      "Point clients at http://localhost:4000/v1 with model nous/<model-id>; the proxy also works as an API gateway for other tools"
+    ],
+    opencodeConfig: "OpenCode opencode.json",
+    opencodeUsage: [
+      "Download opencode.json and merge provider.nous into ~/.config/opencode/opencode.json (project-level config goes in the project root)",
+      'Set your API key: export NOUS_API_KEY="your Nous API key" (referenced as {env:NOUS_API_KEY} in the config)',
+      "Restart opencode and pick a nous model with /models"
+    ],
+    crushConfig: "Crush crush.json",
+    crushUsage: [
+      "Download crush.json and merge providers.nous into ~/.config/crush/crush.json (or ./crush.json)",
+      'Set your API key: export NOUS_API_KEY="your Nous API key" (referenced as $NOUS_API_KEY in the config)',
+      "Start crush and switch models with /models"
+    ],
+    chatboxProvider: "Chatbox provider import",
+    chatboxUsage: [
+      "Download chatbox-nous-provider.json and copy its contents",
+      "Open Chatbox settings → Model → Model providers → Add custom provider, and use the import button to paste this JSON for one-click setup",
+      "Fill in your Nous API key in the provider settings after importing"
+    ],
+    cherryStudioProvider: "Cherry Studio provider",
+    cherryStudioUsage: [
+      "Download cherry-studio-nous.json (or copy its contents)",
+      "Add an OpenAI-compatible provider in Cherry Studio settings → Model Provider with API Host https://inference-api.nousresearch.com (no /v1), or merge this JSON into settings.json under data.providers.nous",
+      "Fill in your API key; the model list comes pre-seeded from this file"
+    ]
   }
 }
 

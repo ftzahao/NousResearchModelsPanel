@@ -7,11 +7,13 @@ import type { ExportPreviewFile } from "../types"
 export function ExportPreviewModal({
   files,
   usage,
+  warning,
   selectedCount,
   onClose
 }: {
   files: ExportPreviewFile[]
   usage?: string[]
+  warning?: string
   selectedCount: number
   onClose: () => void
 }) {
@@ -74,6 +76,13 @@ export function ExportPreviewModal({
         <div
           className={`flex-1 overflow-auto p-4 min-h-0 ${theme === "dark" ? "bg-gray-950" : "bg-gray-50"}`}
         >
+          {warning ? (
+            <div
+              className={`mb-3 rounded-xl border p-3 text-[11px] leading-relaxed ${theme === "dark" ? "border-amber-500/30 bg-amber-500/10 text-amber-300" : "border-amber-300 bg-amber-50 text-amber-800"}`}
+            >
+              ⚠️ {warning}
+            </div>
+          ) : null}
           {usage?.length ? (
             <div
               className={`mb-3 rounded-xl border p-3 ${theme === "dark" ? "border-white/10 bg-white/5" : "border-gray-200 bg-white"}`}

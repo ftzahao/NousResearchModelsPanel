@@ -98,6 +98,8 @@ export interface ModelConfigExporter {
   fileName: string
   format?: "yaml" | "toml"
   usage?: string[]
+  // shown as a ⚠️ badge in the picker and a callout in the preview modal (e.g. Codex needs an API proxy)
+  warning?: string
   build: (models: ExportableModel[]) => unknown
   // additional downloadable files shown in the same preview modal (e.g. Codex ships config + catalog together)
   extraFiles?: Array<{
@@ -438,5 +440,263 @@ export function buildDshProviderConfig(models: ExportableModel[]): DshSettings {
         }
       }
     }
+  }
+}
+
+const NOUS_API_HOST = "https://inference-api.nousresearch.com"
+const NOUS_API_KEY_ENV = "NOUS_API_KEY"
+
+// API prices are per-token; the tool configs below expect USD per 1M tokens
+const toPerMillion = (perToken: string) =>
+  new BigNumber(perToken).times(1e6).decimalPlaces(6).toNumber()
+
+const hasImageInput = (model: ExportableModel) =>
+  model.architecture?.input_modalities?.includes("image") ?? false
+const isReasoningModel = (model: ExportableModel) =>
+  (model.reasoning?.supported_efforts?.length ?? 0) > 0
+const supportsToolCalling = (model: ExportableModel) =>
+  model.supported_parameters?.includes("tools") ?? false
+
+// ---- LiteLLM (proxy config.yaml) ----
+
+export interface LitellmModelEntry {
+  model_name: string
+  litellm_params: {
+    model: string
+    api_base: string
+    api_key: string
+  }
+}
+
+export function buildLitellmConfig(models: ExportableModel[]): LitellmModelEntry[] {
+  return models.map((model) => ({
+    model_name: `nous/${model.id}`,
+    litellm_params: {
+      model: `openai/${model.id}`,
+      api_base: GCMP_BASE_URL,
+      api_key: `os.environ/${NOUS_API_KEY_ENV}`
+    }
+  }))
+}
+
+// ---- OpenCode (opencode.json) ----
+
+export interface OpencodeModelEntry {
+  name: string
+  limit: { context: number; output: number }
+  reasoning?: boolean
+  tool_call?: boolean
+  attachment?: boolean
+}
+
+export interface OpencodeProviderEntry {
+  npm: "@ai-sdk/openai-compatible"
+  name: string
+  options: { baseURL: string; apiKey: string }
+  models: Record<string, OpencodeModelEntry>
+}
+
+export interface OpencodeConfig {
+  $schema: string
+  provider: Record<string, OpencodeProviderEntry>
+}
+
+export function buildOpencodeConfig(models: ExportableModel[]): OpencodeConfig {
+  const modelEntries = Object.fromEntries(
+    models.map((model) => {
+      const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+      const { maxOutputTokens } = deriveContextTokens(model)
+      const entry: OpencodeModelEntry = {
+        name: model.name,
+        limit: { context: contextWindow, output: maxOutputTokens },
+        ...(isReasoningModel(model) ? { reasoning: true } : {}),
+        ...(supportsToolCalling(model) ? { tool_call: true } : {}),
+        ...(hasImageInput(model) ? { attachment: true } : {})
+      }
+      return [model.id, entry]
+    })
+  )
+  return {
+    $schema: "https://opencode.ai/config.json",
+    provider: {
+      nous: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "nous",
+        options: {
+          baseURL: GCMP_BASE_URL,
+          apiKey: "{env:NOUS_API_KEY}"
+        },
+        models: modelEntries
+      }
+    }
+  }
+}
+
+// ---- Crush (crush.json) ----
+
+export interface CrushModelEntry {
+  id: string
+  name: string
+  context_window: number
+  default_max_tokens: number
+  cost_per_1m_in: number
+  cost_per_1m_out: number
+  cost_per_1m_in_cached: number
+  cost_per_1m_out_cached: number
+  can_reason: boolean
+  supports_attachments: boolean
+}
+
+export interface CrushProviderEntry {
+  id: string
+  name: string
+  type: "openai"
+  base_url: string
+  api_key: string
+  models: CrushModelEntry[]
+}
+
+export interface CrushConfig {
+  $schema: string
+  providers: Record<string, CrushProviderEntry>
+}
+
+export function buildCrushConfig(models: ExportableModel[]): CrushConfig {
+  return {
+    $schema: "https://charm.land/crush.json",
+    providers: {
+      nous: {
+        id: "nous",
+        name: "nous",
+        type: "openai",
+        base_url: GCMP_BASE_URL,
+        api_key: `$${NOUS_API_KEY_ENV}`,
+        models: models.map((model) => {
+          const pricing = (model.pricing ?? {}) as Record<string, string | undefined>
+          const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+          const { maxOutputTokens } = deriveContextTokens(model)
+          return {
+            id: model.id,
+            name: model.name,
+            context_window: contextWindow,
+            default_max_tokens: maxOutputTokens,
+            // all four cost fields are schema-required; cache-write has no API price
+            cost_per_1m_in: pricing.prompt != null ? toPerMillion(pricing.prompt) : 0,
+            cost_per_1m_out: pricing.completion != null ? toPerMillion(pricing.completion) : 0,
+            cost_per_1m_in_cached:
+              pricing.input_cache_read != null ? toPerMillion(pricing.input_cache_read) : 0,
+            cost_per_1m_out_cached: 0,
+            can_reason: isReasoningModel(model),
+            supports_attachments: hasImageInput(model)
+          }
+        })
+      }
+    }
+  }
+}
+
+// ---- Chatbox (one-click provider import) ----
+
+export type ChatboxCapability = "vision" | "reasoning" | "tool_use"
+
+export interface ChatboxModelEntry {
+  modelId: string
+  nickname: string
+  type: "chat"
+  capabilities?: ChatboxCapability[]
+  contextWindow?: number
+  maxOutput?: number
+}
+
+export interface ChatboxProviderConfig {
+  id: string
+  name: string
+  type: "openai"
+  iconUrl: string
+  urls: { website: string }
+  settings: {
+    apiHost: string
+    models: ChatboxModelEntry[]
+  }
+}
+
+export function buildChatboxProviderConfig(models: ExportableModel[]): ChatboxProviderConfig {
+  return {
+    id: "nous",
+    name: "nous",
+    type: "openai",
+    iconUrl: "https://nousresearch.com/favicon.ico",
+    urls: { website: "https://nousresearch.com" },
+    settings: {
+      // chatbox appends /v1/chat/completions itself, so no /v1 here
+      apiHost: NOUS_API_HOST,
+      models: models.map((model) => {
+        const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+        const { maxOutputTokens } = deriveContextTokens(model)
+        const capabilities: ChatboxCapability[] = []
+        if (hasImageInput(model)) capabilities.push("vision")
+        if (isReasoningModel(model)) capabilities.push("reasoning")
+        if (supportsToolCalling(model)) capabilities.push("tool_use")
+        return {
+          modelId: model.id,
+          nickname: model.name,
+          type: "chat",
+          ...(capabilities.length ? { capabilities } : {}),
+          ...(contextWindow ? { contextWindow } : {}),
+          ...(maxOutputTokens ? { maxOutput: maxOutputTokens } : {})
+        }
+      })
+    }
+  }
+}
+
+// ---- Cherry Studio (provider entry for settings.json data.providers) ----
+
+export type CherryStudioCapability = "vision" | "reasoning" | "function_calling"
+
+export interface CherryStudioModelEntry {
+  id: string
+  name: string
+  provider: string
+  group: string
+  description?: string
+  capabilities?: Array<{ type: CherryStudioCapability }>
+}
+
+export interface CherryStudioProviderEntry {
+  id: string
+  type: "openai"
+  name: string
+  apiKey: string
+  apiHost: string
+  models: CherryStudioModelEntry[]
+  enabled: boolean
+  isSystem: false
+}
+
+export function buildCherryStudioProvider(models: ExportableModel[]): CherryStudioProviderEntry {
+  return {
+    id: "nous",
+    type: "openai",
+    name: "nous",
+    apiKey: "",
+    // cherry studio appends /v1 itself, so no /v1 here
+    apiHost: NOUS_API_HOST,
+    models: models.map((model) => {
+      const capabilities: CherryStudioCapability[] = []
+      if (hasImageInput(model)) capabilities.push("vision")
+      if (isReasoningModel(model)) capabilities.push("reasoning")
+      if (supportsToolCalling(model)) capabilities.push("function_calling")
+      return {
+        id: model.id,
+        name: model.name,
+        provider: "nous",
+        group: "nous",
+        ...(model.description ? { description: model.description } : {}),
+        ...(capabilities.length ? { capabilities: capabilities.map((type) => ({ type })) } : {})
+      }
+    }),
+    enabled: true,
+    isSystem: false
   }
 }
