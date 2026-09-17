@@ -1,44 +1,9 @@
 import BigNumber from "bignumber.js"
+import type { Model, PriceField } from "./types"
 
-export interface ExportableModel {
-  id: string
-  canonical_slug: string
-  hugging_face_id: string | null
-  name: string
-  created: number
-  description: string
-  context_length: number
-  architecture: {
-    modality: string
-    input_modalities: string[]
-    output_modalities: string[]
-    tokenizer: string
-    instruct_type: string | null
-  }
-  pricing: object
-  top_provider: {
-    context_length: number
-    max_completion_tokens: number
-    is_moderated: boolean
-  }
-  per_request_limits: number | null
-  supported_parameters: string[]
-  default_parameters: object
-  supported_voices: unknown
-  knowledge_cutoff: unknown
-  expiration_date: unknown
-  links: {
-    details: string
-  }
-  reasoning: {
-    mandatory: boolean
-    default_enabled: boolean
-    supported_efforts: string[]
-    default_effort: string
-  }
-  aliases: string[]
-  synthesizedFreeVariant: boolean
-}
+// The exporters consume the same API models the dashboard renders, so this is an
+// alias rather than a second hand-maintained copy of the response shape.
+export type ExportableModel = Model
 
 export interface CodexReasoningLevel {
   effort: string
@@ -140,7 +105,7 @@ export const CODEX_MODEL_INSTRUCTIONS =
 export function buildModelCatalogJson(models: ExportableModel[]): ModelCatalog {
   return {
     models: models.map((model, index) => {
-      const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+      const contextWindow = getContextWindow(model)
       const knownEfforts = (model.reasoning?.supported_efforts ?? []).filter((effort) =>
         CODEX_KNOWN_EFFORTS.includes(effort)
       )
@@ -197,11 +162,18 @@ wire_api = "responses"
 const GCMP_BASE_URL = "https://inference-api.nousresearch.com/v1"
 const GCMP_LIMIT = { rpm: 180, tpm: 720000 }
 
+const getContextWindow = (model: ExportableModel): number =>
+  model.top_provider?.context_length ?? model.context_length ?? 0
+
+// API prices are per-token; the tool configs below expect USD per 1M tokens
+const toPerMillion = (perToken: string) =>
+  new BigNumber(perToken).times(1e6).decimalPlaces(6).toNumber()
+
 function deriveContextTokens(model: ExportableModel): {
   maxInputTokens: number
   maxOutputTokens: number
 } {
-  const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+  const contextWindow = getContextWindow(model)
   // reserve 1/8 of the context window for output, capped at the provider's max output
   const context = new BigNumber(contextWindow)
   const declaredMaxOutput = model.top_provider?.max_completion_tokens ?? 0
@@ -215,12 +187,9 @@ function deriveContextTokens(model: ExportableModel): {
 
 export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompatibleModelEntry[] {
   return models.map((model) => {
-    const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+    const contextWindow = getContextWindow(model)
     const { maxInputTokens, maxOutputTokens } = deriveContextTokens(model)
-    const pricing = (model.pricing ?? {}) as Record<string, string | undefined>
-    // API prices are per-token; gcmp expects USD per 1M tokens
-    const toPerMillion = (perToken: string) =>
-      new BigNumber(perToken).times(1e6).decimalPlaces(6).toNumber()
+    const pricing: Partial<Record<PriceField, string>> = model.pricing ?? {}
     const promptPrice = pricing.prompt != null ? toPerMillion(pricing.prompt) : 0
     const completionPrice = pricing.completion != null ? toPerMillion(pricing.completion) : 0
     const usd: number[] = [promptPrice, completionPrice]
@@ -329,7 +298,7 @@ export function buildZcodeConfig(models: ExportableModel[]): Record<string, Zcod
       },
       models: Object.fromEntries(
         models.map((model) => {
-          const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+          const contextWindow = getContextWindow(model)
           const { maxOutputTokens } = deriveContextTokens(model)
           const efforts = model.reasoning?.supported_efforts
           const entry: ZcodeModelEntry = {
@@ -420,7 +389,7 @@ export function buildDshProviderConfig(models: ExportableModel[]): DshSettings {
           // pi-ai treats an unrecognized gateway URL as plain OpenAI; these are the docs' first corrections
           compat: { supportsDeveloperRole: false, maxTokensField: "max_tokens" },
           models: models.map((model) => {
-            const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+            const contextWindow = getContextWindow(model)
             const { maxOutputTokens } = deriveContextTokens(model)
             const input = (model.architecture?.input_modalities ?? []).filter(
               (modality): modality is DshModality => modality === "text" || modality === "image"
@@ -445,10 +414,6 @@ export function buildDshProviderConfig(models: ExportableModel[]): DshSettings {
 
 const NOUS_API_HOST = "https://inference-api.nousresearch.com"
 const NOUS_API_KEY_ENV = "NOUS_API_KEY"
-
-// API prices are per-token; the tool configs below expect USD per 1M tokens
-const toPerMillion = (perToken: string) =>
-  new BigNumber(perToken).times(1e6).decimalPlaces(6).toNumber()
 
 const hasImageInput = (model: ExportableModel) =>
   model.architecture?.input_modalities?.includes("image") ?? false
@@ -504,7 +469,7 @@ export interface OpencodeConfig {
 export function buildOpencodeConfig(models: ExportableModel[]): OpencodeConfig {
   const modelEntries = Object.fromEntries(
     models.map((model) => {
-      const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+      const contextWindow = getContextWindow(model)
       const { maxOutputTokens } = deriveContextTokens(model)
       const entry: OpencodeModelEntry = {
         name: model.name,
@@ -572,8 +537,8 @@ export function buildCrushConfig(models: ExportableModel[]): CrushConfig {
         base_url: GCMP_BASE_URL,
         api_key: `$${NOUS_API_KEY_ENV}`,
         models: models.map((model) => {
-          const pricing = (model.pricing ?? {}) as Record<string, string | undefined>
-          const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+          const pricing: Partial<Record<PriceField, string>> = model.pricing ?? {}
+          const contextWindow = getContextWindow(model)
           const { maxOutputTokens } = deriveContextTokens(model)
           return {
             id: model.id,
@@ -631,7 +596,7 @@ export function buildChatboxProviderConfig(models: ExportableModel[]): ChatboxPr
       // chatbox appends /v1/chat/completions itself, so no /v1 here
       apiHost: NOUS_API_HOST,
       models: models.map((model) => {
-        const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+        const contextWindow = getContextWindow(model)
         const { maxOutputTokens } = deriveContextTokens(model)
         const capabilities: ChatboxCapability[] = []
         if (hasImageInput(model)) capabilities.push("vision")
@@ -779,7 +744,7 @@ export function buildZedSettings(models: ExportableModel[]): ZedSettings {
         [ZED_PROVIDER_ID]: {
           api_url: GCMP_BASE_URL,
           available_models: models.map((model) => {
-            const contextWindow = model.top_provider?.context_length ?? model.context_length ?? 0
+            const contextWindow = getContextWindow(model)
             const { maxOutputTokens } = deriveContextTokens(model)
             const reasoningEffort = buildZedReasoningEffort(
               model.reasoning?.supported_efforts,

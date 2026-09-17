@@ -1,20 +1,21 @@
+import { memo } from "react"
 import { Brain, Shield, Sparkles, Eye, BadgePercent } from "lucide-react"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
 import {
-  bn,
+  isFreePrice,
+  isNewModel,
   formatCtx,
   formatPriceShort,
   getProviderColor,
-  daysSince,
   getDiscount,
   formatDiscount
 } from "../utils"
 import { SelectCheckbox } from "./SelectCheckbox"
 import { IntelligenceBar } from "./IntelligenceBar"
 import { FavoriteButton } from "./FavoriteButton"
-export function CompactModelCard({
+export const CompactModelCard = memo(function CompactModelCard({
   model,
   selected,
   onSelect,
@@ -24,10 +25,10 @@ export function CompactModelCard({
 }: {
   model: Model
   selected: boolean
-  onSelect: () => void
-  onShowDetails: () => void
+  onSelect: (id: string) => void
+  onShowDetails: (id: string) => void
   favorite: boolean
-  onToggleFavorite: () => void
+  onToggleFavorite: (id: string) => void
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
@@ -39,7 +40,7 @@ export function CompactModelCard({
 
   return (
     <div
-      onClick={onSelect}
+      onClick={() => onSelect(model.id)}
       className={`glass rounded-xl p-2.5 cursor-pointer transition-all duration-200 ${
         selected
           ? isDark
@@ -53,7 +54,7 @@ export function CompactModelCard({
       <div className="flex items-start gap-1.5">
         <SelectCheckbox
           checked={selected}
-          onToggle={onSelect}
+          onToggle={() => onSelect(model.id)}
           ariaLabel={selected ? `Deselect ${model.name}` : `Select ${model.name}`}
           theme={theme}
         />
@@ -69,7 +70,7 @@ export function CompactModelCard({
             >
               {model.name}
             </span>
-            {daysSince(model.created) < 7 && (
+            {isNewModel(model.created) && (
               <Sparkles
                 size={11}
                 className={`flex-shrink-0 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
@@ -95,14 +96,18 @@ export function CompactModelCard({
                 className={`flex-shrink-0 ${isDark ? "text-blue-400" : "text-blue-600"}`}
               />
             )}
-            <FavoriteButton active={favorite} onToggle={onToggleFavorite} size={12} />
+            <FavoriteButton
+              active={favorite}
+              onToggle={() => onToggleFavorite(model.id)}
+              size={12}
+            />
             <button
               type="button"
               title={t.viewDetails}
               aria-label={t.viewDetails}
               onClick={(event) => {
                 event.stopPropagation()
-                onShowDetails()
+                onShowDetails(model.id)
               }}
               className={`p-0.5 rounded flex-shrink-0 transition-colors ${isDark ? "text-gray-500 hover:text-gray-200 hover:bg-white/10" : "text-gray-400 hover:text-gray-800 hover:bg-gray-100"}`}
             >
@@ -125,7 +130,7 @@ export function CompactModelCard({
           className={isDark ? "text-brand-300" : "text-brand-700"}
           title={`${t.promptPrice} (${t.perM})`}
         >
-          {bn(model.pricing.prompt).isZero() ? (
+          {isFreePrice(model.pricing.prompt) ? (
             <span className={`font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}>
               {t.freeLabel}
             </span>
@@ -137,7 +142,7 @@ export function CompactModelCard({
           className={isDark ? "text-brand-400" : "text-brand-600"}
           title={`${t.completePrice} (${t.perM})`}
         >
-          {bn(model.pricing.completion).isZero() ? (
+          {isFreePrice(model.pricing.completion) ? (
             <span className={`font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}>
               {t.freeLabel}
             </span>
@@ -153,4 +158,4 @@ export function CompactModelCard({
       </div>
     </div>
   )
-}
+})

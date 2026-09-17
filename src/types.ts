@@ -6,6 +6,18 @@ export type Currency = "USD" | "CNY"
 export type ViewMode = "grid" | "list" | "compact-table" | "compact-cards"
 export type { ExportableModel, ModelConfigExporter, ExportPreviewFile }
 
+/** the string-valued keys of Model["pricing"], i.e. everything except overrides/original */
+export type PriceField =
+  | "prompt"
+  | "completion"
+  | "image"
+  | "audio"
+  | "input_cache_read"
+  | "input_cache_write"
+  | "input_cache_write_1h"
+  | "web_search"
+  | "internal_reasoning"
+
 export interface Model {
   id: string
   name: string

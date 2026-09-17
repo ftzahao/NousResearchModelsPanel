@@ -1,5 +1,5 @@
 import { Clock, Layers, DollarSign } from "lucide-react"
-import type { Model } from "../types"
+import type { Model, PriceField } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
 import { DetailBox } from "./DetailBox"
@@ -35,7 +35,7 @@ export function ModelPricingDetails({ model }: { model: Model }) {
   const isDark = theme === "dark"
 
   const pricingItems: Array<{
-    key: string
+    key: PriceField
     label: string
     colorDark: string
     colorLight: string
@@ -97,9 +97,8 @@ export function ModelPricingDetails({ model }: { model: Model }) {
       colorLight: "text-rose-600"
     }
   ]
-  const p = model.pricing as unknown as Record<string, string | undefined>
-  const orig = model.pricing.original as unknown as Record<string, string | undefined> | undefined
-  const active = pricingItems.filter((item) => p[item.key])
+  const orig: Partial<Record<PriceField, string>> | undefined = model.pricing.original
+  const active = pricingItems.filter((item) => model.pricing[item.key])
 
   const formatPer1k = (val: string) =>
     currency === "CNY"
@@ -123,7 +122,7 @@ export function ModelPricingDetails({ model }: { model: Model }) {
       </h4>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {active.map((item) => {
-          const current = priceFor(p[item.key], item.per1k)
+          const current = priceFor(model.pricing[item.key], item.per1k)
           const original = orig?.[item.key] ? priceFor(orig[item.key], item.per1k) : null
           return (
             <DetailBox key={item.key}>

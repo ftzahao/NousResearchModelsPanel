@@ -1,13 +1,14 @@
+import { memo } from "react"
 import { Brain, Shield, Sparkles, Eye, BadgePercent } from "lucide-react"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
 import {
-  bn,
+  isFreePrice,
+  isNewModel,
   formatCtx,
   formatPriceShort,
   getProviderColor,
-  daysSince,
   getDiscount,
   formatDiscount
 } from "../utils"
@@ -15,7 +16,7 @@ import { SelectCheckbox } from "./SelectCheckbox"
 import { IntelligenceBar } from "./IntelligenceBar"
 import { FavoriteButton } from "./FavoriteButton"
 
-export function CompactModelTable({
+export const CompactModelTable = memo(function CompactModelTable({
   models,
   selectedIds,
   onSelect,
@@ -105,7 +106,7 @@ export function CompactModelTable({
                   <td
                     className={`${td} text-right font-mono ${isDark ? "text-brand-300" : "text-brand-700"}`}
                   >
-                    {bn(model.pricing.prompt).isZero() ? (
+                    {isFreePrice(model.pricing.prompt) ? (
                       <span
                         className={`font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}
                       >
@@ -118,7 +119,7 @@ export function CompactModelTable({
                   <td
                     className={`${td} text-right font-mono ${isDark ? "text-brand-400" : "text-brand-600"}`}
                   >
-                    {bn(model.pricing.completion).isZero() ? (
+                    {isFreePrice(model.pricing.completion) ? (
                       <span
                         className={`font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}
                       >
@@ -146,7 +147,7 @@ export function CompactModelTable({
                         active={favorites.has(model.id)}
                         onToggle={() => onToggleFavorite(model.id)}
                       />
-                      {daysSince(model.created) < 7 && (
+                      {isNewModel(model.created) && (
                         <span title={t.newLabel}>
                           <Sparkles
                             size={12}
@@ -202,4 +203,4 @@ export function CompactModelTable({
       </div>
     </div>
   )
-}
+})

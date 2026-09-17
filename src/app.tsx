@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react"
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import BigNumber from "bignumber.js"
 import { stringify } from "yaml"
 import {
@@ -15,20 +15,12 @@ import {
   buildCherryStudioProvider,
   buildZedSettings
 } from "./model-export"
-import type {
-  Model,
-  ExportableModel,
-  ModelConfigExporter,
-  ExportPreviewFile,
-  Lang,
-  Theme,
-  ViewMode
-} from "./types"
+import type { Model, ModelConfigExporter, ExportPreviewFile, Lang, Theme, ViewMode } from "./types"
 import { translations, LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
 import { useModels } from "./hooks/useModels"
 import { useCurrencyState } from "./hooks/useCurrency"
-import { bn, getProvider, getDiscount } from "./utils"
+import { bn, getProvider, getDiscount, isFreePrice } from "./utils"
 import { Header, type Tab } from "./components/Header"
 import { StatsGrid, type AppStats } from "./components/StatsGrid"
 import { FilterBar } from "./components/FilterBar"
@@ -80,23 +72,23 @@ export function App() {
   })
   const t = translations[lang]
 
-  const handleSetLang = (l: Lang) => {
+  const handleSetLang = useCallback((l: Lang) => {
     setLang(l)
     localStorage.setItem("lang", l)
-  }
+  }, [])
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem("theme")
     if (saved === "light" || saved === "dark") return saved
     return "dark"
   })
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme((prev) => {
       const next = prev === "dark" ? "light" : "dark"
       localStorage.setItem("theme", next)
       return next
     })
-  }
+  }, [])
 
   useEffect(() => {
     document.body.className = theme
@@ -105,8 +97,8 @@ export function App() {
   const currency = useCurrencyState()
   const { models, loading, error } = useModels()
 
-  const themeValue = { theme, setTheme, toggleTheme }
-  const langValue = { lang, t, setLang: handleSetLang }
+  const themeValue = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, toggleTheme])
+  const langValue = useMemo(() => ({ lang, t, setLang: handleSetLang }), [lang, t, handleSetLang])
 
   const [search, setSearch] = useState("")
   const [provider, setProvider] = useState<string[]>([])
@@ -127,13 +119,16 @@ export function App() {
   useEffect(() => {
     localStorage.setItem("favorites", JSON.stringify([...favorites]))
   }, [favorites])
-  const toggleFavorite = (id: string) =>
-    setFavorites((current) => {
-      const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  const toggleFavorite = useCallback(
+    (id: string) =>
+      setFavorites((current) => {
+        const next = new Set(current)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      }),
+    []
+  )
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem("viewMode")
     if (saved === "list" || saved === "compact-table" || saved === "compact-cards") return saved
@@ -185,7 +180,7 @@ export function App() {
         modality.some((mod) => m.architecture?.input_modalities?.includes(mod))
       )
     if (showReasoning) result = result.filter((m) => m.reasoning)
-    if (showFree) result = result.filter((m) => bn(m.pricing?.prompt).isZero())
+    if (showFree) result = result.filter((m) => isFreePrice(m.pricing?.prompt))
     if (showDiscount) result = result.filter((m) => getDiscount(m) !== null)
     if (showFavorites) result = result.filter((m) => favorites.has(m.id))
 
@@ -237,9 +232,21 @@ export function App() {
   const visibleModels = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount])
   const hasMore = filtered.length > visibleModels.length
 
+  // one dependency for every filter that should restart the page window
+  const filterKey = JSON.stringify([
+    search,
+    provider,
+    modality,
+    sortBy,
+    showReasoning,
+    showFree,
+    showDiscount,
+    showFavorites
+  ])
+
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [search, provider, modality, sortBy, showReasoning, showFree, showDiscount, showFavorites])
+  }, [filterKey])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -356,38 +363,52 @@ export function App() {
 
   const openExportPreview = () => {
     if (!activeExporter || selectedModels.length === 0) return
-    const items = selectedModels as ExportableModel[]
     setPreviewFiles([
       {
         fileName: activeExporter.fileName,
-        content: serializeExport(activeExporter.build(items), activeExporter.format)
+        content: serializeExport(activeExporter.build(selectedModels), activeExporter.format)
       },
       ...(activeExporter.extraFiles ?? []).map((file) => ({
         fileName: file.fileName,
-        content: serializeExport(file.build(items), file.format)
+        content: serializeExport(file.build(selectedModels), file.format)
       }))
     ])
   }
 
   const closeExportPreview = () => setPreviewFiles(null)
 
-  const updateSelection = (mutate: (next: Set<string>) => void) =>
+  const updateSelection = useCallback((mutate: (next: Set<string>) => void) => {
     setSelectedIds((current) => {
       const next = new Set(current)
       mutate(next)
       return next
     })
+  }, [])
 
-  const toggleSelect = (id: string) =>
-    updateSelection((next) => {
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-    })
+  const toggleSelect = useCallback(
+    (id: string) =>
+      updateSelection((next) => {
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+      }),
+    [updateSelection]
+  )
 
-  const removeSelected = (id: string) =>
-    updateSelection((next) => {
-      next.delete(id)
-    })
+  const removeSelected = useCallback(
+    (id: string) =>
+      updateSelection((next) => {
+        next.delete(id)
+      }),
+    [updateSelection]
+  )
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedId((current) => (current === id ? null : id))
+  }, [])
+
+  const toggleRawDetails = useCallback((id: string) => {
+    setRawDetails((current) => ({ ...current, [id]: !(current[id] ?? false) }))
+  }, [])
 
   const locateSelected = (id: string) => {
     setShowSelectedModels(false)
@@ -403,9 +424,9 @@ export function App() {
   const stats = useMemo<AppStats>(
     () => ({
       total: models.length,
-      providers: new Set(models.map((m) => getProvider(m.id))).size,
+      providers: providers.length,
       reasoning: models.filter((m) => m.reasoning).length,
-      free: models.filter((m) => bn(m.pricing?.prompt).isZero()).length,
+      free: models.filter((m) => isFreePrice(m.pricing?.prompt)).length,
       avgIntelligence: (() => {
         const vals = models
           .map((m) => m.benchmarks?.artificial_analysis?.intelligence_index)
@@ -415,7 +436,7 @@ export function App() {
         return sum.div(vals.length).toFixed(1)
       })()
     }),
-    [models]
+    [models, providers]
   )
 
   if (loading) {
@@ -513,7 +534,7 @@ export function App() {
 
               {viewMode === "compact-table" ? (
                 <CompactModelTable
-                  models={filtered}
+                  models={visibleModels}
                   selectedIds={selectedIds}
                   onSelect={toggleSelect}
                   onShowDetails={setDetailId}
@@ -527,10 +548,10 @@ export function App() {
                       key={m.id}
                       model={m}
                       selected={selectedIds.has(m.id)}
-                      onSelect={() => toggleSelect(m.id)}
-                      onShowDetails={() => setDetailId(m.id)}
+                      onSelect={toggleSelect}
+                      onShowDetails={setDetailId}
                       favorite={favorites.has(m.id)}
-                      onToggleFavorite={() => toggleFavorite(m.id)}
+                      onToggleFavorite={toggleFavorite}
                     />
                   ))}
                 </div>
@@ -547,24 +568,19 @@ export function App() {
                       key={m.id}
                       model={m}
                       expanded={expandedId === m.id}
-                      onToggle={() => setExpandedId(expandedId === m.id ? null : m.id)}
+                      onToggle={toggleExpanded}
                       selected={selectedIds.has(m.id)}
-                      onSelect={() => toggleSelect(m.id)}
+                      onSelect={toggleSelect}
                       rawDetails={rawDetails[m.id] ?? false}
-                      onToggleRawDetails={() =>
-                        setRawDetails((current) => ({
-                          ...current,
-                          [m.id]: !(current[m.id] ?? false)
-                        }))
-                      }
+                      onToggleRawDetails={toggleRawDetails}
                       favorite={favorites.has(m.id)}
-                      onToggleFavorite={() => toggleFavorite(m.id)}
+                      onToggleFavorite={toggleFavorite}
                     />
                   ))}
                 </div>
               )}
 
-              {viewMode !== "compact-table" && hasMore && (
+              {hasMore && (
                 <div
                   ref={sentinelRef}
                   className={`py-3 text-center text-xs font-mono uppercase tracking-wider ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}

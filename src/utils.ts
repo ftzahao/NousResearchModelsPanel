@@ -40,6 +40,10 @@ export function bn(val: string | undefined | null): BigNumber {
   return new BigNumber(val ?? "0")
 }
 
+export function isFreePrice(val: string | undefined | null): boolean {
+  return bn(val).isZero()
+}
+
 export function stripZeros(s: string): string {
   if (!s.includes(".")) return s
   return s.replace(/\.?0+$/, "")
@@ -66,14 +70,6 @@ export function formatPrice(
   }
 
   return `$${stripZeros(n.times(1e6).toFixed(2))}/1M`
-}
-
-export function formatPriceRaw(val: string | undefined, currency: Currency = "USD"): string {
-  if (!val) return "—"
-  const n = bn(val)
-  const sym = currency === "CNY" ? "¥" : "$"
-  if (n.isZero()) return `${sym}0`
-  return `${sym}${stripZeros(n.toFixed(10))}`
 }
 
 export function formatPriceShort(
@@ -110,6 +106,10 @@ export function formatDate(ts: number, lang: Lang = "zh"): string {
 
 export function daysSince(ts: number): number {
   return Math.floor((Date.now() / 1000 - ts) / 86400)
+}
+
+export function isNewModel(created: number): boolean {
+  return daysSince(created) < 7
 }
 
 export interface DiscountInfo {

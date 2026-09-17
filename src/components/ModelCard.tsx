@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { ChevronDown, ChevronUp, Brain, Shield } from "lucide-react"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
@@ -8,17 +9,19 @@ import { FavoriteButton } from "./FavoriteButton"
 import { ModalityFlow } from "./ModalityFlow"
 import { ModelExpandedDetails } from "./ModelExpandedDetails"
 import {
-  bn,
+  isFreePrice,
+  isNewModel,
   formatPrice,
   formatCtx,
-  daysSince,
   currencyUnit,
   getProviderColor,
   getDiscount,
   formatDiscount
 } from "../utils"
 
-export function ModelCard({
+// memoized: the handlers below are id-based so every card in the grid can share one
+// stable callback and skip re-rendering when an unrelated card changes
+export const ModelCard = memo(function ModelCard({
   model,
   expanded,
   onToggle,
@@ -31,22 +34,22 @@ export function ModelCard({
 }: {
   model: Model
   expanded: boolean
-  onToggle: () => void
+  onToggle: (id: string) => void
   selected: boolean
-  onSelect: () => void
+  onSelect: (id: string) => void
   rawDetails: boolean
-  onToggleRawDetails: () => void
+  onToggleRawDetails: (id: string) => void
   favorite: boolean
-  onToggleFavorite: () => void
+  onToggleFavorite: (id: string) => void
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
   const { currency, exchangeRate } = useCurrency()
   const color = getProviderColor(model.id)
   const benchmarks = model.benchmarks?.artificial_analysis
-  const isNew = daysSince(model.created) < 7
+  const isNew = isNewModel(model.created)
   const isBatch = model.id.includes(":batch")
-  const isFree = bn(model.pricing?.prompt).isZero()
+  const isFree = isFreePrice(model.pricing?.prompt)
   const isRouter = model.id.startsWith("~")
   const discount = getDiscount(model)
   const isDark = theme === "dark"
@@ -67,14 +70,14 @@ export function ModelCard({
       {/* Header */}
       <div
         className={`group p-4 cursor-pointer transition-colors ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-gray-50"}`}
-        onClick={onToggle}
+        onClick={() => onToggle(model.id)}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <SelectCheckbox
                 checked={selected}
-                onToggle={onSelect}
+                onToggle={() => onSelect(model.id)}
                 ariaLabel={selected ? `Deselect ${model.name}` : `Select ${model.name}`}
                 theme={theme}
               />
@@ -127,7 +130,7 @@ export function ModelCard({
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <FavoriteButton active={favorite} onToggle={onToggleFavorite} />
+            <FavoriteButton active={favorite} onToggle={() => onToggleFavorite(model.id)} />
             {model.reasoning?.mandatory && (
               <span title="Reasoning mandatory">
                 <Brain size={14} className={isDark ? "text-brand-400" : "text-brand-600"} />
@@ -266,9 +269,9 @@ export function ModelCard({
         <ModelExpandedDetails
           model={model}
           rawDetails={rawDetails}
-          onToggleRawDetails={onToggleRawDetails}
+          onToggleRawDetails={() => onToggleRawDetails(model.id)}
         />
       )}
     </div>
   )
-}
+})

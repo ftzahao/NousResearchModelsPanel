@@ -209,6 +209,7 @@ export function PricingChart({ models }: { models: Model[] }) {
         return p.gt(0) && p.lt(0.00001)
       })
       .map((m) => ({
+        id: m.id,
         name: shortName(m.name, 20),
         prompt: bn(m.pricing?.prompt).times(1e6).times(conv).toNumber(),
         color: getProviderColor(m.id)
@@ -244,8 +245,8 @@ export function PricingChart({ models }: { models: Model[] }) {
             formatter={(v) => [`${fmtPrice(Number(v), sym)}/M`, t.promptPrice]}
           />
           <Bar dataKey="prompt" radius={[0, 4, 4, 0]}>
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.color} fillOpacity={0.8} />
+            {data.map((d) => (
+              <Cell key={d.id} fill={d.color} fillOpacity={0.8} />
             ))}
           </Bar>
         </BarChart>
@@ -328,8 +329,8 @@ export function BenchmarkScatter({
             content={<ScatterTip isDark={isDark} t={t} currency={currency} rate={exchangeRate} />}
           />
           <Scatter data={data} onClick={handlePointClick} cursor="pointer">
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.color} fillOpacity={0.85} />
+            {data.map((d) => (
+              <Cell key={d.id} fill={d.color} fillOpacity={0.85} />
             ))}
           </Scatter>
         </ScatterChart>
@@ -420,8 +421,8 @@ export function ValueScatter({
             content={<ValueTip isDark={isDark} t={t} currency={currency} rate={exchangeRate} />}
           />
           <Scatter data={data} onClick={handlePointClick} cursor="pointer">
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.color} fillOpacity={0.75} />
+            {data.map((d) => (
+              <Cell key={d.id} fill={d.color} fillOpacity={0.75} />
             ))}
           </Scatter>
         </ScatterChart>
@@ -498,8 +499,8 @@ export function DiscountChart({ models }: { models: Model[] }) {
             }
           />
           <Bar dataKey="depth" radius={[0, 4, 4, 0]}>
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.color} fillOpacity={0.8} />
+            {data.map((d) => (
+              <Cell key={d.id} fill={d.color} fillOpacity={0.8} />
             ))}
           </Bar>
         </BarChart>
@@ -564,8 +565,8 @@ export function ContextChart({ models }: { models: Model[] }) {
             formatter={(v) => [Number(v).toLocaleString() + " tokens", t.maxContext]}
           />
           <Bar dataKey="maxCtx" radius={[4, 4, 0, 0]}>
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.color} fillOpacity={0.7} />
+            {data.map((d) => (
+              <Cell key={d.provider} fill={d.color} fillOpacity={0.7} />
             ))}
           </Bar>
         </BarChart>
@@ -612,8 +613,8 @@ export function ProviderPie({ models }: { models: Model[] }) {
             paddingAngle={2}
             strokeWidth={0}
           >
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.color} fillOpacity={0.8} />
+            {data.map((d) => (
+              <Cell key={d.name} fill={d.color} fillOpacity={0.8} />
             ))}
           </Pie>
           <Tooltip content={<PieTip isDark={isDark} />} />
