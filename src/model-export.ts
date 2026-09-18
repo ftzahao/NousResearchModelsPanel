@@ -849,7 +849,7 @@ export function buildCliproxyapiConfig(models: ExportableModel[]): CliproxyapiCo
           return {
             name: model.id,
             // the client-visible alias stays equal to the upstream id to avoid a rename layer
-            alias: model.id,
+            alias: "",
             ...(model.name ? { "display-name": model.name } : {}),
             ...(contextWindow > 0 ? { "max-context-length": contextWindow } : {}),
             "input-modalities": buildCliproxyapiModalities(model.architecture?.input_modalities),
