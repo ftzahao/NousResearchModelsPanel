@@ -158,6 +158,13 @@ export const translations = {
       "启动代理：litellm --config ~/.litellm/config.yaml --port 4000",
       "客户端把 base URL 指向 http://localhost:4000/v1，model 填 nous/<模型ID>；它也可以当作其它工具的 API 代理"
     ],
+    cliproxyapiConfig: "CLIProxyAPI config.yaml",
+    cliproxyapiUsage: [
+      "下载 cliproxyapi-config.yaml，把 openai-compatibility 段合并进 CLIProxyAPI 的 config.yaml（默认在程序目录，或用 --config 指定路径；Homebrew 安装读取 $(brew --prefix)/etc/cliproxyapi.conf）",
+      "把 api-key 替换为你的 Nous API Key（CLIProxyAPI 不展开环境变量，必须写入字面值）",
+      "保存后配置会自动热重载，无需重启；可访问 /v1/models 确认模型已注册",
+      "客户端把 base URL 指向 http://localhost:8317/v1，model 填导出的模型 ID，API Key 用 config.yaml 顶层 api-keys 中配置的密钥"
+    ],
     opencodeConfig: "OpenCode opencode.json",
     opencodeUsage: [
       "下载 opencode.json，把 provider.nous 合并进 ~/.config/opencode/opencode.json（项目级配置则放在项目根目录）",
@@ -346,6 +353,13 @@ export const translations = {
       'Set your API key: export NOUS_API_KEY="your Nous API key"',
       "Start the proxy: litellm --config ~/.litellm/config.yaml --port 4000",
       "Point clients at http://localhost:4000/v1 with model nous/<model-id>; the proxy also works as an API gateway for other tools"
+    ],
+    cliproxyapiConfig: "CLIProxyAPI config.yaml",
+    cliproxyapiUsage: [
+      "Download cliproxyapi-config.yaml and merge its openai-compatibility section into CLIProxyAPI's config.yaml (next to the binary by default, or the --config path; Homebrew installs read $(brew --prefix)/etc/cliproxyapi.conf)",
+      "Replace api-key with your Nous API key (CLIProxyAPI does not expand environment variables, so the literal value is required)",
+      "The config hot-reloads on save; check /v1/models to confirm the models registered",
+      "Point clients at http://localhost:8317/v1 with the exported model IDs, using a key from the top-level api-keys list"
     ],
     opencodeConfig: "OpenCode opencode.json",
     opencodeUsage: [

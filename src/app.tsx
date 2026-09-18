@@ -13,7 +13,8 @@ import {
   buildCrushConfig,
   buildChatboxProviderConfig,
   buildCherryStudioProvider,
-  buildZedSettings
+  buildZedSettings,
+  buildCliproxyapiConfig
 } from "./model-export"
 import type { Model, ModelConfigExporter, ExportPreviewFile, Lang, Theme, ViewMode } from "./types"
 import { translations, LangContext } from "./i18n"
@@ -308,6 +309,14 @@ export function App() {
         format: "yaml",
         usage: t.litellmUsage,
         build: (items) => buildLitellmConfig(items)
+      },
+      {
+        id: "cliproxyapi",
+        label: t.cliproxyapiConfig,
+        fileName: "cliproxyapi-config.yaml",
+        format: "yaml",
+        usage: t.cliproxyapiUsage,
+        build: (items) => buildCliproxyapiConfig(items)
       },
       {
         id: "opencode",
