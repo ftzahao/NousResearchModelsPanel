@@ -292,7 +292,8 @@ export function App() {
       {
         id: "zcode",
         label: t.zcodeProviders,
-        fileName: "zcode-providers.json",
+        fileName: "zcode-provider-config.json",
+        usage: t.zcodeUsage,
         build: (items) => buildZcodeConfig(items)
       },
       {

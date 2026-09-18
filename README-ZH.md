@@ -28,10 +28,17 @@
 | Codex 接入配置                            | `codex-config.toml` + `models.json` | Codex CLI 服务商配置 + 模型目录（已针对 CLI 0.154.0 实测验证）    |
 | GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json`       | Copilot GCMP 兼容模型条目                                         |
 | GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`           | Copilot 自定义端点提供商（`customendpoint` / `chat-completions`） |
-| ZCode `v2/config.json` provider           | `zcode-providers.json`              | ZCode OpenAI 兼容提供商条目                                       |
+| ZCode `provider_config.json` 配置         | `zcode-provider-config.json`        | ZCode 个人提供商条目（`schemaVersion: 1`，ZCode 3.x）             |
 | DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`                | DeepSeek Harness `llm-pi-ai` 提供商（YAML）                       |
+| LiteLLM `config.yaml`                     | `litellm-config.yaml`               | LiteLLM 代理 `model_list` 条目（OpenAI 兼容上游）                 |
+| CLIProxyAPI `config.yaml`                 | `cliproxyapi-config.yaml`           | CLIProxyAPI `openai-compatibility` 提供商片段                     |
+| OpenCode `opencode.json`                  | `opencode.json`                     | OpenCode 提供商（`@ai-sdk/openai-compatible`）                    |
+| Crush `crush.json`                        | `crush.json`                        | Crush 提供商（`type: openai`）                                    |
+| Chatbox 服务商导入配置                    | `chatbox-nous-provider.json`        | Chatbox 一键导入服务商 JSON                                       |
+| Cherry Studio 服务商配置                  | `cherry-studio-nous.json`           | Cherry Studio `data.providers.nous` 条目                          |
+| Zed `language_models` 配置                | `zed-language-models.json`          | Zed `language_models.openai_compatible` 片段                      |
 
-所有转换逻辑集中在 `src/model-export.ts`。ZCode 与 DeepSeek Harness 导出使用固定提供商 id（`nous`），重复导入时覆盖同一条目而非新增。
+所有转换逻辑集中在 `src/model-export.ts`。各导出统一写入固定提供商 id（`nous`），重复导入时覆盖同一条目而非新增。Codex、LiteLLM、OpenCode、Crush、DeepSeek Harness、Zed 通过环境变量 `NOUS_API_KEY` 读取密钥；Chatbox、Cherry Studio、ZCode、CLIProxyAPI 提供占位符，导入后替换为真实 Key。
 
 ## 技术栈
 

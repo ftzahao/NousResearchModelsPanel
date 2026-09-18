@@ -148,7 +148,12 @@ export const translations = {
     ],
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
-    zcodeProviders: "ZCode v2/config.json provider",
+    zcodeProviders: "ZCode provider_config.json 配置",
+    zcodeUsage: [
+      "下载 zcode-provider-config.json，合并进 ~/.zcode/v2/provider_config.json：把 providerConfigRules.providerRules、modelConfigRules.providerModelRules 与 providerOrder 里的数组项追加进去（已有同名 providerId 时替换该项，不要整体覆盖文件）",
+      "把 apiKey 替换为你的 Nous API Key（ZCode 存字面值，不支持环境变量引用）",
+      "ZCode 运行中会自动加载配置，无需重启；在模型列表里即可看到 nous 的模型"
+    ],
     deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider",
     codexWarning: "官方 API 格式不支持此方式，可以尝试用 API 代理工具（如 LiteLLM）",
     litellmConfig: "LiteLLM config.yaml",
@@ -343,7 +348,12 @@ export const translations = {
     ],
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
-    zcodeProviders: "ZCode v2/config.json provider",
+    zcodeProviders: "ZCode provider_config.json",
+    zcodeUsage: [
+      "Download zcode-provider-config.json and merge it into ~/.zcode/v2/provider_config.json: append the entries of providerConfigRules.providerRules, modelConfigRules.providerModelRules and providerOrder (replace an entry with the same providerId instead of overwriting the file)",
+      "Replace apiKey with your Nous API key (ZCode stores a literal value and does not expand environment variables)",
+      "ZCode reloads the config while running, so the nous models appear without a restart"
+    ],
     deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider",
     codexWarning:
       "The official API format doesn't support this method; try an API proxy tool (e.g. LiteLLM)",

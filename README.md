@@ -28,10 +28,17 @@ Select models, then choose a format in the export menu. Each format targets one 
 | Codex setup                               | `codex-config.toml` + `models.json` | Codex CLI provider config + model catalog (verified against CLI 0.154.0) |
 | GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json`       | Copilot GCMP-compatible model entries                                    |
 | GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`           | Copilot custom-endpoint provider (`customendpoint` / `chat-completions`) |
-| ZCode `v2/config.json` provider           | `zcode-providers.json`              | ZCode OpenAI-compatible provider entry                                   |
+| ZCode `provider_config.json` provider     | `zcode-provider-config.json`        | ZCode personal provider entry (`schemaVersion: 1`, ZCode 3.x)            |
 | DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`                | DeepSeek Harness `llm-pi-ai` provider (YAML)                             |
+| LiteLLM `config.yaml`                     | `litellm-config.yaml`               | LiteLLM proxy `model_list` entries for an OpenAI-compatible upstream     |
+| CLIProxyAPI `config.yaml`                 | `cliproxyapi-config.yaml`           | CLIProxyAPI `openai-compatibility` provider fragment                     |
+| OpenCode `opencode.json`                  | `opencode.json`                     | OpenCode provider (`@ai-sdk/openai-compatible`)                          |
+| Crush `crush.json`                        | `crush.json`                        | Crush provider (`type: openai`)                                          |
+| Chatbox provider import                   | `chatbox-nous-provider.json`        | Chatbox one-click provider import JSON                                   |
+| Cherry Studio provider                    | `cherry-studio-nous.json`           | Cherry Studio `data.providers.nous` entry                                |
+| Zed `language_models` settings            | `zed-language-models.json`          | Zed `language_models.openai_compatible` fragment                         |
 
-All conversion logic lives in `src/model-export.ts`. The ZCode and DeepSeek Harness exports use a fixed provider id (`nous`) so re-importing replaces the same entry instead of duplicating it.
+All conversion logic lives in `src/model-export.ts`. Every provider-scoped export writes a fixed provider id (`nous`) so re-importing replaces the same entry instead of duplicating it. Codex, LiteLLM, OpenCode, Crush, DeepSeek Harness and Zed read the key from the `NOUS_API_KEY` environment variable; Chatbox, Cherry Studio, ZCode and CLIProxyAPI ship a placeholder you replace after import.
 
 ## Tech Stack
 
