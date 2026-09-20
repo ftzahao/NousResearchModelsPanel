@@ -57,7 +57,7 @@ export const ModelCard = memo(function ModelCard({
   return (
     <div
       id={`model-card-${model.id}`}
-      className={`glass rounded-2xl overflow-hidden transition-all duration-300 card-glow animate-fade-in relative
+      className={`glass rounded-2xl overflow-hidden transition-all duration-300 card-glow animate-fade-in relative flex flex-col
         ${expanded ? "col-span-full" : ""}
         ${selected ? `ring-1 ${isDark ? "ring-[#edff45]/70" : "ring-brand-600"}` : ""}`}
     >
@@ -69,12 +69,12 @@ export const ModelCard = memo(function ModelCard({
       />
       {/* Header */}
       <div
-        className={`group p-4 cursor-pointer transition-colors ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-gray-50"}`}
+        className={`group p-4 cursor-pointer transition-colors flex-1 ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-gray-50"}`}
         onClick={() => onToggle(model.id)}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
               <SelectCheckbox
                 checked={selected}
                 onToggle={() => onSelect(model.id)}
@@ -86,7 +86,7 @@ export const ModelCard = memo(function ModelCard({
                 style={{ background: color }}
               />
               <span
-                title={model.id}
+                title={model.name}
                 className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-gray-900"}`}
               >
                 {model.name}
@@ -127,6 +127,12 @@ export const ModelCard = memo(function ModelCard({
                   lightClass="bg-cyan-100 text-cyan-700"
                 />
               )}
+            </div>
+            <div
+              className={`mt-0.5 text-[10px] font-mono truncate ${isDark ? "text-gray-600" : "text-gray-400"}`}
+              title={model.id}
+            >
+              {model.id}
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">

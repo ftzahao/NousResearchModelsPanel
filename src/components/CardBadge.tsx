@@ -16,7 +16,7 @@ export function CardBadge({
   return (
     <span
       title={title}
-      className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+      className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${
         theme === "dark" ? darkClass : lightClass
       }`}
     >
