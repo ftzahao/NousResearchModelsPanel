@@ -98,6 +98,28 @@ test("filters input modalities to Codex's closed InputModality enum", () => {
   expect(entry.input_modalities).toEqual(["text", "image", "audio"])
 })
 
+test("keeps extended efforts in the catalog but clamps the config default to the official enum", () => {
+  const exotic = {
+    ...model,
+    reasoning: {
+      mandatory: false,
+      supported_efforts: ["disable", "max", "ultra", "high"],
+      default_effort: "max"
+    }
+  } as unknown as ExportableModel
+  const entry = buildModelCatalogJson([exotic]).models[0]!
+  // catalog keeps max/ultra (some models support them)
+  expect(entry.supported_reasoning_levels).toEqual([
+    { effort: "max", description: "Maximum reasoning depth for the hardest problems" },
+    { effort: "ultra", description: "Maximum reasoning with automatic task delegation" },
+    { effort: "high", description: "Greater reasoning depth for complex problems" }
+  ])
+  expect(entry.default_reasoning_level).toBe("max")
+  // config.toml's model_reasoning_effort only accepts up to xhigh officially
+  const toml = buildCodexConfigToml([exotic])
+  expect(toml).toContain('model_reasoning_effort = "high"')
+})
+
 test("builds a Codex config.toml snippet wired to the Nous provider", () => {
   const toml = buildCodexConfigToml([model])
   expect(toml).toContain('model_provider = "nous"')
@@ -105,6 +127,19 @@ test("builds a Codex config.toml snippet wired to the Nous provider", () => {
   expect(toml).toContain('base_url = "https://inference-api.nousresearch.com/v1"')
   expect(toml).toContain('env_key = "NOUS_API_KEY"')
   expect(toml).toContain('wire_api = "responses"')
+  // official provider fields
+  expect(toml).toContain("env_key_instructions")
+  expect(toml).toContain("stream_idle_timeout_ms = 600000")
   // top-level keys must precede table headers in TOML
   expect(toml.indexOf("model_catalog_json")).toBeLessThan(toml.indexOf("[model_providers.nous]"))
+})
+
+test("sets model_reasoning_effort from the first model's effective default", () => {
+  expect(buildCodexConfigToml([model])).toContain('model_reasoning_effort = "low"')
+  const high = {
+    ...model,
+    reasoning: { mandatory: false, supported_efforts: ["max", "high"], default_effort: "max" }
+  } as unknown as ExportableModel
+  // "max" is outside the official enum, so the effective default degrades to "high"
+  expect(buildCodexConfigToml([high])).toContain('model_reasoning_effort = "high"')
 })
