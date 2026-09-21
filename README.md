@@ -28,7 +28,7 @@ Select models, then choose a format in the export menu. Each format targets one 
 | Codex setup                               | `codex-config.toml` + `models.json` | Codex CLI provider config + model catalog (verified against CLI 0.154.0) |
 | GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json`       | Copilot GCMP-compatible model entries                                    |
 | GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`           | Copilot custom-endpoint provider (`customendpoint` / `chat-completions`) |
-| ZCode `provider_config.json` provider     | `zcode-provider-config.json`        | ZCode personal provider entry (`schemaVersion: 1`, ZCode 3.x)            |
+| ZCode `provider_config.json` provider     | `zcode-provider-config.json`        | ZCode personal provider entry (`schemaVersion: 1`, [open-sourced client](https://github.com/zai-org/ZCode)) |
 | DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`                | DeepSeek Harness `llm-pi-ai` provider (YAML)                             |
 | LiteLLM `config.yaml`                     | `litellm-config.yaml`               | LiteLLM proxy `model_list` entries for an OpenAI-compatible upstream     |
 | CLIProxyAPI `config.yaml`                 | `cliproxyapi-config.yaml`           | CLIProxyAPI `openai-compatibility` provider fragment                     |

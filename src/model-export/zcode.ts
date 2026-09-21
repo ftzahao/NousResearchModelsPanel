@@ -45,7 +45,7 @@ export interface ZcodeProviderRule {
   providerName: string
   config: {
     group: "standard-personal"
-    access: { type: "api-key"; apiKey: string }
+    access: { type: "api-key"; apiKey: string; apiKeyManagementUrl?: string }
     api: { type: "openai-chat-completions"; baseUrl: string }
     personalModelIds: string[]
     modelOrder: string[]
@@ -66,12 +66,17 @@ export interface ZcodeConfig {
 
 // fixed id so every export replaces the same provider entry in ~/.zcode/v2/provider_config.json;
 // "builtin:" / "account:" prefixes are reserved for ZCode's own providers
+// schema is the open-source client's zod contracts: packages/provider/src/config/rule-data-schema.ts
+// and packages/shared/src/model-config.ts in https://github.com/zai-org/ZCode
 const ZCODE_PROVIDER_ID = "nous"
-// ZCode's reasoningLevel option vocabulary (from the bundled provider catalog)
+// ZCode's reasoningLevel option vocabulary (from the bundled provider catalog);
+// values must be sorted by ascending semantic strength
 const ZCODE_KNOWN_LEVELS = ["disabled", "none", "minimal", "low", "medium", "high", "xhigh", "max"]
 // ZCode's default openai-chat-completions map sends max_completion_tokens; the Nous gateway wants max_tokens
 const ZCODE_MAX_TOKENS_MAP = "{'max_tokens': maxOutputTokens}"
 const ZCODE_REASONING_MAP = '{"reasoning_effort": reasoningLevel}'
+// Nous Portal is where inference API keys are managed; ZCode's settings UI links to it
+const NOUS_API_KEY_MANAGEMENT_URL = "https://portal.nousresearch.com"
 
 function buildZcodeReasoningValues(efforts: string[] | undefined): string[] {
   const values = new Set<string>()
@@ -79,7 +84,8 @@ function buildZcodeReasoningValues(efforts: string[] | undefined): string[] {
     const level = effort.toLowerCase()
     if (ZCODE_KNOWN_LEVELS.includes(level)) values.add(level)
   }
-  return [...values]
+  // ZCode's schema expects values ordered from weakest to strongest
+  return ZCODE_KNOWN_LEVELS.filter((level) => values.has(level))
 }
 
 export function buildZcodeConfig(models: ExportableModel[]): ZcodeConfig {
@@ -95,7 +101,11 @@ export function buildZcodeConfig(models: ExportableModel[]): ZcodeConfig {
             providerName: ZCODE_PROVIDER_ID,
             config: {
               group: "standard-personal",
-              access: { type: "api-key", apiKey: "${input:nousApiKey}" },
+              access: {
+                type: "api-key",
+                apiKey: "${input:nousApiKey}",
+                apiKeyManagementUrl: NOUS_API_KEY_MANAGEMENT_URL
+              },
               api: { type: "openai-chat-completions", baseUrl: GCMP_BASE_URL },
               personalModelIds: modelIds,
               modelOrder: modelIds
@@ -116,16 +126,15 @@ export function buildZcodeConfig(models: ExportableModel[]): ZcodeConfig {
           const parameters = model.supported_parameters ?? []
           const reasoningValues = buildZcodeReasoningValues(model.reasoning?.supported_efforts)
           const optionSpecs: ZcodeModelOptionSpecs = {
-            ...(maxOutputTokens > 0
-              ? { maxOutputTokens: { max: maxOutputTokens, map: ZCODE_MAX_TOKENS_MAP } }
-              : {}),
             ...(reasoningValues.length
               ? { reasoningLevel: { values: reasoningValues, map: ZCODE_REASONING_MAP } }
+              : {}),
+            ...(maxOutputTokens > 0
+              ? { maxOutputTokens: { max: maxOutputTokens, map: ZCODE_MAX_TOKENS_MAP } }
               : {})
           }
           return {
             modelId: model.id,
-            providerId: ZCODE_PROVIDER_ID,
             config: {
               enabled: true as const,
               properties: {
@@ -144,7 +153,8 @@ export function buildZcodeConfig(models: ExportableModel[]): ZcodeConfig {
                 supportsNativeWebSearch: parameters.includes("web_search_options")
               },
               ...(Object.keys(optionSpecs).length ? { optionSpecs } : {})
-            }
+            },
+            providerId: ZCODE_PROVIDER_ID
           }
         }),
         manualProviderModelRules: []

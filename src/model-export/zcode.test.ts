@@ -15,7 +15,11 @@ test("builds a ZCode provider_config.json document for the nous provider", () =>
             providerName: "nous",
             config: {
               group: "standard-personal",
-              access: { type: "api-key", apiKey: "${input:nousApiKey}" },
+              access: {
+                type: "api-key",
+                apiKey: "${input:nousApiKey}",
+                apiKeyManagementUrl: "https://portal.nousresearch.com"
+              },
               api: {
                 type: "openai-chat-completions",
                 baseUrl: "https://inference-api.nousresearch.com/v1"
@@ -123,13 +127,13 @@ test("falls back to text modalities and marks non-text output in the ZCode expor
   })
 })
 
-test("drops reasoning levels ZCode does not know", () => {
+test("drops reasoning levels ZCode does not know and sorts the rest by strength", () => {
   const entries = buildZcodeConfig([
     {
       id: "r/model",
       name: "R",
       context_length: 8192,
-      reasoning: { mandatory: false, supported_efforts: ["turbo", "high", "max"] }
+      reasoning: { mandatory: false, supported_efforts: ["high", "minimal", "turbo", "max", "low"] }
     } as unknown as ExportableModel,
     {
       id: "odd/model",
@@ -140,7 +144,10 @@ test("drops reasoning levels ZCode does not know", () => {
   ]).config.modelConfigRules.providerModelRules
   expect(entries[0]!.config.optionSpecs).toEqual({
     maxOutputTokens: { max: 1024, map: "{'max_tokens': maxOutputTokens}" },
-    reasoningLevel: { values: ["high", "max"], map: '{"reasoning_effort": reasoningLevel}' }
+    reasoningLevel: {
+      values: ["minimal", "low", "high", "max"],
+      map: '{"reasoning_effort": reasoningLevel}'
+    }
   })
   expect(entries[1]!.config.optionSpecs).toEqual({
     maxOutputTokens: { max: 1024, map: "{'max_tokens': maxOutputTokens}" }
