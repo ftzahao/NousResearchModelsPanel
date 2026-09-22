@@ -76,3 +76,6 @@ export type {
   CliproxyapiModality,
   CliproxyapiProviderEntry
 } from "./cliproxyapi"
+
+export { buildMimocodeConfig } from "./mimocode"
+export type { MimocodeConfig, MimocodeCost, MimocodeModelEntry, MimocodeProviderEntry } from "./mimocode"

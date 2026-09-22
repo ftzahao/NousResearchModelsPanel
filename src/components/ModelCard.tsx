@@ -30,7 +30,14 @@ export const ModelCard = memo(function ModelCard({
   rawDetails,
   onToggleRawDetails,
   favorite,
-  onToggleFavorite
+  onToggleFavorite,
+  dragEnabled,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd
 }: {
   model: Model
   expanded: boolean
@@ -41,6 +48,13 @@ export const ModelCard = memo(function ModelCard({
   onToggleRawDetails: (id: string) => void
   favorite: boolean
   onToggleFavorite: (id: string) => void
+  dragEnabled?: boolean
+  isDragging?: boolean
+  isDropTarget?: boolean
+  onDragStart?: (id: string) => void
+  onDragOver?: (id: string, e: React.DragEvent) => void
+  onDrop?: (id: string) => void
+  onDragEnd?: () => void
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
@@ -57,9 +71,24 @@ export const ModelCard = memo(function ModelCard({
   return (
     <div
       id={`model-card-${model.id}`}
+      draggable={dragEnabled}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move"
+        e.dataTransfer.setData("text/plain", model.id)
+        onDragStart?.(model.id)
+      }}
+      onDragOver={(e) => onDragOver?.(model.id, e)}
+      onDrop={(e) => {
+        e.preventDefault()
+        onDrop?.(model.id)
+      }}
+      onDragEnd={() => onDragEnd?.()}
       className={`glass rounded-2xl overflow-hidden transition-all duration-300 card-glow animate-fade-in relative flex flex-col
         ${expanded ? "col-span-full" : ""}
-        ${selected ? `ring-1 ${isDark ? "ring-[#edff45]/70" : "ring-brand-600"}` : ""}`}
+        ${selected ? `ring-1 ${isDark ? "ring-[#edff45]/70" : "ring-brand-600"}` : ""}
+        ${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""}
+        ${isDragging ? "opacity-40" : ""}
+        ${isDropTarget ? `ring-1 ${isDark ? "ring-brand-400/70" : "ring-brand-500"}` : ""}`}
     >
       {/* Provider color edge */}
       <span

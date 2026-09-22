@@ -22,6 +22,8 @@ export const translations = {
     intelligence: "智能指数",
     codingIndex: "编程指数",
     nameAZ: "名称 A→Z",
+    sortCustom: "自定义顺序",
+    dragToReorder: "拖拽调整顺序",
     reasoning: "推理",
     free: "免费",
     discount: "折扣",
@@ -199,6 +201,12 @@ export const translations = {
       "下载 zed-language-models.json，把 language_models.openai_compatible.nous 合并进 Zed 的 settings.json",
       "API Key 不要写入 settings.json：在 Zed 的 设置 → AI → LLM Providers 页面为 nous 填入 Key，或设置环境变量 NOUS_API_KEY",
       "在 Agent Panel 的模型下拉中选择 nous 下的模型"
+    ],
+    mimocodeConfig: "Xiaomi MiMo Desktop mimocode.jsonc",
+    mimocodeUsage: [
+      "下载 mimocode.jsonc，把 provider.nous 合并进 ~/.config/mimocode/mimocode.jsonc",
+      '设置 API Key：export NOUS_API_KEY="你的 Nous API Key"（配置中通过 {env:NOUS_API_KEY} 引用）',
+      "重启 MiMo Desktop，在模型选择中使用 nous 下的模型"
     ]
   },
   en: {
@@ -221,6 +229,8 @@ export const translations = {
     intelligence: "Intelligence",
     codingIndex: "Coding Index",
     nameAZ: "Name A→Z",
+    sortCustom: "Manual Order",
+    dragToReorder: "Drag to reorder",
     reasoning: "Reasoning",
     free: "Free",
     discount: "Discount",
@@ -400,6 +410,12 @@ export const translations = {
       "Download zed-language-models.json and merge language_models.openai_compatible.nous into Zed's settings.json",
       "Do not put the API key in settings.json: fill it in for nous under Zed settings → AI → LLM Providers, or set the NOUS_API_KEY environment variable",
       "Pick a nous model from the Agent Panel model dropdown"
+    ],
+    mimocodeConfig: "Xiaomi MiMo Desktop mimocode.jsonc",
+    mimocodeUsage: [
+      "Download mimocode.jsonc and merge provider.nous into ~/.config/mimocode/mimocode.jsonc",
+      'Set your API key: export NOUS_API_KEY="your Nous API key" (referenced as {env:NOUS_API_KEY} in the config)',
+      "Restart MiMo Desktop and pick a nous model from the model selector"
     ]
   }
 }

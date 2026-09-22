@@ -37,8 +37,9 @@ Select models, then choose a format in the export menu. Each format targets one 
 | Chatbox provider import                   | `chatbox-nous-provider.json`        | Chatbox one-click provider import JSON                                   |
 | Cherry Studio provider                    | `cherry-studio-nous.json`           | Cherry Studio `data.providers.nous` entry                                |
 | Zed `language_models` settings            | `zed-language-models.json`          | Zed `language_models.openai_compatible` fragment                         |
+| Xiaomi MiMo Desktop `mimocode.jsonc`      | `mimocode.jsonc`                    | MiMo Desktop provider (`@ai-sdk/openai-compatible`)                      |
 
-All conversion logic lives in `src/model-export.ts`. Every provider-scoped export writes a fixed provider id (`nous`) so re-importing replaces the same entry instead of duplicating it. Codex, LiteLLM, OpenCode, Crush, DeepSeek Harness and Zed read the key from the `NOUS_API_KEY` environment variable; Chatbox, Cherry Studio, ZCode and CLIProxyAPI ship a placeholder you replace after import.
+All conversion logic lives in `src/model-export.ts`. Every provider-scoped export writes a fixed provider id (`nous`) so re-importing replaces the same entry instead of duplicating it. Codex, LiteLLM, OpenCode, Crush, DeepSeek Harness, Zed and MiMo Desktop read the key from the `NOUS_API_KEY` environment variable; Chatbox, Cherry Studio, ZCode and CLIProxyAPI ship a placeholder you replace after import.
 
 ## Tech Stack
 

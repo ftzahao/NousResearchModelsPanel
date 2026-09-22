@@ -14,14 +14,15 @@ import {
   buildChatboxProviderConfig,
   buildCherryStudioProvider,
   buildZedSettings,
-  buildCliproxyapiConfig
+  buildCliproxyapiConfig,
+  buildMimocodeConfig
 } from "./model-export"
 import type { Model, ModelConfigExporter, ExportPreviewFile, Lang, Theme, ViewMode } from "./types"
 import { translations, LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
 import { useModels } from "./hooks/useModels"
 import { useCurrencyState } from "./hooks/useCurrency"
-import { bn, getProvider, getDiscount, isFreePrice } from "./utils"
+import { bn, getProvider, getDiscount, isFreePrice, reorderFavorites } from "./utils"
 import { Header, type Tab } from "./components/Header"
 import { StatsGrid, type AppStats } from "./components/StatsGrid"
 import { FilterBar } from "./components/FilterBar"
@@ -130,6 +131,49 @@ export function App() {
       }),
     []
   )
+  // Entering the favorites filter switches to manual order; leaving it
+  // falls back to the default sort so "custom" never applies elsewhere.
+  const handleSetShowFavorites = useCallback((v: boolean) => {
+    setShowFavorites(v)
+    setSortBy((s) => (v ? "custom" : s === "custom" ? "newest" : s))
+  }, [])
+  const moveFavorite = useCallback((fromId: string, toId: string, position: "before" | "after") => {
+    setFavorites((current) => new Set(reorderFavorites([...current], fromId, toId, position)))
+  }, [])
+
+  const canDrag = showFavorites && sortBy === "custom"
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [dropHint, setDropHint] = useState<{ id: string; position: "before" | "after" } | null>(
+    null
+  )
+  const handleDragStart = useCallback((id: string) => setDragId(id), [])
+  const handleDragOver = useCallback(
+    (id: string, e: React.DragEvent) => {
+      if (!dragId || dragId === id) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = "move"
+      const rect = e.currentTarget.getBoundingClientRect()
+      const position = e.clientY < rect.top + rect.height / 2 ? "before" : "after"
+      setDropHint((prev) =>
+        prev && prev.id === id && prev.position === position ? prev : { id, position }
+      )
+    },
+    [dragId]
+  )
+  const handleDrop = useCallback(
+    (id: string) => {
+      if (dragId && dropHint?.id === id && dragId !== id) {
+        moveFavorite(dragId, id, dropHint.position)
+      }
+      setDragId(null)
+      setDropHint(null)
+    },
+    [dragId, dropHint, moveFavorite]
+  )
+  const handleDragEnd = useCallback(() => {
+    setDragId(null)
+    setDropHint(null)
+  }, [])
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem("viewMode")
     if (saved === "list" || saved === "compact-table" || saved === "compact-cards") return saved
@@ -184,6 +228,14 @@ export function App() {
     if (showFree) result = result.filter((m) => isFreePrice(m.pricing?.prompt))
     if (showDiscount) result = result.filter((m) => getDiscount(m) !== null)
     if (showFavorites) result = result.filter((m) => favorites.has(m.id))
+
+    if (sortBy === "custom") {
+      // manual drag order: favorites index decides position
+      const order = new Map([...favorites].map((id, i) => [id, i]))
+      return [...result].sort(
+        (a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+      )
+    }
 
     result = [...result].sort((a, b) => {
       switch (sortBy) {
@@ -353,6 +405,13 @@ export function App() {
         fileName: "zed-language-models.json",
         usage: t.zedUsage,
         build: (items) => buildZedSettings(items)
+      },
+      {
+        id: "mimocode",
+        label: t.mimocodeConfig,
+        fileName: "mimocode.jsonc",
+        usage: t.mimocodeUsage,
+        build: (items) => buildMimocodeConfig(items)
       }
     ],
     [t]
@@ -505,7 +564,7 @@ export function App() {
                 showDiscount={showDiscount}
                 setShowDiscount={setShowDiscount}
                 showFavorites={showFavorites}
-                setShowFavorites={setShowFavorites}
+                setShowFavorites={handleSetShowFavorites}
                 favoriteCount={favorites.size}
                 onClearFavorites={() => setFavorites(new Set())}
                 viewMode={viewMode}
@@ -550,6 +609,13 @@ export function App() {
                   onShowDetails={setDetailId}
                   favorites={favorites}
                   onToggleFavorite={toggleFavorite}
+                  dragEnabled={canDrag}
+                  dragId={dragId}
+                  dropHint={dropHint}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
                 />
               ) : viewMode === "compact-cards" ? (
                 <div className="card-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
@@ -562,6 +628,13 @@ export function App() {
                       onShowDetails={setDetailId}
                       favorite={favorites.has(m.id)}
                       onToggleFavorite={toggleFavorite}
+                      dragEnabled={canDrag}
+                      isDragging={dragId === m.id}
+                      isDropTarget={dropHint?.id === m.id}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
                     />
                   ))}
                 </div>
@@ -585,6 +658,13 @@ export function App() {
                       onToggleRawDetails={toggleRawDetails}
                       favorite={favorites.has(m.id)}
                       onToggleFavorite={toggleFavorite}
+                      dragEnabled={canDrag}
+                      isDragging={dragId === m.id}
+                      isDropTarget={dropHint?.id === m.id}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
                     />
                   ))}
                 </div>

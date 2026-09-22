@@ -225,6 +225,9 @@ export function FilterBar({
             <option value="intelligence">{t.intelligence}</option>
             <option value="coding">{t.codingIndex}</option>
             <option value="name">{t.nameAZ}</option>
+            <option value="custom" disabled={!showFavorites}>
+              {t.sortCustom}
+            </option>
           </select>
         </div>
 

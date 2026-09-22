@@ -22,7 +22,14 @@ export const CompactModelTable = memo(function CompactModelTable({
   onSelect,
   onShowDetails,
   favorites,
-  onToggleFavorite
+  onToggleFavorite,
+  dragEnabled,
+  dragId,
+  dropHint,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd
 }: {
   models: Model[]
   selectedIds: Set<string>
@@ -30,6 +37,13 @@ export const CompactModelTable = memo(function CompactModelTable({
   onShowDetails: (id: string) => void
   favorites: Set<string>
   onToggleFavorite: (id: string) => void
+  dragEnabled?: boolean
+  dragId?: string | null
+  dropHint?: { id: string; position: "before" | "after" } | null
+  onDragStart?: (id: string) => void
+  onDragOver?: (id: string, e: React.DragEvent) => void
+  onDrop?: (id: string) => void
+  onDragEnd?: () => void
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
@@ -68,11 +82,31 @@ export const CompactModelTable = memo(function CompactModelTable({
                 <tr
                   key={model.id}
                   onClick={() => onSelect(model.id)}
+                  draggable={dragEnabled}
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = "move"
+                    e.dataTransfer.setData("text/plain", model.id)
+                    onDragStart?.(model.id)
+                  }}
+                  onDragOver={(e) => onDragOver?.(model.id, e)}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    onDrop?.(model.id)
+                  }}
+                  onDragEnd={() => onDragEnd?.()}
                   className={`cursor-pointer transition-colors border-b ${
                     isDark
                       ? "border-white/5 hover:bg-white/[0.03]"
                       : "border-gray-100 hover:bg-gray-50"
-                  } ${selected ? (isDark ? "bg-[#edff45]/[0.08] hover:bg-[#edff45]/[0.1]" : "bg-brand-50") : ""}`}
+                  } ${selected ? (isDark ? "bg-[#edff45]/[0.08] hover:bg-[#edff45]/[0.1]" : "bg-brand-50") : ""} ${
+                    dragEnabled ? "cursor-grab active:cursor-grabbing" : ""
+                  } ${dragId === model.id ? "opacity-40" : ""} ${
+                    dropHint?.id === model.id
+                      ? isDark
+                        ? "ring-1 ring-inset ring-brand-400/70"
+                        : "ring-1 ring-inset ring-brand-500"
+                      : ""
+                  }`}
                 >
                   <td className={td}>
                     <SelectCheckbox

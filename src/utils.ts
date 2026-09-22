@@ -34,6 +34,23 @@ export function getProviderColor(id: string): string {
   return providerColors[getProvider(id)] ?? "#6B7280"
 }
 
+// Reorder a favorites id list for drag-and-drop: move fromId next to toId.
+// Returns a new array; unknown ids leave the order unchanged.
+export function reorderFavorites(
+  order: string[],
+  fromId: string,
+  toId: string,
+  position: "before" | "after"
+): string[] {
+  const from = order.indexOf(fromId)
+  const to = order.indexOf(toId)
+  if (from === -1 || to === -1 || fromId === toId) return [...order]
+  const next = order.filter((id) => id !== fromId)
+  const target = next.indexOf(toId)
+  next.splice(position === "before" ? target : target + 1, 0, fromId)
+  return next
+}
+
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_HALF_UP })
 
 export function bn(val: string | undefined | null): BigNumber {

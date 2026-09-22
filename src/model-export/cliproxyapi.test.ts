@@ -12,7 +12,7 @@ test("builds a CLIProxyAPI openai-compatibility config fragment", () => {
         "base-url": "https://inference-api.nousresearch.com/v1",
         "api-key-entries": [{ "api-key": "YOUR_NOUS_API_KEY" }],
         headers: {
-          "User-Agent": "HermesAgent/0.21.3",
+          "User-Agent": "HermesAgent/0.21.4",
           Authorization: "Bearer YOUR_NOUS_API_KEY"
         },
         models: [

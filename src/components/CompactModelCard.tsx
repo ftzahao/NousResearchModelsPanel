@@ -21,7 +21,14 @@ export const CompactModelCard = memo(function CompactModelCard({
   onSelect,
   onShowDetails,
   favorite,
-  onToggleFavorite
+  onToggleFavorite,
+  dragEnabled,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd
 }: {
   model: Model
   selected: boolean
@@ -29,6 +36,13 @@ export const CompactModelCard = memo(function CompactModelCard({
   onShowDetails: (id: string) => void
   favorite: boolean
   onToggleFavorite: (id: string) => void
+  dragEnabled?: boolean
+  isDragging?: boolean
+  isDropTarget?: boolean
+  onDragStart?: (id: string) => void
+  onDragOver?: (id: string, e: React.DragEvent) => void
+  onDrop?: (id: string) => void
+  onDragEnd?: () => void
 }) {
   const { lang, t } = useLang()
   const { theme } = useTheme()
@@ -41,6 +55,18 @@ export const CompactModelCard = memo(function CompactModelCard({
   return (
     <div
       onClick={() => onSelect(model.id)}
+      draggable={dragEnabled}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move"
+        e.dataTransfer.setData("text/plain", model.id)
+        onDragStart?.(model.id)
+      }}
+      onDragOver={(e) => onDragOver?.(model.id, e)}
+      onDrop={(e) => {
+        e.preventDefault()
+        onDrop?.(model.id)
+      }}
+      onDragEnd={() => onDragEnd?.()}
       className={`glass rounded-xl p-2.5 cursor-pointer transition-all duration-200 ${
         selected
           ? isDark
@@ -49,7 +75,9 @@ export const CompactModelCard = memo(function CompactModelCard({
           : isDark
             ? "hover:bg-white/[0.03]"
             : "hover:bg-gray-50"
-      }`}
+      } ${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
+        isDragging ? "opacity-40" : ""
+      } ${isDropTarget ? `ring-1 ${isDark ? "ring-brand-400/80" : "ring-brand-500"}` : ""}`}
     >
       <div className="flex items-start gap-1.5">
         <SelectCheckbox
