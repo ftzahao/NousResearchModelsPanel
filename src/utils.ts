@@ -51,6 +51,21 @@ export function reorderFavorites(
   return next
 }
 
+// Sort items into the manual favorites drag order (Set insertion order);
+// non-favorites keep their original relative order at the end.
+export function sortByFavorites<T extends { id: string }>(
+  items: T[],
+  favorites: ReadonlySet<string>
+): T[] {
+  if (favorites.size === 0) return [...items]
+  const order = new Map([...favorites].map((id, i) => [id, i]))
+  return [...items].sort(
+    (a, b) =>
+      (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+      (order.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+  )
+}
+
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_HALF_UP })
 
 export function bn(val: string | undefined | null): BigNumber {

@@ -22,7 +22,7 @@ import { translations, LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
 import { useModels } from "./hooks/useModels"
 import { useCurrencyState } from "./hooks/useCurrency"
-import { bn, getProvider, getDiscount, isFreePrice, reorderFavorites } from "./utils"
+import { bn, getProvider, getDiscount, isFreePrice, reorderFavorites, sortByFavorites } from "./utils"
 import { Header, type Tab } from "./components/Header"
 import { StatsGrid, type AppStats } from "./components/StatsGrid"
 import { FilterBar } from "./components/FilterBar"
@@ -231,10 +231,7 @@ export function App() {
 
     if (sortBy === "custom") {
       // manual drag order: favorites index decides position
-      const order = new Map([...favorites].map((id, i) => [id, i]))
-      return [...result].sort(
-        (a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER)
-      )
+      return sortByFavorites(result, favorites)
     }
 
     result = [...result].sort((a, b) => {
@@ -417,8 +414,8 @@ export function App() {
     [t]
   )
   const selectedModels = useMemo(
-    () => models.filter((model) => selectedIds.has(model.id)),
-    [models, selectedIds]
+    () => sortByFavorites(models.filter((model) => selectedIds.has(model.id)), favorites),
+    [models, selectedIds, favorites]
   )
   const detailModel = detailId ? (models.find((m) => m.id === detailId) ?? null) : null
   const activeExporter = exporters.find((exporter) => exporter.id === exporterId) ?? exporters[0]
