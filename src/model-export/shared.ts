@@ -12,7 +12,7 @@ export interface ExportPreviewFile {
 
 export interface ModelConfigExporter {
   id: string
-  label: string
+  label?: string
   fileName: string
   format?: "yaml" | "toml"
   usage?: string[]

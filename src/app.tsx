@@ -1,21 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import BigNumber from "bignumber.js"
-import { stringify } from "yaml"
 import {
-  buildDshProviderConfig,
-  buildGcmpCompatibleModels,
-  buildGithubCopilotLanguageModels,
-  buildCodexConfigToml,
-  buildModelCatalogJson,
-  buildZcodeConfig,
-  buildLitellmConfig,
-  buildOpencodeConfig,
-  buildCrushConfig,
-  buildChatboxProviderConfig,
-  buildCherryStudioProvider,
-  buildZedSettings,
-  buildCliproxyapiConfig,
-  buildMimocodeConfig
+  exporterRegistry,
+  serializeExport
 } from "./model-export"
 import type { Model, ModelConfigExporter, ExportPreviewFile, Lang, Theme, ViewMode } from "./types"
 import { translations, LangContext } from "./i18n"
@@ -315,102 +302,39 @@ export function App() {
   }, [hasMore, visibleCount, viewMode])
 
   const exporters = useMemo<ModelConfigExporter[]>(
-    () => [
-      {
-        id: "codex",
-        label: t.codexSetup,
-        fileName: "codex-config.toml",
-        format: "toml",
-        usage: t.codexUsage,
-        warning: t.codexWarning,
-        build: (items) => buildCodexConfigToml(items),
-        extraFiles: [{ fileName: "models.json", build: (items) => buildModelCatalogJson(items) }]
-      },
-      {
-        id: "github-copilot-gcmp",
-        label: t.gcmpCompatible,
-        fileName: "gcmp-compatible-models.json",
-        build: (items) => buildGcmpCompatibleModels(items)
-      },
-      {
-        id: "github-copilot-language-models",
-        label: t.githubCopilotLanguageModels,
-        fileName: "chatLanguageModels.json",
-        build: (items) => buildGithubCopilotLanguageModels(items)
-      },
-      {
-        id: "zcode",
-        label: t.zcodeProviders,
-        fileName: "zcode-provider-config.json",
-        usage: t.zcodeUsage,
-        build: (items) => buildZcodeConfig(items)
-      },
-      {
-        id: "deepseek-harness",
-        label: t.deepseekHarnessProviders,
-        fileName: "dsh-llm-pi-ai.yaml",
-        format: "yaml",
-        build: (items) => buildDshProviderConfig(items)
-      },
-      {
-        id: "litellm",
-        label: t.litellmConfig,
-        fileName: "litellm-config.yaml",
-        format: "yaml",
-        usage: t.litellmUsage,
-        build: (items) => buildLitellmConfig(items)
-      },
-      {
-        id: "cliproxyapi",
-        label: t.cliproxyapiConfig,
-        fileName: "cliproxyapi-config.yaml",
-        format: "yaml",
-        usage: t.cliproxyapiUsage,
-        build: (items) => buildCliproxyapiConfig(items)
-      },
-      {
-        id: "opencode",
-        label: t.opencodeConfig,
-        fileName: "opencode.json",
-        usage: t.opencodeUsage,
-        build: (items) => buildOpencodeConfig(items)
-      },
-      {
-        id: "crush",
-        label: t.crushConfig,
-        fileName: "crush.json",
-        usage: t.crushUsage,
-        build: (items) => buildCrushConfig(items)
-      },
-      {
-        id: "chatbox",
-        label: t.chatboxProvider,
-        fileName: "chatbox-nous-provider.json",
-        usage: t.chatboxUsage,
-        build: (items) => buildChatboxProviderConfig(items)
-      },
-      {
-        id: "cherry-studio",
-        label: t.cherryStudioProvider,
-        fileName: "cherry-studio-nous.json",
-        usage: t.cherryStudioUsage,
-        build: (items) => buildCherryStudioProvider(items)
-      },
-      {
-        id: "zed",
-        label: t.zedSettings,
-        fileName: "zed-language-models.json",
-        usage: t.zedUsage,
-        build: (items) => buildZedSettings(items)
-      },
-      {
-        id: "mimocode",
-        label: t.mimocodeConfig,
-        fileName: "mimocode.jsonc",
-        usage: t.mimocodeUsage,
-        build: (items) => buildMimocodeConfig(items)
-      }
-    ],
+    () =>
+      exporterRegistry.map((exporter) => {
+        switch (exporter.id) {
+          case "codex":
+            return { ...exporter, label: t.codexSetup, usage: t.codexUsage, warning: t.codexWarning }
+          case "github-copilot-gcmp":
+            return { ...exporter, label: t.gcmpCompatible }
+          case "github-copilot-language-models":
+            return { ...exporter, label: t.githubCopilotLanguageModels }
+          case "zcode":
+            return { ...exporter, label: t.zcodeProviders, usage: t.zcodeUsage }
+          case "deepseek-harness":
+            return { ...exporter, label: t.deepseekHarnessProviders }
+          case "litellm":
+            return { ...exporter, label: t.litellmConfig, usage: t.litellmUsage }
+          case "cliproxyapi":
+            return { ...exporter, label: t.cliproxyapiConfig, usage: t.cliproxyapiUsage }
+          case "opencode":
+            return { ...exporter, label: t.opencodeConfig, usage: t.opencodeUsage }
+          case "crush":
+            return { ...exporter, label: t.crushConfig, usage: t.crushUsage }
+          case "chatbox":
+            return { ...exporter, label: t.chatboxProvider, usage: t.chatboxUsage }
+          case "cherry-studio":
+            return { ...exporter, label: t.cherryStudioProvider, usage: t.cherryStudioUsage }
+          case "zed":
+            return { ...exporter, label: t.zedSettings, usage: t.zedUsage }
+          case "mimocode":
+            return { ...exporter, label: t.mimocodeConfig, usage: t.mimocodeUsage }
+          default:
+            throw new Error(`Missing localized labels for exporter: ${exporter.id}`)
+        }
+      }),
     [t]
   )
   const selectedModels = useMemo(
@@ -419,13 +343,6 @@ export function App() {
   )
   const detailModel = detailId ? (models.find((m) => m.id === detailId) ?? null) : null
   const activeExporter = exporters.find((exporter) => exporter.id === exporterId) ?? exporters[0]
-
-  const serializeExport = (payload: unknown, format?: "yaml" | "toml") =>
-    format === "yaml"
-      ? stringify(payload)
-      : format === "toml"
-        ? String(payload)
-        : JSON.stringify(payload, null, 2)
 
   const openExportPreview = () => {
     if (!activeExporter || selectedModels.length === 0) return
