@@ -25,7 +25,7 @@ test("builds a MiMo Desktop provider map with schema and env apiKey", () => {
             tool_call: true,
             limit: { context: 131072, input: 114688, output: 16384 },
             modalities: { input: ["text"], output: ["text"] },
-            headers: { "User-Agent": "HermesAgent/0.21.4" }
+            headers: { "User-Agent": "HermesAgent/0.21.5" }
           }
         }
       }
@@ -44,7 +44,7 @@ test("maps capabilities and modalities for MiMo Desktop vision models", () => {
     tool_call: true,
     limit: { context: 65536, input: 57344, output: 8192 },
     modalities: { input: ["text", "image"], output: ["text"] },
-    headers: { "User-Agent": "HermesAgent/0.21.4" }
+    headers: { "User-Agent": "HermesAgent/0.21.5" }
   })
 })
 

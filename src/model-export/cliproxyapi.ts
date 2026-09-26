@@ -74,7 +74,7 @@ export function buildCliproxyapiConfig(models: ExportableModel[]): CliproxyapiCo
         "base-url": GCMP_BASE_URL,
         "api-key-entries": [{ "api-key": CLIPROXYAPI_API_KEY_PLACEHOLDER }],
         headers: {
-          "User-Agent": "HermesAgent/0.21.4",
+          "User-Agent": "HermesAgent/0.21.5",
           Authorization: "Bearer " + CLIPROXYAPI_API_KEY_PLACEHOLDER
         },
         models: models.map((model) => {
