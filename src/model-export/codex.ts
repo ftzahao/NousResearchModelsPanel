@@ -90,17 +90,17 @@ export function buildModelCatalogJson(models: ExportableModel[]): ModelCatalog {
   }
 }
 
-const tomlString = (value: string) => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+export const tomlString = (value: string) => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
 
 // Effective reasoning effort: filtered to Codex's official enum, with the default inside it
-function effectiveCodexEfforts(model: ExportableModel): string[] {
+export function effectiveCodexEfforts(model: ExportableModel): string[] {
   const knownEfforts = (model.reasoning?.supported_efforts ?? []).filter((effort) =>
     CODEX_KNOWN_EFFORTS.includes(effort)
   )
   return knownEfforts.length ? knownEfforts : ["medium"]
 }
 
-function effectiveCodexDefaultEffort(model: ExportableModel, efforts: string[]): string {
+export function effectiveCodexDefaultEffort(model: ExportableModel, efforts: string[]): string {
   const requestedDefault = model.reasoning?.default_effort
   return requestedDefault && efforts.includes(requestedDefault)
     ? requestedDefault
@@ -110,7 +110,7 @@ function effectiveCodexDefaultEffort(model: ExportableModel, efforts: string[]):
 // The official model_reasoning_effort key only accepts up to xhigh. If the default is an
 // extended effort (max/ultra), fall back to the highest official effort the model supports
 // so the config stays parseable while the catalog still advertises max/ultra
-function configReasoningEffort(defaultEffort: string, efforts: string[]): string {
+export function configReasoningEffort(defaultEffort: string, efforts: string[]): string {
   if (CODEX_CONFIG_EFFORTS.includes(defaultEffort)) return defaultEffort
   const official = efforts.filter((effort) => CODEX_CONFIG_EFFORTS.includes(effort))
   return official.at(-1) ?? "xhigh"
@@ -128,6 +128,13 @@ model_provider = "nous"
 model = "${tomlString(firstModel?.id ?? "")}"
 model_reasoning_effort = "${tomlString(configReasoningEffort(defaultEffort, efforts))}"
 model_catalog_json = "<PATH_TO_MODELS_JSON>"
+
+# Follow the system proxy (Clash/Verge, corporate PAC, ...) for Codex's own
+# outbound requests. Key is singular — the plural "respect_system_proxies"
+# parses as an unknown feature and is silently ignored. Merge this key into an
+# existing [features] table if you already have one.
+[features]
+respect_system_proxy = true
 
 [model_providers.nous]
 name = "Nous Research"

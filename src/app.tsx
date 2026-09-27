@@ -307,6 +307,8 @@ export function App() {
         switch (exporter.id) {
           case "codex":
             return { ...exporter, label: t.codexSetup, usage: t.codexUsage, warning: t.codexWarning }
+          case "codex-osaurus":
+            return { ...exporter, label: t.codexOsaurusSetup, usage: t.codexOsaurusUsage }
           case "github-copilot-gcmp":
             return { ...exporter, label: t.gcmpCompatible }
           case "github-copilot-language-models":

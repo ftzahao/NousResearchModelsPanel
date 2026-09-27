@@ -1,6 +1,7 @@
 import { stringify } from "yaml"
 import type { ModelConfigExporter } from "./shared"
 import { buildCodexConfigToml, buildModelCatalogJson } from "./codex"
+import { buildCodexOsaurusConfigToml, buildCodexOsaurusModelCatalogJson } from "./codex-osaurus"
 import { buildGcmpCompatibleModels } from "./gcmp"
 import { buildGithubCopilotLanguageModels } from "./github-copilot"
 import { buildZcodeConfig } from "./zcode"
@@ -17,10 +18,19 @@ import { buildMimocodeConfig } from "./mimocode"
 export const exporterRegistry: readonly ModelConfigExporter[] = [
   {
     id: "codex",
-    fileName: "codex-config.toml",
+    fileName: "config.toml",
     format: "toml",
     build: (items) => buildCodexConfigToml(items),
     extraFiles: [{ fileName: "models.json", build: (items) => buildModelCatalogJson(items) }]
+  },
+  {
+    id: "codex-osaurus",
+    fileName: "config.toml",
+    format: "toml",
+    build: (items) => buildCodexOsaurusConfigToml(items),
+    extraFiles: [
+      { fileName: "models.json", build: (items) => buildCodexOsaurusModelCatalogJson(items) }
+    ]
   },
   {
     id: "github-copilot-gcmp",

@@ -25,7 +25,8 @@
 
 | 格式                                      | 输出文件                            | 目标工具                                                          |
 | ----------------------------------------- | ----------------------------------- | ----------------------------------------------------------------- |
-| Codex 接入配置                            | `codex-config.toml` + `models.json` | Codex CLI 服务商配置 + 模型目录（已针对 CLI 0.154.0 实测验证）    |
+| Codex 接入配置                            | `config.toml` + `models.json` | Codex CLI 服务商配置 + 模型目录（已针对 CLI 0.154.0 实测验证）    |
+| Codex 接入配置（Osaurus 代理）            | `config.toml` + `models.json` | Codex CLI 经本地 [Osaurus](https://docs.osaurus.ai) 代理转发（服务商名 `nous`，模型寻址为 `nous/<模型ID>`） |
 | GitHub Copilot `gcmp.compatibleModels`    | `gcmp-compatible-models.json`       | Copilot GCMP 兼容模型条目                                         |
 | GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`           | Copilot 自定义端点提供商（`customendpoint` / `chat-completions`） |
 | ZCode `provider_config.json` 配置         | `zcode-provider-config.json`        | ZCode 个人提供商条目（`schemaVersion: 1`，ZCode 3.x）             |
@@ -38,7 +39,7 @@
 | Cherry Studio 服务商配置                  | `cherry-studio-nous.json`           | Cherry Studio `data.providers.nous` 条目                          |
 | Zed `language_models` 配置                | `zed-language-models.json`          | Zed `language_models.openai_compatible` 片段                      |
 
-所有转换逻辑集中在 `src/model-export.ts`。各导出统一写入固定提供商 id（`nous`），重复导入时覆盖同一条目而非新增。Codex、LiteLLM、OpenCode、Crush、DeepSeek Harness、Zed 通过环境变量 `NOUS_API_KEY` 读取密钥；Chatbox、Cherry Studio、ZCode、CLIProxyAPI 提供占位符，导入后替换为真实 Key。
+所有转换逻辑集中在 `src/model-export.ts`。各导出统一写入固定提供商 id（`nous`），重复导入时覆盖同一条目而非新增。Codex、LiteLLM、OpenCode、Crush、DeepSeek Harness、Zed 通过环境变量 `NOUS_API_KEY` 读取密钥；Chatbox、Cherry Studio、ZCode、CLIProxyAPI 提供占位符，导入后替换为真实 Key。Codex（Osaurus 代理）版不读取任何密钥：Codex 只访问本地回环地址，Nous Key 由 Osaurus 存放在 macOS 钥匙串中。
 
 ## 技术栈
 

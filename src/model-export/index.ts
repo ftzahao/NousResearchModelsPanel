@@ -17,6 +17,15 @@ export {
 export { buildModelCatalogJson, buildCodexConfigToml, CODEX_MODEL_INSTRUCTIONS } from "./codex"
 export type { CodexReasoningLevel, ModelCatalog, ModelCatalogEntry } from "./codex"
 
+export {
+  buildCodexOsaurusConfigToml,
+  buildCodexOsaurusModelCatalogJson,
+  osaurusModelId,
+  OSAURUS_BASE_URL,
+  OSAURUS_DEFAULT_PORT,
+  OSAURUS_NOUS_PROVIDER
+} from "./codex-osaurus"
+
 export { buildGcmpCompatibleModels } from "./gcmp"
 export type { GcmpCompatibleModelEntry } from "./gcmp"
 

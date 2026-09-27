@@ -132,6 +132,12 @@ test("builds a Codex config.toml snippet wired to the Nous provider", () => {
   expect(toml).toContain("stream_idle_timeout_ms = 600000")
   // top-level keys must precede table headers in TOML
   expect(toml.indexOf("model_catalog_json")).toBeLessThan(toml.indexOf("[model_providers.nous]"))
+  // system-proxy feature flag: singular key, placed before the provider table
+  expect(toml).toContain("[features]")
+  expect(toml).toContain("respect_system_proxy = true")
+  expect(toml).not.toContain("respect_system_proxies =")
+  expect(toml.indexOf("model_catalog_json")).toBeLessThan(toml.indexOf("[features]"))
+  expect(toml.indexOf("[features]")).toBeLessThan(toml.indexOf("[model_providers.nous]"))
 })
 
 test("sets model_reasoning_effort from the first model's effective default", () => {

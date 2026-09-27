@@ -141,12 +141,23 @@ export const translations = {
     usageTitle: "使用方法",
     codexSetup: "Codex 接入配置",
     codexUsage: [
-      "下载 codex-config.toml 与 models.json 两个文件",
+      "下载 config.toml 与 models.json 两个文件",
       "把 models.json 保存到固定位置（例如 ~/.codex/nous-models.json）",
-      "把 codex-config.toml 内容合并进 ~/.codex/config.toml（不要覆盖已有配置），并把 model_catalog_json 改成 models.json 的绝对路径",
+      "把 config.toml 内容合并进 ~/.codex/config.toml（不要覆盖已有配置），并把 model_catalog_json 改成 models.json 的绝对路径",
       '设置 API Key：export NOUS_API_KEY="你的 Nous API Key"（可写入 ~/.zshrc 或 ~/.bashrc）',
       "运行 codex debug models 验证目录加载成功",
-      "启动 codex，用 /model 切换 Nous 模型（注意：model_catalog_json 会整体替换内置模型目录）"
+      "启动 codex，用 /model 切换 Nous 模型（注意：model_catalog_json 会整体替换内置模型目录）",
+      "配置已开启 [features] respect_system_proxy = true，让 Codex 跟随系统代理访问网络；键名是单数，写成复数 respect_system_proxies 会被静默忽略、不生效"
+    ],
+    codexOsaurusSetup: "Codex 接入配置（Osaurus 代理）",
+    codexOsaurusUsage: [
+      "下载 config.toml 与 models.json 两个文件",
+      "先在 Osaurus 里接入 Nous 上游：Management 窗口（⌘⇧M）→ Cloud Models → Add Provider → Custom，Host 填 inference-api.nousresearch.com、Base path 填 /v1、服务商名称填 nous，保存后填入你的 Nous API Key（存入 macOS 钥匙串）",
+      "服务商命名为 nous 后，模型按 nous/<模型ID> 寻址（如 nous/xiaomi/mimo-v2.6-flash），本导出的配置与 models.json 已按此前缀生成",
+      "确认 Osaurus 服务已启动（默认 http://127.0.0.1:1337，可用 OSU_PORT 调整端口）",
+      "把 models.json 保存到固定位置（例如 ~/.codex/nous-models.json），把 config.toml 合并进 ~/.codex/config.toml（不要覆盖已有配置），并把 model_catalog_json 改成 models.json 的绝对路径",
+      "运行 codex debug models 验证目录加载，再启动 codex 用 /model 切换模型；请求经 Osaurus 转发，Codex 无需设置 NOUS_API_KEY",
+      "配置同样开启了 [features] respect_system_proxy；若开启后 127.0.0.1 反复提示重新连接，请把本机地址加入系统代理的绕过列表，或注释掉该行"
     ],
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
@@ -349,12 +360,23 @@ export const translations = {
     usageTitle: "How to use",
     codexSetup: "Codex setup",
     codexUsage: [
-      "Download both files: codex-config.toml and models.json",
+      "Download both files: config.toml and models.json",
       "Put models.json in a fixed location (e.g. ~/.codex/nous-models.json)",
-      "Merge codex-config.toml into ~/.codex/config.toml without overwriting existing settings, and point model_catalog_json at models.json's absolute path",
+      "Merge config.toml into ~/.codex/config.toml without overwriting existing settings, and point model_catalog_json at models.json's absolute path",
       'Set your API key: export NOUS_API_KEY="your Nous API key" (e.g. in ~/.zshrc or ~/.bashrc)',
       "Run codex debug models to verify the catalog loads",
-      "Start codex and switch to Nous models with /model (note: model_catalog_json replaces the built-in model catalog entirely)"
+      "Start codex and switch to Nous models with /model (note: model_catalog_json replaces the built-in model catalog entirely)",
+      "The config enables [features] respect_system_proxy = true so Codex follows your system proxy; the key is singular — the plural respect_system_proxies form parses as an unknown feature and is silently ignored"
+    ],
+    codexOsaurusSetup: "Codex setup (Osaurus proxy)",
+    codexOsaurusUsage: [
+      "Download both files: config.toml and models.json",
+      'Connect the Nous upstream in Osaurus first: Management window (⌘⇧M) → Cloud Models → Add Provider → Custom, host inference-api.nousresearch.com, base path /v1, provider name "nous", then save and enter your Nous API key (stored in the macOS Keychain)',
+      "With the provider named nous, its models are addressed as nous/<model-id> (e.g. nous/xiaomi/mimo-v2.6-flash); the exported config and models.json already carry that prefix",
+      "Make sure the Osaurus server is running (http://127.0.0.1:1337 by default; OSU_PORT changes the port)",
+      "Put models.json in a fixed location (e.g. ~/.codex/nous-models.json), merge config.toml into ~/.codex/config.toml without overwriting existing settings, and point model_catalog_json at models.json's absolute path",
+      "Run codex debug models to verify the catalog loads, then start codex and switch models with /model; requests are proxied through Osaurus, so Codex needs no NOUS_API_KEY",
+      "The config also enables [features] respect_system_proxy; if loopback requests to 127.0.0.1 then keep prompting to reconnect, add your local addresses to the system proxy bypass list or comment that line out"
     ],
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
