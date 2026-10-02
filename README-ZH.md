@@ -31,6 +31,7 @@
 | GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`           | Copilot 自定义端点提供商（`customendpoint` / `chat-completions`） |
 | ZCode `provider_config.json` 配置         | `zcode-provider-config.json`        | ZCode 个人提供商条目（`schemaVersion: 1`，ZCode 3.x）             |
 | DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`                | DeepSeek Harness `llm-pi-ai` 提供商（YAML）                       |
+| DeepSeek Harness 桌面端补丁               | `dsh-desktop-cordis-patch.yml`      | DeepSeek Harness 桌面端 profile 的 `cordis.patch.yml`（`llm-pi-ai` 条目） |
 | LiteLLM `config.yaml`                     | `litellm-config.yaml`               | LiteLLM 代理 `model_list` 条目（OpenAI 兼容上游）                 |
 | CLIProxyAPI `config.yaml`                 | `cliproxyapi-config.yaml`           | CLIProxyAPI `openai-compatibility` 提供商片段                     |
 | OpenCode `opencode.json`                  | `opencode.json`                     | OpenCode 提供商（`@ai-sdk/openai-compatible`）                    |
@@ -38,8 +39,9 @@
 | Chatbox 服务商导入配置                    | `chatbox-nous-provider.json`        | Chatbox 一键导入服务商 JSON                                       |
 | Cherry Studio 服务商配置                  | `cherry-studio-nous.json`           | Cherry Studio `data.providers.nous` 条目                          |
 | Zed `language_models` 配置                | `zed-language-models.json`          | Zed `language_models.openai_compatible` 片段                      |
+| Xiaomi MiMo Desktop `mimocode.jsonc`      | `mimocode.jsonc`                    | MiMo Desktop 提供商（`@ai-sdk/openai-compatible`）                |
 
-所有转换逻辑集中在 `src/model-export.ts`。各导出统一写入固定提供商 id（`nous`），重复导入时覆盖同一条目而非新增。Codex、LiteLLM、OpenCode、Crush、DeepSeek Harness、Zed 通过环境变量 `NOUS_API_KEY` 读取密钥；Chatbox、Cherry Studio、ZCode、CLIProxyAPI 提供占位符，导入后替换为真实 Key。Codex（Osaurus 代理）版不读取任何密钥：Codex 只访问本地回环地址，Nous Key 由 Osaurus 存放在 macOS 钥匙串中。
+所有转换逻辑集中在 `src/model-export/`。各导出统一写入固定提供商 id（`nous`），重复导入时覆盖同一条目而非新增。Codex、LiteLLM、OpenCode、Crush、DeepSeek Harness（两种格式）、Zed 通过环境变量 `NOUS_API_KEY` 读取密钥（桌面端补丁由 Harness 内部解析该引用，写进 `~/.dsh/.env` 或桌面端 设置 → 模型 页面）；Chatbox、Cherry Studio、ZCode、CLIProxyAPI 提供占位符，导入后替换为真实 Key。Codex（Osaurus 代理）版不读取任何密钥：Codex 只访问本地回环地址，Nous Key 由 Osaurus 存放在 macOS 钥匙串中。
 
 ## 技术栈
 

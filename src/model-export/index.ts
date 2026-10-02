@@ -65,8 +65,17 @@ export type {
   ZcodeProviderRule
 } from "./zcode"
 
-export { buildDshProviderConfig } from "./dsh"
+export {
+  buildDshProviderConfig,
+  buildDshProviderProfile,
+  DSH_PROVIDER_ID,
+  DSH_API_KEY_ENV,
+  DSH_LLM_PI_AI_ID
+} from "./dsh"
 export type { DshModality, DshModelProfile, DshProviderProfile, DshSettings } from "./dsh"
+
+export { buildDshDesktopPatch } from "./dsh-desktop"
+export type { DshDesktopPatchEntry } from "./dsh-desktop"
 
 export { buildZedSettings } from "./zed"
 export type {

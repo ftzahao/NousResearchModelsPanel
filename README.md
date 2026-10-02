@@ -31,6 +31,7 @@ Select models, then choose a format in the export menu. Each format targets one 
 | GitHub Copilot `chatLanguageModels.json`  | `chatLanguageModels.json`           | Copilot custom-endpoint provider (`customendpoint` / `chat-completions`) |
 | ZCode `provider_config.json` provider     | `zcode-provider-config.json`        | ZCode personal provider entry (`schemaVersion: 1`, [open-sourced client](https://github.com/zai-org/ZCode)) |
 | DeepSeek Harness `settings.yaml` provider | `dsh-llm-pi-ai.yaml`                | DeepSeek Harness `llm-pi-ai` provider (YAML)                             |
+| DeepSeek Harness desktop patch            | `dsh-desktop-cordis-patch.yml`      | DeepSeek Harness desktop profile `cordis.patch.yml` (`llm-pi-ai` entry) |
 | LiteLLM `config.yaml`                     | `litellm-config.yaml`               | LiteLLM proxy `model_list` entries for an OpenAI-compatible upstream     |
 | CLIProxyAPI `config.yaml`                 | `cliproxyapi-config.yaml`           | CLIProxyAPI `openai-compatibility` provider fragment                     |
 | OpenCode `opencode.json`                  | `opencode.json`                     | OpenCode provider (`@ai-sdk/openai-compatible`)                          |
@@ -40,7 +41,7 @@ Select models, then choose a format in the export menu. Each format targets one 
 | Zed `language_models` settings            | `zed-language-models.json`          | Zed `language_models.openai_compatible` fragment                         |
 | Xiaomi MiMo Desktop `mimocode.jsonc`      | `mimocode.jsonc`                    | MiMo Desktop provider (`@ai-sdk/openai-compatible`)                      |
 
-All conversion logic lives in `src/model-export.ts`. Every provider-scoped export writes a fixed provider id (`nous`) so re-importing replaces the same entry instead of duplicating it. Codex, LiteLLM, OpenCode, Crush, DeepSeek Harness, Zed and MiMo Desktop read the key from the `NOUS_API_KEY` environment variable; Chatbox, Cherry Studio, ZCode and CLIProxyAPI ship a placeholder you replace after import. The Codex/Osaurus variant reads no key at all — Codex talks to the loopback server and Osaurus holds the Nous key in the macOS Keychain.
+All conversion logic lives in `src/model-export/`. Every provider-scoped export writes a fixed provider id (`nous`) so re-importing replaces the same entry instead of duplicating it. Codex, LiteLLM, OpenCode, Crush, DeepSeek Harness (both variants), Zed and MiMo Desktop read the key from the `NOUS_API_KEY` environment variable — the desktop patch resolves it inside Harness, so put it in `~/.dsh/.env` or in the app's Settings → Models page; Chatbox, Cherry Studio, ZCode and CLIProxyAPI ship a placeholder you replace after import. The Codex/Osaurus variant reads no key at all — Codex talks to the loopback server and Osaurus holds the Nous key in the macOS Keychain.
 
 ## Tech Stack
 

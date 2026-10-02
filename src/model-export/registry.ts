@@ -6,6 +6,7 @@ import { buildGcmpCompatibleModels } from "./gcmp"
 import { buildGithubCopilotLanguageModels } from "./github-copilot"
 import { buildZcodeConfig } from "./zcode"
 import { buildDshProviderConfig } from "./dsh"
+import { buildDshDesktopPatch } from "./dsh-desktop"
 import { buildLitellmConfig } from "./litellm"
 import { buildCliproxyapiConfig } from "./cliproxyapi"
 import { buildOpencodeConfig } from "./opencode"
@@ -52,6 +53,12 @@ export const exporterRegistry: readonly ModelConfigExporter[] = [
     fileName: "dsh-llm-pi-ai.yaml",
     format: "yaml",
     build: (items) => buildDshProviderConfig(items)
+  },
+  {
+    id: "deepseek-harness-desktop",
+    fileName: "dsh-desktop-cordis-patch.yml",
+    format: "yaml",
+    build: (items) => buildDshDesktopPatch(items)
   },
   {
     id: "litellm",

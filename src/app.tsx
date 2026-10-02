@@ -317,6 +317,8 @@ export function App() {
             return { ...exporter, label: t.zcodeProviders, usage: t.zcodeUsage }
           case "deepseek-harness":
             return { ...exporter, label: t.deepseekHarnessProviders }
+          case "deepseek-harness-desktop":
+            return { ...exporter, label: t.deepseekHarnessDesktop, usage: t.deepseekHarnessDesktopUsage }
           case "litellm":
             return { ...exporter, label: t.litellmConfig, usage: t.litellmUsage }
           case "cliproxyapi":

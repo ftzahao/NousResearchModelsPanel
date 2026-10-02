@@ -9,6 +9,7 @@ test("exporter registry preserves the current exporter IDs and order", () => {
     "github-copilot-language-models",
     "zcode",
     "deepseek-harness",
+    "deepseek-harness-desktop",
     "litellm",
     "cliproxyapi",
     "opencode",
@@ -47,6 +48,14 @@ test("Chatbox remains a single-file exporter", () => {
 
   expect(chatbox?.fileName).toBe("chatbox-nous-provider.json")
   expect(chatbox?.extraFiles).toBeUndefined()
+})
+
+test("DeepSeek Harness desktop ships a YAML cordis patch next to the settings.yaml export", () => {
+  const desktop = exporterRegistry.find((exporter) => exporter.id === "deepseek-harness-desktop")
+
+  expect(desktop?.fileName).toBe("dsh-desktop-cordis-patch.yml")
+  expect(desktop?.format).toBe("yaml")
+  expect(desktop?.extraFiles).toBeUndefined()
 })
 
 test("serializeExport preserves JSON, YAML, and TOML output behavior", () => {

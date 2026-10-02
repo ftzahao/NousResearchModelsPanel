@@ -168,6 +168,14 @@ export const translations = {
       "ZCode 运行中会自动加载配置，无需重启；在模型列表里即可看到 nous 的模型"
     ],
     deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider",
+    deepseekHarnessDesktop: "DeepSeek Harness 桌面端 cordis.patch.yml",
+    deepseekHarnessDesktopUsage: [
+      "下载 dsh-desktop-cordis-patch.yml，打开当前 profile 的补丁文件：桌面端默认在 ~/.dsh/profiles/desktop/cordis.patch.yml（profile 名看 DSH_PROFILE，其它 profile 在 ~/.dsh/profiles/<profile>/cordis.patch.yml）",
+      "把文件里的 llm-pi-ai 条目合并进去：补丁按 id 整条覆盖 config，已有同 id 条目要整块替换（想保留的字段一并写上），没有就追加为顶层数组的一项；文件里其它条目不要动，删成空文件会导致启动失败（要清空请写 []）",
+      "也可以放进 ~/.dsh/cordis.patch.yml（home 级补丁，优先级高于 profile 级）",
+      '设置 API Key：把 NOUS_API_KEY=你的 Nous API Key 写进 ~/.dsh/.env，或在桌面端 设置 → 模型 里给 nous 提供商填入 Key（存进凭据存储，配置文件不落明文）',
+      "重启 DeepSeek Harness 桌面端，在 设置 → 模型 里确认出现 nous 提供商、导出的模型已列出；若装有 dsh CLI，可用 dsh --profile desktop --dump-config 打印合成后的配置"
+    ],
     codexWarning: "官方 API 格式不支持此方式，可以尝试用 API 代理工具（如 LiteLLM）",
     litellmConfig: "LiteLLM config.yaml",
     litellmUsage: [
@@ -387,6 +395,14 @@ export const translations = {
       "ZCode reloads the config while running, so the nous models appear without a restart"
     ],
     deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider",
+    deepseekHarnessDesktop: "DeepSeek Harness desktop cordis.patch.yml",
+    deepseekHarnessDesktopUsage: [
+      "Download dsh-desktop-cordis-patch.yml and open your profile's patch file: ~/.dsh/profiles/desktop/cordis.patch.yml on the desktop app (the profile name is DSH_PROFILE; other profiles live in ~/.dsh/profiles/<profile>/cordis.patch.yml)",
+      "Merge the llm-pi-ai entry into it: a patch replaces an entry's whole config by id, so an existing llm-pi-ai block is replaced as a whole (restate the fields you want to keep) and otherwise the entry is appended as one item of the top-level array; leave the file's other entries alone — an empty file fails boot (write [] to disable the layer)",
+      "It can also go into ~/.dsh/cordis.patch.yml, the home-level patch that outranks the profile one",
+      'Set your API key: put NOUS_API_KEY=your Nous API key in ~/.dsh/.env, or enter it for the nous provider under Settings → Models in the desktop app (stored in the credential store, never written into the config)',
+      "Restart the DeepSeek Harness desktop app and confirm nous shows up under Settings → Models with the exported models listed; if the dsh CLI is installed, dsh --profile desktop --dump-config prints the composed config"
+    ],
     codexWarning:
       "The official API format doesn't support this method; try an API proxy tool (e.g. LiteLLM)",
     litellmConfig: "LiteLLM config.yaml",
