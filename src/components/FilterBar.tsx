@@ -9,7 +9,8 @@ import {
   LayoutGrid,
   X,
   BadgePercent,
-  Star
+  Star,
+  AlertTriangle
 } from "lucide-react"
 import { XCircle } from "lucide-react"
 import type { ViewMode } from "../types"
@@ -34,6 +35,7 @@ export function FilterBar({
   showFavorites,
   setShowFavorites,
   favoriteCount,
+  missingFavoriteCount,
   onClearFavorites,
   viewMode,
   setViewMode,
@@ -57,6 +59,7 @@ export function FilterBar({
   showFavorites: boolean
   setShowFavorites: (v: boolean) => void
   favoriteCount: number
+  missingFavoriteCount: number
   onClearFavorites: () => void
   viewMode: ViewMode
   setViewMode: (v: ViewMode) => void
@@ -289,6 +292,15 @@ export function FilterBar({
           >
             <Star size={12} fill={showFavorites ? "currentColor" : "none"} /> {t.favorites}
             {favoriteCount > 0 && <span className="opacity-70">({favoriteCount})</span>}
+            {missingFavoriteCount > 0 && (
+              <span
+                title={t.missingFavoritesTitle}
+                className={`flex items-center gap-0.5 ${isDark ? "text-red-400/90" : "text-red-500/90"}`}
+              >
+                <AlertTriangle size={10} />
+                {missingFavoriteCount} {t.missingFavoritesCount}
+              </span>
+            )}
           </button>
           {favoriteCount > 0 && (
             <button

@@ -31,6 +31,11 @@ export const translations = {
     clearFavorites: "清空收藏",
     addFavorite: "收藏",
     removeFavorite: "取消收藏",
+    missingFavoritesTitle: "部分收藏已不在 API 列表中",
+    missingFavoritesDesc:
+      "以下收藏的模型已从上游 API 返回的列表中消失，可能已被上游移除，无法显示详情；可在此逐个或全部取消收藏。",
+    missingFavoritesCount: "失效",
+    removeAllMissing: "全部取消收藏",
     showing: "显示",
     of: "共",
     modelsCount: "个模型",
@@ -257,6 +262,11 @@ export const translations = {
     clearFavorites: "Clear all favorites",
     addFavorite: "Add to favorites",
     removeFavorite: "Remove from favorites",
+    missingFavoritesTitle: "Some favorites are no longer in the API list",
+    missingFavoritesDesc:
+      "These favorited models no longer appear in the upstream API response and may have been removed upstream, so their details can't be shown. Unfavorite them one by one or all at once.",
+    missingFavoritesCount: "missing",
+    removeAllMissing: "Remove all",
     showing: "Showing",
     of: "of",
     modelsCount: "models",

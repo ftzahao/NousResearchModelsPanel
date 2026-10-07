@@ -66,6 +66,18 @@ export function sortByFavorites<T extends { id: string }>(
   )
 }
 
+// Favorite ids that no longer appear in the upstream model list, in the
+// manual favorites order. The upstream may have removed them, so they are
+// surfaced separately instead of silently disappearing from Favorites.
+export function missingFavorites<T extends { id: string }>(
+  favorites: ReadonlySet<string>,
+  items: readonly T[]
+): string[] {
+  if (favorites.size === 0) return []
+  const present = new Set(items.map((item) => item.id))
+  return [...favorites].filter((id) => !present.has(id))
+}
+
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_HALF_UP })
 
 export function bn(val: string | undefined | null): BigNumber {

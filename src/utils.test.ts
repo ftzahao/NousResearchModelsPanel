@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test"
-import { reorderFavorites, sortByFavorites } from "./utils"
+import { missingFavorites, reorderFavorites, sortByFavorites } from "./utils"
 
 test("moves dragged id before target id", () => {
   expect(reorderFavorites(["a", "b", "c", "d"], "d", "b", "before")).toEqual([
@@ -55,4 +55,19 @@ test("keeps non-favorites in their original relative order", () => {
 test("returns original order when favorites is empty", () => {
   const items = [{ id: "a" }, { id: "b" }]
   expect(sortByFavorites(items, new Set())).toEqual(items)
+})
+
+test("lists favorite ids that are absent from the model list, in favorites order", () => {
+  const items = [{ id: "a" }, { id: "b" }]
+  const favorites = new Set(["gone", "b", "also-gone", "a"])
+  expect(missingFavorites(favorites, items)).toEqual(["gone", "also-gone"])
+})
+
+test("returns no missing favorites when every favorite is still listed", () => {
+  const items = [{ id: "a" }, { id: "b" }]
+  expect(missingFavorites(new Set(["b", "a"]), items)).toEqual([])
+})
+
+test("returns no missing favorites when the favorites set is empty", () => {
+  expect(missingFavorites(new Set(), [{ id: "a" }])).toEqual([])
 })

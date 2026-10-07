@@ -9,7 +9,7 @@ import { translations, LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
 import { useModels } from "./hooks/useModels"
 import { useCurrencyState } from "./hooks/useCurrency"
-import { bn, getProvider, getDiscount, isFreePrice, reorderFavorites, sortByFavorites } from "./utils"
+import { bn, getProvider, getDiscount, isFreePrice, missingFavorites, reorderFavorites, sortByFavorites } from "./utils"
 import { Header, type Tab } from "./components/Header"
 import { StatsGrid, type AppStats } from "./components/StatsGrid"
 import { FilterBar } from "./components/FilterBar"
@@ -20,6 +20,7 @@ import { ModelDetailModal } from "./components/ModelDetailModal"
 import { ExportToolbar } from "./components/ExportToolbar"
 import { ExportPreviewModal } from "./components/ExportPreviewModal"
 import { SelectedModelsModal } from "./components/SelectedModelsModal"
+import { MissingFavorites } from "./components/MissingFavorites"
 import { Footer } from "./components/Footer"
 import {
   PricingChart,
@@ -194,6 +195,21 @@ export function App() {
     return [...s].sort()
   }, [models])
 
+  // Favorites whose ids no longer appear in the upstream API response: the
+  // upstream likely removed them, but they stay reachable so the user can
+  // still see them and unfavorite.
+  const missingFavoriteIds = useMemo(
+    () => missingFavorites(favorites, models),
+    [favorites, models]
+  )
+  const removeMissingFavorites = useCallback(() => {
+    setFavorites((current) => {
+      const next = new Set(current)
+      missingFavoriteIds.forEach((id) => next.delete(id))
+      return next
+    })
+  }, [missingFavoriteIds])
+
   const filtered = useMemo(() => {
     let result = models
 
@@ -265,6 +281,15 @@ export function App() {
     showFavorites,
     favorites
   ])
+
+  // The favorites filter can come up empty purely because every favorite
+  // vanished upstream; the missing-favorites strip then is the real content,
+  // so the generic "no models" empty state would be misleading.
+  const onlyMissingFavorites =
+    showFavorites &&
+    favorites.size > 0 &&
+    filtered.length === 0 &&
+    missingFavoriteIds.length === favorites.size
 
   const visibleModels = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount])
   const hasMore = filtered.length > visibleModels.length
@@ -484,11 +509,18 @@ export function App() {
                 showFavorites={showFavorites}
                 setShowFavorites={handleSetShowFavorites}
                 favoriteCount={favorites.size}
+                missingFavoriteCount={missingFavoriteIds.length}
                 onClearFavorites={() => setFavorites(new Set())}
                 viewMode={viewMode}
                 setViewMode={handleSetViewMode}
                 providers={providers}
                 modalities={modalities}
+              />
+
+              <MissingFavorites
+                ids={missingFavoriteIds}
+                onToggleFavorite={toggleFavorite}
+                onRemoveAll={removeMissingFavorites}
               />
 
               <ExportToolbar
@@ -597,7 +629,7 @@ export function App() {
                 </div>
               )}
 
-              {filtered.length === 0 && (
+              {filtered.length === 0 && !onlyMissingFavorites && (
                 <div
                   className={`text-center py-16 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
                 >
