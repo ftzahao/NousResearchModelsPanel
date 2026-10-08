@@ -6,9 +6,10 @@ Bun + React 19 single-page dashboard for browsing the [NousResearch Inference AP
 
 - `bun install` — install dependencies
 - `bun run dev` — Bun server on port 8092 with HMR (`bun --hot index.ts`)
-- `bun test` — run `src/model-export.test.ts`
+- `bun test` — run the test suite (`src/` and `scripts/`)
 - `bun run typecheck` — `tsc --noEmit`
 - `bun run build` — runs `build.sh`, bundling `index.html` + `src/root.tsx` + Tailwind CSS into static assets in `docs/`
+- `bun run merge [files|dirs]` — merge downloaded export files into each tool's target config (`scripts/merge.ts`; `--dry-run` to preview, `--list` for formats/targets)
 
 ## Architecture
 
@@ -17,13 +18,14 @@ Bun + React 19 single-page dashboard for browsing the [NousResearch Inference AP
 - `src/hooks/` — `useModels.ts` (browser-side fetch of the API), `useCurrency.ts` (CNY/USD rate state)
 - `src/components/` — presentational components plus `charts.tsx` (Recharts)
 - `src/model-export.ts` — the only place that maps selected models to tool config formats; keep conversions there
+- `scripts/merge.ts` — CLI that splices exports into the tools' target configs using Bun's built-in parsers (text splicing in `scripts/merge-splice.ts`, tests in `scripts/merge.test.ts`)
 - `src/i18n.ts`, `src/contexts.tsx`, `src/types.ts`, `src/utils.ts` — translations, theme/currency contexts, shared types, helpers
 
 ## Conventions
 
 - Every user-facing string must exist in both the `zh` and `en` sections of `src/i18n.ts`
 - Themes are driven by CSS variables in `index.html` plus `theme === "dark"` conditional classes; Tailwind v4 compiles locally (`src/tailwind.css` with `@theme`/`@custom-variant dark`, `bun-plugin-tailwind` via `bunfig.toml` in dev and `build.ts` in prod) — never load it from a CDN
-- Adding an export format means adding a builder in `src/model-export.ts`, a registry entry in `src/app.tsx`, i18n labels for both languages, and tests in `src/model-export.test.ts`
+- Adding an export format means adding a builder in `src/model-export.ts`, a registry entry in `src/app.tsx`, i18n labels for both languages, and tests in `src/model-export.test.ts`; when the export merges into a target file, also add a rule in `scripts/merge.ts` (a test enforces that every registry file name is covered)
 - `docs/` is gitignored and built by CI (`.github/workflows/deploy.yml` calls `bash build.sh`); never commit its contents
 
 ---

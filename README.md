@@ -43,6 +43,20 @@ Select models, then choose a format in the export menu. Each format targets one 
 
 All conversion logic lives in `src/model-export/`. Every provider-scoped export writes a fixed provider id (`nous`) so re-importing replaces the same entry instead of duplicating it. Codex, LiteLLM, OpenCode, Crush, DeepSeek Harness (both variants), Zed and MiMo Desktop read the key from the `NOUS_API_KEY` environment variable — the desktop patch resolves it inside Harness, so put it in `~/.dsh/.env` or in the app's Settings → Models page; Chatbox, Cherry Studio, ZCode and CLIProxyAPI ship a placeholder you replace after import. The Codex/Osaurus variant reads no key at all — Codex talks to the loopback server and Osaurus holds the Nous key in the macOS Keychain.
 
+### One-command merge
+
+After downloading the export files, a single command merges them into each tool's target config — a `.bak` backup is written first and only the relevant fragment is rewritten, so the rest of the target file (your comments included) stays byte-for-byte identical:
+
+```bash
+bun run merge                            # scan ~/Downloads for export files and merge them all
+bun run merge ~/Downloads/opencode.json  # merge specific files (directories work too)
+bun run merge -- --dry-run               # preview the merge without writing
+bun run merge -- --list                  # list supported formats and their default targets
+bun run merge -- --api-key <your-key>    # replace placeholders in the export with a real key
+```
+
+Files are detected by content (the file name is only a fallback, and duplicate-download suffixes like `config (1).toml` are stripped); a Codex `config.toml` automatically picks up a sibling `models.json` and points `model_catalog_json` at its absolute path; re-running a merge that changes nothing reports "unchanged" without touching the file. Every spliced result is re-parsed and deep-compared against the expected merge before anything is written.
+
 ## Tech Stack
 
 Bun + React 19 + Recharts + Tailwind CSS v4 (compiled locally via `bun-plugin-tailwind`) + Lucide Icons + BigNumber.js + YAML

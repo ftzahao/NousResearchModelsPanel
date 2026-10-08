@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun --hot index.ts",
     "build": "bash build.sh",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "merge": "bun scripts/merge.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -21,7 +22,7 @@
   "dependencies": {
     "bignumber.js": "^11.1.5",
     "highlight.js": "^11.12.0",
-    "lucide-react": "^1.48.0",
+    "lucide-react": "^1.52.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "recharts": "^3.10.1",

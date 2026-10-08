@@ -43,6 +43,20 @@
 
 所有转换逻辑集中在 `src/model-export/`。各导出统一写入固定提供商 id（`nous`），重复导入时覆盖同一条目而非新增。Codex、LiteLLM、OpenCode、Crush、DeepSeek Harness（两种格式）、Zed 通过环境变量 `NOUS_API_KEY` 读取密钥（桌面端补丁由 Harness 内部解析该引用，写进 `~/.dsh/.env` 或桌面端 设置 → 模型 页面）；Chatbox、Cherry Studio、ZCode、CLIProxyAPI 提供占位符，导入后替换为真实 Key。Codex（Osaurus 代理）版不读取任何密钥：Codex 只访问本地回环地址，Nous Key 由 Osaurus 存放在 macOS 钥匙串中。
 
+### 一键合并
+
+下载导出文件后，一条命令即可把它们合并进各工具的目标配置——写入前自动生成 `.bak` 备份，且只改写相关片段，目标文件的其余内容与注释原样保留：
+
+```bash
+bun run merge                            # 扫描 ~/Downloads 中的导出文件并全部合并
+bun run merge ~/Downloads/opencode.json  # 合并指定文件（也支持目录）
+bun run merge -- --dry-run               # 只预览合并结果，不写入
+bun run merge -- --list                  # 列出支持的格式与默认目标路径
+bun run merge -- --api-key <你的Key>     # 用真实 Key 替换导出中的占位符
+```
+
+导出文件按内容识别（文件名仅作兜底，`config (1).toml` 这类下载重名后缀会自动去掉）；Codex 的 `config.toml` 会自动带上同目录的 `models.json` 并把 `model_catalog_json` 指向其绝对路径；重复运行同一合并且结果不变时会报“无变化”且不写文件。每次合并都会把拼接后的文本重新解析、与预期合并结果深度比对，校验不通过就不写入。
+
 ## 技术栈
 
 Bun + React 19 + Recharts + Tailwind CSS v4（通过 `bun-plugin-tailwind` 本地编译）+ Lucide Icons + BigNumber.js + YAML
