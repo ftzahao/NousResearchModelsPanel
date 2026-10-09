@@ -5,7 +5,8 @@ import {
   serializeExport
 } from "./model-export"
 import type { Model, ModelConfigExporter, ExportPreviewFile, Lang, Theme, ViewMode } from "./types"
-import { translations, LangContext } from "./i18n"
+import { translations } from "./translations"
+import { LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
 import { useModels } from "./hooks/useModels"
 import { useCurrencyState } from "./hooks/useCurrency"

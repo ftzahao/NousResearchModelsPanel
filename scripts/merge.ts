@@ -18,7 +18,7 @@
 import { basename, dirname, isAbsolute, join, resolve as resolvePath } from "node:path"
 import { homedir } from "node:os"
 import { parseArgs } from "node:util"
-import { translations } from "../src/i18n.ts"
+import { translations } from "../src/translations.ts"
 import type { Lang } from "../src/types.ts"
 import {
   type Action,
