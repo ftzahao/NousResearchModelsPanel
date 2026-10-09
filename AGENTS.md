@@ -8,8 +8,10 @@ Bun + React 19 single-page dashboard for browsing the [NousResearch Inference AP
 - `bun run dev` — Bun server on port 8092 with HMR (`bun --hot index.ts`)
 - `bun test` — run the test suite (`src/` and `scripts/`)
 - `bun run typecheck` — `tsc --noEmit`
+- `deno check --no-lock scripts/merge.ts` — type-check the standalone Deno entrypoint
 - `bun run build` — runs `build.sh`, bundling `index.html` + `src/root.tsx` + Tailwind CSS into static assets in `docs/`
 - `bun run merge [files|dirs]` — merge downloaded export files into each tool's target config (`scripts/merge.ts`; `--dry-run` to preview, `--list` for formats/targets)
+- `deno run --no-lock --allow-read --allow-write --allow-env <raw merge.ts URL> [files|dirs]` — run the same standalone merge CLI remotely with Deno
 
 ## Architecture
 
@@ -18,12 +20,12 @@ Bun + React 19 single-page dashboard for browsing the [NousResearch Inference AP
 - `src/hooks/` — `useModels.ts` (browser-side fetch of the API), `useCurrency.ts` (CNY/USD rate state)
 - `src/components/` — presentational components plus `charts.tsx` (Recharts)
 - `src/model-export.ts` — the only place that maps selected models to tool config formats; keep conversions there
-- `scripts/merge.ts` — CLI that splices exports into the tools' target configs using Bun's built-in parsers (text splicing in `scripts/merge-splice.ts`, tests in `scripts/merge.test.ts`)
-- `src/i18n.ts`, `src/contexts.tsx`, `src/types.ts`, `src/utils.ts` — translations, theme/currency contexts, shared types, helpers
+- `scripts/merge.ts` — self-contained Bun/Deno CLI that parses and splices exports into tool configs; keep runtime code and text-splicing primitives in this file (tests in `scripts/merge.test.ts`)
+- `src/i18n.ts`, `src/translations.ts`, `src/contexts.tsx`, `src/types.ts`, `src/utils.ts` — translations, theme/currency contexts, shared types, helpers
 
 ## Conventions
 
-- Every user-facing string must exist in both the `zh` and `en` sections of `src/i18n.ts`
+- Every user-facing string must exist in both the `zh` and `en` sections of `src/translations.ts`
 - Themes are driven by CSS variables in `index.html` plus `theme === "dark"` conditional classes; Tailwind v4 compiles locally (`src/tailwind.css` with `@theme`/`@custom-variant dark`, `bun-plugin-tailwind` via `bunfig.toml` in dev and `build.ts` in prod) — never load it from a CDN
 - Adding an export format means adding a builder in `src/model-export.ts`, a registry entry in `src/app.tsx`, i18n labels for both languages, and tests in `src/model-export.test.ts`; when the export merges into a target file, also add a rule in `scripts/merge.ts` (a test enforces that every registry file name is covered)
 - `docs/` is gitignored and built by CI (`.github/workflows/deploy.yml` calls `bash build.sh`); never commit its contents
@@ -47,7 +49,7 @@ Default to using Bun instead of Node.js.
 - `Bun.redis` for Redis. Don't use `ioredis`.
 - `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
 - `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
+- Prefer `Bun.file` over `node:fs`'s readFile/writeFile, except in `scripts/merge.ts`, which must stay Deno-compatible
 - Bun.$`ls` instead of execa.
 
 ## Testing

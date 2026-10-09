@@ -55,11 +55,21 @@ bun run merge -- --list                  # 列出支持的格式与默认目标�
 bun run merge -- --api-key <你的Key>     # 用真实 Key 替换导出中的占位符
 ```
 
+合并逻辑集中在单个 TypeScript 文件中，因此无需克隆仓库，Deno 可直接从 GitHub 远程执行：
+
+```bash
+deno run --no-lock --allow-read --allow-write --allow-env \
+  https://raw.githubusercontent.com/ftzahao/NousResearchModelsPanel/main/scripts/merge.ts \
+  ~/Downloads
+```
+
+Deno 需要读取、写入和环境变量权限，才能检查并更新本地配置；首次运行会下载固定版本的 YAML/TOML 解析模块。
+
 导出文件按内容识别（文件名仅作兜底，`config (1).toml` 这类下载重名后缀会自动去掉）；Codex 的 `config.toml` 会自动带上同目录的 `models.json` 并把 `model_catalog_json` 指向其绝对路径；重复运行同一合并且结果不变时会报“无变化”且不写文件。每次合并都会把拼接后的文本重新解析、与预期合并结果深度比对，校验不通过就不写入。
 
 ## 技术栈
 
-Bun + React 19 + Recharts + Tailwind CSS v4（通过 `bun-plugin-tailwind` 本地编译）+ Lucide Icons + BigNumber.js + YAML
+Bun + React 19 + Recharts + Tailwind CSS v4（通过 `bun-plugin-tailwind` 本地编译）+ Lucide Icons + BigNumber.js + YAML + smol-toml
 
 ## 项目结构
 
@@ -71,6 +81,7 @@ Bun + React 19 + Recharts + Tailwind CSS v4（通过 `bun-plugin-tailwind` 本�
 - `src/hooks/` — `useModels.ts`（模型获取）、`useCurrency.ts`（货币与汇率状态）
 - `src/model-export.ts` — 模型选择 → 各导出格式的转换逻辑
 - `src/model-export.test.ts` — 导出构造器测试（`bun test`）
+- `scripts/merge.ts` — 独立的 Bun/Deno 合并命令与文本拼接实现
 - `src/contexts.tsx`、`src/i18n.ts`、`src/types.ts`、`src/utils.ts` — 主题/货币 Context、翻译、共享类型、工具函数
 - `build.sh` — 静态构建脚本（将前端打包进 `docs/`）
 
@@ -88,6 +99,7 @@ bun run dev
 ```bash
 bun test
 bun run typecheck
+deno check --no-lock scripts/merge.ts
 ```
 
 ## 构建

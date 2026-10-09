@@ -3,47 +3,160 @@
  * One-command merge for files exported from the NousResearch dashboard.
  *
  *   bun run merge [file or directory ...] [options]
+ *   deno run <remote-or-local>/merge.ts [file or directory ...] [options]
  *
  * Detects which exporter produced each file (by content, falling back to the
- * file name), resolves the tool's target config, parses both sides with Bun's
- * built-in parsers (Bun.JSONC / Bun.YAML / Bun.TOML) and splices only the
- * affected fragment into the target — comments and formatting everywhere else
- * stay byte-identical. Every result is re-parsed and deep-compared against the
- * expected merge before anything is written, and an existing target is backed
- * up to `<target>.bak` first.
+ * file name), resolves the tool's target config, parses both sides and splices
+ * only the affected fragment into the target — comments and formatting
+ * everywhere else stay byte-identical. Every result is re-parsed and
+ * deep-compared against the expected merge before anything is written, and an
+ * existing target is backed up to `<target>.bak` first.
  *
- * Pure text-splicing primitives live in ./merge-splice.ts; tests in
- * ./merge.test.ts.
+ * This file is self-contained so Deno can execute it directly from a remote
+ * URL. Tests live in ./merge.test.ts.
  */
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises"
 import { basename, dirname, isAbsolute, join, resolve as resolvePath } from "node:path"
 import { homedir } from "node:os"
+import process from "node:process"
 import { parseArgs } from "node:util"
-import { translations } from "../src/translations.ts"
-import type { Lang } from "../src/types.ts"
-import {
-  type Action,
-  type Format,
-  type TomlOp,
-  SpliceError,
-  deepEqual,
-  detectIndent,
-  getAtPath,
-  hasHashComments,
-  hasJsonComments,
-  isObj,
-  parseByFormat,
-  serializeByFormat,
-  spliceJsonPath,
-  spliceToml,
-  spliceYamlKey,
-  spliceYamlRootArray
-} from "./merge-splice.ts"
+
+type Lang = "zh" | "en"
+
+const importModule = (specifier: string): Promise<any> => import(specifier)
+const isDeno = Object.prototype.hasOwnProperty.call(globalThis, "Deno")
+
+interface TextFormatModule {
+  parse(text: string): unknown
+  stringify(value: unknown): string
+}
+
+const formatModule = (loaded: any): TextFormatModule => {
+  const source = typeof loaded?.parse === "function" ? loaded : loaded?.default
+  if (typeof source?.parse !== "function" || typeof source?.stringify !== "function")
+    throw new TypeError("Unsupported format module")
+  return source
+}
+
+const yaml = formatModule(
+  await importModule(isDeno ? "https://esm.sh/yaml@2.9.1" : "yaml"),
+)
+const toml = formatModule(
+  await importModule(isDeno ? "https://esm.sh/smol-toml@1.9.1" : "smol-toml"),
+)
+
+export const MERGE_CLI_MESSAGES = {
+  zh: {
+    usage: [
+      "用法: bun run merge | deno run <merge.ts> [文件或目录 ...] [选项]",
+      "把面板导出的配置文件自动合并进对应工具的目标配置（写入前生成 .bak 备份）",
+      "",
+      "选项:",
+      "  -t, --target <路径>      指定目标配置文件（仅支持单个输入文件）",
+      "  -n, --dry-run           只预览合并结果，不写入文件",
+      "      --print             输出合并后的完整文件内容（隐含 --dry-run）",
+      "      --no-backup         不生成 .bak 备份",
+      "      --api-key <key>     用真实 Key 替换导出文件中的占位符（如 YOUR_NOUS_API_KEY）",
+      "      --models-out <路径> Codex models.json 的保存位置（默认 ~/.codex/nous-models.json）",
+      "  -l, --list              列出支持的导出格式与默认目标路径",
+      "      --lang <zh|en>      输出语言（默认跟随 LANG 环境变量）",
+      "  -h, --help              显示帮助"
+    ],
+    scanning: "扫描目录",
+    noExportFiles: "目录中没有找到可识别的导出文件",
+    unrecognized: "无法识别为面板导出的文件",
+    fileMissing: "文件不存在",
+    targetLabel: "目标",
+    mergedLabel: "已合并",
+    createdLabel: "已创建",
+    unchanged: "无变化（已是最新）",
+    backupLabel: "备份",
+    dryRun: "预演模式：未写入任何文件",
+    pasteOnly: "该格式请在应用界面中粘贴导入，无需合并文件",
+    needTarget: "未找到默认目标文件，请用 --target 指定（已尝试: %s）",
+    parseExportFail: "导出文件解析失败",
+    parseTargetFail: "目标文件解析失败",
+    validateFail: "合并结果校验失败，未写入目标文件",
+    sameFile: "源文件与目标文件相同，跳过",
+    multiTarget: "--target 只能与单个输入文件一起使用",
+    modelsCopied: "模型目录已保存",
+    keptSecrets: "已保留目标文件中已有的 API Key",
+    commentsLost: "被替换的片段含有注释，这些注释会丢失",
+    fallbackRewrite: "文本定位失败，改为整文件重写",
+    catalogWarning:
+      "未找到 models.json，model_catalog_json 保留原占位符；请把 config.toml 和 models.json 一起传入",
+    errShape: "结构不符合预期：%s",
+    summary: "完成",
+    countMerged: "合并",
+    countCreated: "新建",
+    countUnchanged: "无变化",
+    countSkipped: "跳过",
+    countFailed: "失败",
+    changesLabel: "变更",
+    listHeader: "支持的导出格式与默认目标路径",
+    listNeedTarget: "需 --target 指定",
+    listPasteOnly: "应用内导入，无文件合并"
+  },
+  en: {
+    usage: [
+      "Usage: bun run merge | deno run <merge.ts> [file or directory ...] [options]",
+      "Automatically merges files exported from the dashboard into each tool's target config (writes a .bak backup first)",
+      "",
+      "Options:",
+      "  -t, --target <path>      target config file (single input file only)",
+      "  -n, --dry-run           preview the merge without writing",
+      "      --print             print the merged file content (implies --dry-run)",
+      "      --no-backup         do not create a .bak backup",
+      "      --api-key <key>     replace placeholders in the export (e.g. YOUR_NOUS_API_KEY) with a real key",
+      "      --models-out <path> where to save Codex models.json (default ~/.codex/nous-models.json)",
+      "  -l, --list              list supported export formats and their default target paths",
+      "      --lang <zh|en>      output language (defaults to LANG)",
+      "  -h, --help              show help"
+    ],
+    scanning: "Scanning directory",
+    noExportFiles: "No recognizable export files found in the directory",
+    unrecognized: "Not recognized as a dashboard export file",
+    fileMissing: "File not found",
+    targetLabel: "Target",
+    mergedLabel: "Merged",
+    createdLabel: "Created",
+    unchanged: "No changes (already up to date)",
+    backupLabel: "Backup",
+    dryRun: "Dry run: nothing was written",
+    pasteOnly: "This format is imported by pasting in the app UI; no file merge needed",
+    needTarget: "No default target file found; pass --target (tried: %s)",
+    parseExportFail: "Failed to parse the export file",
+    parseTargetFail: "Failed to parse the target file",
+    validateFail: "Merged result failed validation; target file was not written",
+    sameFile: "Source and target are the same file, skipped",
+    multiTarget: "--target only works with a single input file",
+    modelsCopied: "Model catalog saved",
+    keptSecrets: "Kept the existing API key from the target file",
+    commentsLost: "The replaced fragment contains comments; those comments will be lost",
+    fallbackRewrite: "Could not locate text span; fell back to rewriting the whole file",
+    catalogWarning:
+      "models.json not found; model_catalog_json keeps its placeholder — pass config.toml and models.json together",
+    errShape: "Unexpected structure: %s",
+    summary: "Done",
+    countMerged: "merged",
+    countCreated: "created",
+    countUnchanged: "unchanged",
+    countSkipped: "skipped",
+    countFailed: "failed",
+    changesLabel: "Changes",
+    listHeader: "Supported export formats and default target paths",
+    listNeedTarget: "requires --target",
+    listPasteOnly: "paste in app, no file merge"
+  }
+}
 
 // ---------------------------------------------------------------------------
 // types & messages
 // ---------------------------------------------------------------------------
 
-type MergeCli = (typeof translations)["zh"]["mergeCli"]
+type MergeCli = {
+  usage: readonly string[]
+} & Record<Exclude<keyof (typeof MERGE_CLI_MESSAGES)["zh"], "usage">, string>
 /** All CLI messages except the multi-line usage block. */
 export type MergeMsgKey = Exclude<keyof MergeCli, "usage">
 
@@ -144,11 +257,18 @@ export const expandTilde = (p: string, home: string): string => {
   return p
 }
 
-const fileExists = (p: string): Promise<boolean> => Bun.file(p).exists()
+const fileExists = async (p: string): Promise<boolean> => {
+  try {
+    await stat(p)
+    return true
+  } catch {
+    return false
+  }
+}
 
 async function statOrNull(p: string) {
   try {
-    return await Bun.file(p).stat()
+    return await stat(p)
   } catch {
     return null
   }
@@ -322,6 +442,666 @@ function applyTomlOps(targetParsed: unknown, ops: readonly TomlOp[]): unknown {
     cur[parts[parts.length - 1]!] = op.value
   }
   return out
+}
+
+// ---------------------------------------------------------------------------
+// text splicing
+// ---------------------------------------------------------------------------
+
+export type Format = "json" | "yaml" | "toml"
+
+/** What a splice did: replaced/inserted text, no-op, or fell back to a full rewrite. */
+export type Action = "replace" | "insert" | "append" | "skip" | "rewrite"
+
+export interface SpliceOutcome {
+  text: string
+  action: Action
+  /** true when the replaced region contained comments that are now gone */
+  commentLoss: boolean
+}
+
+export interface TomlSpliceOutcome extends SpliceOutcome {
+  changes: string[]
+}
+
+/** A single targeted TOML edit: a top-level scalar or a whole `[table]` block. */
+export type TomlOp =
+  | { kind: "scalar"; key: string; value: unknown }
+  | { kind: "table"; key: string; value: Record<string, unknown> }
+
+/** Thrown when the target text cannot be spliced at the requested location. */
+export class SpliceError extends Error {}
+
+export const isObj = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v)
+
+export function deepEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime()
+  if (Array.isArray(a) && Array.isArray(b))
+    return a.length === b.length && a.every((value, i) => deepEqual(value, b[i]))
+  if (!isObj(a) || !isObj(b)) return false
+  const aKeys = Object.keys(a)
+  const bKeys = Object.keys(b)
+  return (
+    aKeys.length === bKeys.length &&
+    aKeys.every((key) => Object.hasOwn(b, key) && deepEqual(a[key], b[key]))
+  )
+}
+
+export function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+export function getAtPath(root: unknown, path: readonly string[]): unknown {
+  let cur: unknown = root
+  for (const key of path) {
+    if (!isObj(cur)) return undefined
+    cur = cur[key]
+  }
+  return cur
+}
+
+/** Column (0-based) of `idx`, counting from the preceding newline. */
+export function colOf(text: string, idx: number): number {
+  const nl = text.lastIndexOf("\n", idx - 1)
+  return idx - nl - 1
+}
+
+export function detectIndent(text: string): string {
+  const m = /\n([\t ]+)"/.exec(text)
+  return m?.[1] ?? "  "
+}
+
+/** Does the text contain `//` or `/*` comments outside of string literals? */
+export function hasJsonComments(text: string): boolean {
+  let i = 0
+  while (i < text.length) {
+    const c = text[i]
+    if (c === '"') {
+      i++
+      while (i < text.length) {
+        if (text[i] === "\\") i += 2
+        else if (text[i] === '"') {
+          i++
+          break
+        } else i++
+      }
+      continue
+    }
+    if (c === "/" && text[i + 1] === "/") return true
+    if (c === "/" && text[i + 1] === "*") return true
+    i++
+  }
+  return false
+}
+
+/** YAML/TOML comment heuristic: `#` at line start or after whitespace. */
+export const hasHashComments = (text: string): boolean => /(^|\s)#/m.test(text)
+
+function stripJsonComments(text: string): string {
+  let out = ""
+  let i = 0
+  while (i < text.length) {
+    const c = text[i]
+    if (c === '"') {
+      const start = i
+      i++
+      while (i < text.length) {
+        if (text[i] === "\\") i += 2
+        else if (text[i] === '"') {
+          i++
+          break
+        } else i++
+      }
+      out += text.slice(start, i)
+      continue
+    }
+    if (c === "/" && text[i + 1] === "/") {
+      while (i < text.length && text[i] !== "\n") {
+        out += " "
+        i++
+      }
+      continue
+    }
+    if (c === "/" && text[i + 1] === "*") {
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) {
+        out += text[i] === "\n" ? "\n" : " "
+        i++
+      }
+      if (i < text.length) {
+        out += "  "
+        i += 2
+      }
+      continue
+    }
+    out += c
+    i++
+  }
+  return out
+}
+
+function stripTrailingJsonCommas(text: string): string {
+  const chars = [...text]
+  let inString = false
+  let escaped = false
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (c === "\\") escaped = true
+      else if (c === '"') inString = false
+      continue
+    }
+    if (c === '"') {
+      inString = true
+      continue
+    }
+    if (c !== ",") continue
+    let j = i + 1
+    while (j < chars.length && /\s/.test(chars[j]!)) j++
+    if (chars[j] === "}" || chars[j] === "]") chars[i] = " "
+  }
+  return chars.join("")
+}
+
+export function parseJsonc(text: string): unknown {
+  return JSON.parse(stripTrailingJsonCommas(stripJsonComments(text)))
+}
+
+export function tryParseJsonc(text: string): unknown {
+  try {
+    return parseJsonc(text)
+  } catch {
+    return undefined
+  }
+}
+
+export function parseByFormat(text: string, format: Format): unknown {
+  if (format === "yaml") return yaml.parse(text)
+  if (format === "toml") return toml.parse(text)
+  return parseJsonc(text)
+}
+
+const ensureNewline = (s: string): string => (s.endsWith("\n") ? s : s + "\n")
+
+export function serializeByFormat(value: unknown, format: Format, indent = "  "): string {
+  if (format === "yaml")
+    return ensureNewline(yaml.stringify(value) ?? "")
+  if (format === "toml") return ensureNewline(toml.stringify(value) ?? "")
+  return JSON.stringify(value, null, indent) + "\n"
+}
+
+/**
+ * Render `value` as JSON whose first line sits at the current cursor position
+ * and whose remaining lines are indented to column `keyCol + indent`.
+ */
+function renderValue(value: unknown, keyCol: number, indent: string): string {
+  const json = JSON.stringify(value, null, indent)
+  if (!json.includes("\n")) return json
+  const pad = " ".repeat(keyCol)
+  return json
+    .split("\n")
+    .map((line, i) => (i === 0 || line === "" ? line : pad + line))
+    .join("\n")
+}
+
+/** Skip whitespace plus `//` and `/*` comments starting at `i`. */
+function skipWsComments(s: string, i: number): number {
+  for (;;) {
+    while (i < s.length && (s[i] === " " || s[i] === "\t" || s[i] === "\n" || s[i] === "\r")) i++
+    if (s[i] === "/" && s[i + 1] === "/") {
+      while (i < s.length && s[i] !== "\n") i++
+      continue
+    }
+    if (s[i] === "/" && s[i + 1] === "*") {
+      const end = s.indexOf("*/", i + 2)
+      i = end === -1 ? s.length : end + 2
+      continue
+    }
+    return i
+  }
+}
+
+/** `i` points at the opening quote; returns the index after the closing quote. */
+function scanJsonString(s: string, i: number): number {
+  i++
+  while (i < s.length) {
+    const c = s[i]
+    if (c === "\\") {
+      i += 2
+      continue
+    }
+    if (c === '"') return i + 1
+    i++
+  }
+  return i
+}
+
+/** `i` points at the start of a value; returns the index right after it. */
+function scanJsonValue(s: string, i: number): number {
+  const c = s[i]
+  if (c === '"') return scanJsonString(s, i)
+  if (c === "{" || c === "[") {
+    let depth = 0
+    let j = i
+    while (j < s.length) {
+      const ch = s[j]
+      if (ch === '"') {
+        j = scanJsonString(s, j)
+        continue
+      }
+      if (ch === "/" && (s[j + 1] === "/" || s[j + 1] === "*")) {
+        j = skipWsComments(s, j)
+        continue
+      }
+      if (ch === "{" || ch === "[") depth++
+      else if (ch === "}" || ch === "]") {
+        depth--
+        if (depth === 0) return j + 1
+      }
+      j++
+    }
+    return j
+  }
+  let j = i
+  while (j < s.length && !",}]\n/".includes(s[j] ?? "")) j++
+  while (j > i && (s[j - 1] === " " || s[j - 1] === "\t" || s[j - 1] === "\r" || s[j - 1] === "\n"))
+    j--
+  return j
+}
+
+interface KeySpan {
+  keyStart: number
+  valueStart: number
+  valueEnd: number
+}
+
+function findKeySpan(s: string, objStart: number, key: string): KeySpan | null {
+  let i = skipWsComments(s, objStart + 1)
+  while (i < s.length && s[i] !== "}") {
+    if (s[i] === ",") {
+      i = skipWsComments(s, i + 1)
+      continue
+    }
+    if (s[i] !== '"') return null
+    const keyStart = i
+    const keyEnd = scanJsonString(s, i)
+    let parsedKey: string
+    try {
+      parsedKey = JSON.parse(s.slice(keyStart, keyEnd))
+    } catch {
+      return null
+    }
+    const colon = skipWsComments(s, keyEnd)
+    if (s[colon] !== ":") return null
+    const valueStart = skipWsComments(s, colon + 1)
+    const valueEnd = scanJsonValue(s, valueStart)
+    if (parsedKey === key) return { keyStart, valueStart, valueEnd }
+    i = skipWsComments(s, valueEnd)
+  }
+  return null
+}
+
+function detectRootKeyCol(s: string, rootStart: number, indent: string): number {
+  const i = skipWsComments(s, rootStart + 1)
+  return s[i] === '"' ? colOf(s, i) : indent.length
+}
+
+interface InsertStats {
+  count: number
+  lastValueEnd: number
+  commaEnd: number
+}
+
+function scanObjectStats(s: string, objStart: number, close: number): InsertStats {
+  const stats: InsertStats = { count: 0, lastValueEnd: -1, commaEnd: -1 }
+  let i = skipWsComments(s, objStart + 1)
+  while (i < close) {
+    if (s[i] === ",") {
+      i = skipWsComments(s, i + 1)
+      continue
+    }
+    if (s[i] !== '"') break
+    const keyEnd = scanJsonString(s, i)
+    const colon = skipWsComments(s, keyEnd)
+    if (s[colon] !== ":") break
+    const valueStart = skipWsComments(s, colon + 1)
+    const valueEnd = scanJsonValue(s, valueStart)
+    stats.count++
+    stats.lastValueEnd = valueEnd
+    i = skipWsComments(s, valueEnd)
+    if (s[i] === ",") {
+      stats.commaEnd = i + 1
+      i = skipWsComments(s, stats.commaEnd)
+    } else {
+      stats.commaEnd = -1
+    }
+  }
+  return stats
+}
+
+function insertIntoObject(
+  s: string,
+  objStart: number,
+  key: string,
+  value: unknown,
+  childrenCol: number,
+  indent: string,
+): string {
+  const close = scanJsonValue(s, objStart) - 1
+  if (s[close] !== "}") throw new SpliceError(`unbalanced object at ${objStart}`)
+  const stats = scanObjectStats(s, objStart, close)
+  const pad = " ".repeat(childrenCol)
+  const entry = `${pad}${JSON.stringify(key)}: ${renderValue(value, childrenCol, indent)}`
+  const closePad = " ".repeat(colOf(s, close))
+
+  if (stats.count === 0) {
+    const interior = s.slice(objStart + 1, close)
+    const body = interior.replace(/[ \t]+$/, "")
+    const lead = body === "" ? "\n" : body.endsWith("\n") ? "" : "\n"
+    return s.slice(0, objStart + 1) + body + lead + entry + "\n" + closePad + s.slice(close)
+  }
+
+  const insertPos = stats.commaEnd !== -1 ? stats.commaEnd : stats.lastValueEnd
+  const needsComma = stats.commaEnd === -1
+  let mid = s.slice(insertPos, close)
+  if (mid.trim() === "") mid = "\n"
+  else if (!mid.endsWith("\n")) mid += "\n"
+  return (
+    s.slice(0, insertPos) + (needsComma ? "," : "") + mid + entry + "\n" + closePad + s.slice(close)
+  )
+}
+
+function rewriteJson(merged: unknown, indent: string, original: string): SpliceOutcome {
+  return {
+    text: JSON.stringify(merged, null, indent) + "\n",
+    action: "rewrite",
+    commentLoss: hasJsonComments(original),
+  }
+}
+
+export function spliceJsonPath(
+  text: string,
+  path: readonly string[],
+  merged: unknown,
+  indent: string,
+): SpliceOutcome {
+  const value = getAtPath(merged, path)
+  if (value === undefined) throw new SpliceError(`missing merged value at ${path.join(".")}`)
+
+  const rootStart = skipWsComments(text, 0)
+  if (text[rootStart] !== "{") return rewriteJson(merged, indent, text)
+
+  let container = rootStart
+  let containerKeyCol: number | null = null
+  const rootKeyCol = detectRootKeyCol(text, rootStart, indent)
+
+  for (let d = 0; d < path.length; d++) {
+    const seg = path[d]!
+    const span = findKeySpan(text, container, seg)
+    if (span) {
+      const isLast = d === path.length - 1
+      const subtree = isLast ? value : getAtPath(merged, path.slice(0, d + 1))
+      if (subtree === undefined) throw new SpliceError(`missing merged value at ${path.join(".")}`)
+
+      if (!isLast && text[span.valueStart] === "{") {
+        container = span.valueStart
+        containerKeyCol = colOf(text, span.keyStart)
+        continue
+      }
+      const old = text.slice(span.valueStart, span.valueEnd)
+      const current = tryParseJsonc(old)
+      if (deepEqual(current, subtree)) return { text, action: "skip", commentLoss: false }
+      const rendered = old.includes("\n")
+        ? renderValue(subtree, colOf(text, span.keyStart), indent)
+        : JSON.stringify(subtree)
+      return {
+        text: text.slice(0, span.valueStart) + rendered + text.slice(span.valueEnd),
+        action: "replace",
+        commentLoss: hasJsonComments(old),
+      }
+    }
+
+    const subtree = getAtPath(merged, path.slice(0, d + 1))
+    if (subtree === undefined) throw new SpliceError(`missing merged value at ${path.join(".")}`)
+    const childrenCol = containerKeyCol === null ? rootKeyCol : containerKeyCol + indent.length
+    return {
+      text: insertIntoObject(text, container, seg, subtree, childrenCol, indent),
+      action: "insert",
+      commentLoss: false,
+    }
+  }
+  throw new SpliceError(`unreachable path ${path.join(".")}`)
+}
+
+// ---------------------------------------------------------------------------
+// YAML
+// ---------------------------------------------------------------------------
+
+function yamlBlockLines(key: string, value: unknown): string[] {
+  const s = yaml.stringify({ [key]: value })
+  return s
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n+$/, "")
+    .split("\n")
+}
+
+export function spliceYamlKey(
+  text: string,
+  key: string,
+  targetParsed: unknown,
+  merged: unknown,
+): SpliceOutcome {
+  const value = getAtPath(merged, [key])
+  const current = isObj(targetParsed) ? targetParsed[key] : undefined
+  if (deepEqual(current, value) && current !== undefined)
+    return { text, action: "skip", commentLoss: false }
+
+  const lines = text.split("\n")
+  const plain = new RegExp(`^${escapeRegExp(key)}\\s*:`)
+  const quoted = new RegExp(`^["']${escapeRegExp(key)}["']\\s*:`)
+  const start = lines.findIndex((l) => plain.test(l) || quoted.test(l))
+
+  if (start === -1) {
+    if (current !== undefined)
+      return {
+        text: serializeByFormat(merged, "yaml"),
+        action: "rewrite",
+        commentLoss: hasHashComments(text),
+      }
+    const block = yamlBlockLines(key, value)
+    const base = text.replace(/\s*$/, "")
+    const head = base === "" ? "" : base.endsWith("\n") ? base : base + "\n"
+    const sep = base === "" ? "" : "\n"
+    return { text: head + sep + block.join("\n") + "\n", action: "append", commentLoss: false }
+  }
+
+  let boundary = lines.length
+  for (let i = start + 1; i < lines.length; i++) {
+    const l = lines[i] ?? ""
+    if (l.trim() === "") continue
+    if (/^\s/.test(l)) continue
+    if (l.startsWith("#")) continue
+    if (/^-(\s|$)/.test(l)) continue
+    boundary = i
+    break
+  }
+  let end = boundary
+  while (end - 1 > start) {
+    const prev = lines[end - 1] ?? ""
+    if (prev.trim() === "" || prev.startsWith("#")) end--
+    else break
+  }
+
+  const region = lines.slice(start, end).join("\n")
+  const next = [...lines.slice(0, start), ...yamlBlockLines(key, value), ...lines.slice(end)]
+  return {
+    text: next.join("\n"),
+    action: "replace",
+    commentLoss: hasHashComments(region),
+  }
+}
+
+export function spliceYamlRootArray(
+  text: string,
+  targetParsed: unknown,
+  merged: unknown,
+): SpliceOutcome {
+  if (!Array.isArray(targetParsed)) throw new SpliceError("target is not a YAML sequence")
+  if (deepEqual(targetParsed, merged)) return { text, action: "skip", commentLoss: false }
+
+  const lines = text.split("\n")
+  const block = yaml
+    .stringify(merged)
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n+$/, "")
+    .split("\n")
+  const start = lines.findIndex((l) => /^-(\s|$)/.test(l))
+
+  if (start === -1) {
+    let i = 0
+    while (i < lines.length && (lines[i]!.trim() === "" || lines[i]!.startsWith("#"))) i++
+    const kept = lines.slice(0, i)
+    const mergedLines = [...kept, ...block]
+    return {
+      text: mergedLines.join("\n") + "\n",
+      action: "replace",
+      commentLoss: hasHashComments(lines.slice(i).join("\n")),
+    }
+  }
+
+  let end = lines.length
+  while (end - 1 > start) {
+    const prev = lines[end - 1] ?? ""
+    if (prev.trim() === "" || prev.startsWith("#")) end--
+    else break
+  }
+  const region = lines.slice(start, end).join("\n")
+  const next = [...lines.slice(0, start), ...block, ...lines.slice(end)]
+  return {
+    text: next.join("\n"),
+    action: "replace",
+    commentLoss: hasHashComments(region),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TOML
+// ---------------------------------------------------------------------------
+
+function tomlScalarLine(key: string, value: unknown): string {
+  return toml.stringify({ [key]: value }).trim()
+}
+
+function tomlTableBlock(op: Extract<TomlOp, { kind: "table" }>): string[] | null {
+  const wrapped = toml.stringify({ v: op.value })
+  const lines = wrapped.split("\n")
+  const body = lines.slice(1)
+  while (body.length > 0 && body[body.length - 1] === "") body.pop()
+  if (body.some((line) => /^\s*\[/.test(line))) return null
+  return [`[${op.key}]`, ...body]
+}
+
+export function spliceToml(
+  text: string,
+  targetParsed: unknown,
+  ops: readonly TomlOp[],
+  merged: unknown,
+): TomlSpliceOutcome {
+  let lines = text.split("\n")
+  const changes: string[] = []
+  let commentLoss = false
+
+  const topEnd = (): number => {
+    const idx = lines.findIndex((line) => /^\s*\[/.test(line))
+    return idx === -1 ? lines.length : idx
+  }
+  const findScalar = (key: string, from: number, to: number): number => {
+    const re = new RegExp(`^(\\s*)${escapeRegExp(key)}\\s*=`)
+    for (let i = from; i < to; i++) if (re.test(lines[i] ?? "")) return i
+    return -1
+  }
+
+  for (const op of ops) {
+    const parts = op.key.split(".")
+    const current = getAtPath(targetParsed, parts)
+
+    if (op.kind === "scalar") {
+      if (op.value !== undefined && deepEqual(current, op.value)) continue
+      const end = topEnd()
+      const idx = findScalar(op.key, 0, end)
+      if (op.value === undefined) {
+        if (idx === -1) continue
+        if (hasHashComments(lines[idx]!)) commentLoss = true
+        lines.splice(idx, 1)
+        changes.push(op.key)
+        continue
+      }
+      const line = tomlScalarLine(op.key, op.value)
+      if (idx !== -1) {
+        if (hasHashComments(lines[idx]!)) commentLoss = true
+        const indent = /^\s*/.exec(lines[idx]!)?.[0] ?? ""
+        lines[idx] = indent + line
+        changes.push(op.key)
+      } else {
+        let pos = 0
+        for (let i = 0; i < end; i++) if (/^\s*\S+\s*=/.test(lines[i] ?? "")) pos = i + 1
+        lines.splice(pos, 0, line)
+        changes.push(op.key)
+      }
+      continue
+    }
+
+    if (deepEqual(current, op.value)) continue
+    changes.push(`[${op.key}]`)
+    const headerRe = new RegExp(`^\\s*\\[\\s*${escapeRegExp(op.key)}\\s*\\]\\s*(#.*)?$`)
+    const idx = lines.findIndex((line) => headerRe.test(line))
+    const block = tomlTableBlock(op)
+    if (block === null) return rewriteTomlOutcome(text, merged, changes)
+
+    if (idx === -1) {
+      if (current !== undefined) return rewriteTomlOutcome(text, merged, changes)
+      while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop()
+      lines.push("", ...block)
+      continue
+    }
+    let boundary = lines.length
+    for (let i = idx + 1; i < lines.length; i++)
+      if (/^\s*\[/.test(lines[i] ?? "")) {
+        boundary = i
+        break
+      }
+    let end = boundary
+    while (end - 1 > idx) {
+      const prev = lines[end - 1] ?? ""
+      if (prev.trim() === "" || prev.trimStart().startsWith("#")) end--
+      else break
+    }
+    const region = lines.slice(idx, end).join("\n")
+    if (hasHashComments(region)) commentLoss = true
+    lines = [...lines.slice(0, idx), ...block, ...lines.slice(end)]
+  }
+
+  return {
+    text: lines.join("\n"),
+    action: changes.length ? "replace" : "skip",
+    commentLoss,
+    changes,
+  }
+}
+
+function rewriteTomlOutcome(
+  text: string,
+  merged: unknown,
+  changes: string[],
+): TomlSpliceOutcome {
+  return {
+    text: serializeByFormat(merged, "toml"),
+    action: "rewrite",
+    commentLoss: hasHashComments(text),
+    changes,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1097,7 +1877,7 @@ export async function runMerge(files: string[], opts: RunOptions = {}): Promise<
       })
       continue
     }
-    const text = await Bun.file(file).text()
+    const text = await readFile(file, "utf8")
     const det = detectExport(file, text, "loose")
     if (!det) {
       outcomes.set(file, { input: file, status: "failed", message: { key: "unrecognized" } })
@@ -1112,7 +1892,7 @@ export async function runMerge(files: string[], opts: RunOptions = {}): Promise<
     const sibling = join(dirname(item.file), "models.json")
     if (order.includes(sibling)) continue
     if (!(await fileExists(sibling))) continue
-    const text = await Bun.file(sibling).text()
+    const text = await readFile(sibling, "utf8")
     const det = detectExport(sibling, text, "strict")
     if (det?.ruleId !== "codex-models") continue
     order.push(sibling)
@@ -1158,7 +1938,7 @@ async function mergeLoaded(
   let targetText: string | null = null
   let targetParsed: unknown = null
   if (await fileExists(targetPath)) {
-    const raw = await Bun.file(targetPath).text()
+    const raw = await readFile(targetPath, "utf8")
     if (raw.trim() !== "") {
       targetText = raw
       try {
@@ -1221,11 +2001,12 @@ async function mergeLoaded(
 
   if (written) {
     let backupPath: string | undefined
+    await mkdir(dirname(targetPath), { recursive: true })
     if (opts.backup !== false && targetText !== null && !rule.noBackup) {
       backupPath = `${targetPath}.bak`
-      await Bun.write(backupPath, targetText)
+      await writeFile(backupPath, targetText, "utf8")
     }
-    await Bun.write(targetPath, result.text)
+    await writeFile(targetPath, result.text, "utf8")
     return {
       ...span,
       status,
@@ -1329,9 +2110,10 @@ async function collectInputs(paths: string[], home: string): Promise<string[]> {
     const full = expandTilde(p, home)
     const st = await statOrNull(full)
     if (st?.isDirectory()) {
-      const glob = new Bun.Glob("*")
-      for await (const name of glob.scan({ cwd: full, onlyFiles: true })) {
-        if (KNOWN_NAMES.includes(normalizeName(name))) files.push(join(full, name))
+      const entries = await readdir(full, { withFileTypes: true })
+      for (const entry of entries) {
+        if (!entry.isFile()) continue
+        if (KNOWN_NAMES.includes(normalizeName(entry.name))) files.push(join(full, entry.name))
       }
     } else {
       files.push(full)
@@ -1378,7 +2160,7 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   const lang = pickLang(values.lang)
-  const t = translations[lang].mergeCli
+  const t = MERGE_CLI_MESSAGES[lang]
   const home = process.env.HOME ?? homedir()
 
   if (values.help) {

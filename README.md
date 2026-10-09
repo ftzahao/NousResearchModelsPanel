@@ -55,11 +55,21 @@ bun run merge -- --list                  # list supported formats and their defa
 bun run merge -- --api-key <your-key>    # replace placeholders in the export with a real key
 ```
 
+The merge implementation is a standalone TypeScript file, so Deno can execute it directly from GitHub without cloning the repository:
+
+```bash
+deno run --no-lock --allow-read --allow-write --allow-env \
+  https://raw.githubusercontent.com/ftzahao/NousResearchModelsPanel/main/scripts/merge.ts \
+  ~/Downloads
+```
+
+Deno needs read, write and environment permissions to inspect and update local configs. Its first run downloads the pinned YAML/TOML parser modules.
+
 Files are detected by content (the file name is only a fallback, and duplicate-download suffixes like `config (1).toml` are stripped); a Codex `config.toml` automatically picks up a sibling `models.json` and points `model_catalog_json` at its absolute path; re-running a merge that changes nothing reports "unchanged" without touching the file. Every spliced result is re-parsed and deep-compared against the expected merge before anything is written.
 
 ## Tech Stack
 
-Bun + React 19 + Recharts + Tailwind CSS v4 (compiled locally via `bun-plugin-tailwind`) + Lucide Icons + BigNumber.js + YAML
+Bun + React 19 + Recharts + Tailwind CSS v4 (compiled locally via `bun-plugin-tailwind`) + Lucide Icons + BigNumber.js + YAML + smol-toml
 
 ## Project Structure
 
@@ -71,6 +81,7 @@ Bun + React 19 + Recharts + Tailwind CSS v4 (compiled locally via `bun-plugin-ta
 - `src/hooks/` — `useModels.ts` (model fetching), `useCurrency.ts` (currency + exchange rate state)
 - `src/model-export.ts` — Model selection → each export format
 - `src/model-export.test.ts` — Tests for the export builders (`bun test`)
+- `scripts/merge.ts` — Standalone Bun/Deno merge CLI and text-splicing implementation
 - `src/contexts.tsx`, `src/i18n.ts`, `src/types.ts`, `src/utils.ts` — Theme/currency contexts, translations, shared types, helpers
 - `build.sh` — Static build script (bundles the frontend into `docs/`)
 
@@ -88,6 +99,7 @@ Opens at `http://localhost:8092` with hot reload.
 ```bash
 bun test
 bun run typecheck
+deno check --no-lock scripts/merge.ts
 ```
 
 ## Build

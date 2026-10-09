@@ -3,23 +3,23 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { exporterRegistry } from "../src/model-export"
+import { translations } from "../src/translations"
 import {
-  hasJsonComments,
-  spliceJsonPath,
-  spliceToml,
-  spliceYamlKey,
-  spliceYamlRootArray,
-} from "./merge-splice"
-import {
+  MERGE_CLI_MESSAGES,
   type FileOutcome,
   type RunOptions,
   KNOWN_NAMES,
   detectExport,
   fillApiKey,
   fmt,
+  hasJsonComments,
   normalizeName,
   preserveSecrets,
   runMerge,
+  spliceJsonPath,
+  spliceToml,
+  spliceYamlKey,
+  spliceYamlRootArray,
 } from "./merge"
 
 // keep default-target resolution deterministic regardless of the host env
@@ -40,6 +40,25 @@ const merge1 = async (file: string, opts: RunOptions): Promise<FileOutcome> => {
   expect(out).toHaveLength(1)
   return out[0]!
 }
+
+describe("portable entrypoint", () => {
+  test("keeps embedded CLI messages in sync with app translations", () => {
+    expect(MERGE_CLI_MESSAGES.zh).toEqual(translations.zh.mergeCli)
+    expect(MERGE_CLI_MESSAGES.en).toEqual(translations.en.mergeCli)
+  })
+
+  test("does not import repository-local modules", async () => {
+    const source = await Bun.file(new URL("./merge.ts", import.meta.url)).text()
+    expect(source).not.toMatch(/(?:from\s*|import\s*\(\s*)["']\.\.?\//)
+  })
+
+  test("does not depend on Bun runtime APIs", async () => {
+    const source = await Bun.file(new URL("./merge.ts", import.meta.url)).text()
+    expect(source).not.toMatch(
+      /\bBun\.(?:deepEquals|file|write|Glob|JSONC|YAML|TOML)\b/,
+    )
+  })
+})
 
 // ---------------------------------------------------------------------------
 // text splicing: JSON / JSONC

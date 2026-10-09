@@ -231,7 +231,7 @@ export const translations = {
     ],
     mergeCli: {
       usage: [
-        "用法: bun run merge [文件或目录 ...] [选项]",
+        "用法: bun run merge | deno run <merge.ts> [文件或目录 ...] [选项]",
         "把面板导出的配置文件自动合并进对应工具的目标配置（写入前生成 .bak 备份）",
         "",
         "选项:",
@@ -514,7 +514,7 @@ export const translations = {
     ],
     mergeCli: {
       usage: [
-        "Usage: bun run merge [file or directory ...] [options]",
+        "Usage: bun run merge | deno run <merge.ts> [file or directory ...] [options]",
         "Automatically merges files exported from the dashboard into each tool's target config (writes a .bak backup first)",
         "",
         "Options:",
