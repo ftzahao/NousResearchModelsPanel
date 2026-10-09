@@ -18,8 +18,8 @@
 import { basename, dirname, isAbsolute, join, resolve as resolvePath } from "node:path"
 import { homedir } from "node:os"
 import { parseArgs } from "node:util"
-import { translations } from "../src/i18n"
-import type { Lang } from "../src/types"
+import { translations } from "../src/i18n.ts"
+import type { Lang } from "../src/types.ts"
 import {
   type Action,
   type Format,
@@ -36,8 +36,8 @@ import {
   spliceJsonPath,
   spliceToml,
   spliceYamlKey,
-  spliceYamlRootArray,
-} from "./merge-splice"
+  spliceYamlRootArray
+} from "./merge-splice.ts"
 
 // ---------------------------------------------------------------------------
 // types & messages
@@ -237,14 +237,14 @@ function applyJson(
   merged: unknown,
   paths: readonly (readonly string[])[],
   notices: Notice[],
-  format: Format = "json",
+  format: Format = "json"
 ): MergeResult {
   if (ctx.targetText === null) {
     return {
       text: serializeByFormat(merged, format, detectIndent(ctx.exportText)),
       merged,
       changes: [],
-      notices,
+      notices
     }
   }
   if (deepEqual(ctx.targetParsed, merged))
@@ -267,7 +267,12 @@ function applyJson(
 /** Full rewrite for root-array JSON targets (gcmp / chatLanguageModels). */
 function applyJsonRootArray(ctx: MergeContext, merged: unknown, notices: Notice[]): MergeResult {
   if (ctx.targetText === null)
-    return { text: serializeByFormat(merged, "json", detectIndent(ctx.exportText)), merged, changes: [], notices }
+    return {
+      text: serializeByFormat(merged, "json", detectIndent(ctx.exportText)),
+      merged,
+      changes: [],
+      notices
+    }
   if (deepEqual(ctx.targetParsed, merged))
     return { text: ctx.targetText, merged, changes: [], notices }
   if (hasJsonComments(ctx.targetText)) notices.push({ key: "commentsLost" })
@@ -275,7 +280,7 @@ function applyJsonRootArray(ctx: MergeContext, merged: unknown, notices: Notice[
     text: JSON.stringify(merged, null, detectIndent(ctx.targetText)) + "\n",
     merged,
     changes: ["[]"],
-    notices,
+    notices
   }
 }
 
@@ -284,7 +289,7 @@ function finishYaml(
   merged: unknown,
   run: (text: string, targetParsed: unknown, merged: unknown) => ReturnType<typeof spliceYamlKey>,
   notices: Notice[],
-  changeLabel: string,
+  changeLabel: string
 ): MergeResult {
   if (ctx.targetText === null)
     return { text: serializeByFormat(merged, "yaml"), merged, changes: [], notices }
@@ -366,8 +371,8 @@ function rules(): Rule[] {
       text: ctx.exportText,
       merged: ctx.exportParsed,
       changes: [],
-      notices: [{ key: "modelsCopied", args: [ctx.targetPath] }],
-    }),
+      notices: [{ key: "modelsCopied", args: [ctx.targetPath] }]
+    })
   })
 
   // ---- Codex config.toml (both the direct and the Osaurus variant) ----
@@ -377,7 +382,9 @@ function rules(): Rule[] {
     fileNames: ["config.toml"],
     format: "toml",
     sniff: (p, f) =>
-      f === "toml" && isObj(p) && typeof p.model_provider === "string" &&
+      f === "toml" &&
+      isObj(p) &&
+      typeof p.model_provider === "string" &&
       ("model_catalog_json" in p || isObj(p.model_providers)),
     targets: (b) => [join(b.home, ".codex", "config.toml")],
     createPath: (b) => join(b.home, ".codex", "config.toml"),
@@ -401,9 +408,10 @@ function rules(): Rule[] {
         }
       }
       if (isObj(exp.features)) {
-        const targetFeatures = isObj(ctx.targetParsed) && isObj(ctx.targetParsed.features)
-          ? ctx.targetParsed.features
-          : {}
+        const targetFeatures =
+          isObj(ctx.targetParsed) && isObj(ctx.targetParsed.features)
+            ? ctx.targetParsed.features
+            : {}
         ops.push({ kind: "table", key: "features", value: { ...targetFeatures, ...exp.features } })
       }
       if (isObj(exp.model_providers)) {
@@ -417,7 +425,7 @@ function rules(): Rule[] {
       if (out.action === "rewrite") notices.push({ key: "fallbackRewrite" })
       if (out.commentLoss) notices.push({ key: "commentsLost" })
       return { text: out.text, merged, changes: out.changes, notices }
-    },
+    }
   })
 
   // ---- ZCode ----
@@ -426,7 +434,11 @@ function rules(): Rule[] {
     displayName: "ZCode",
     fileNames: ["zcode-provider-config.json"],
     format: "json",
-    sniff: (p) => isObj(p) && p.schemaVersion === 1 && isObj(p.config) && isObj(asObj(p.config).providerConfigRules),
+    sniff: (p) =>
+      isObj(p) &&
+      p.schemaVersion === 1 &&
+      isObj(p.config) &&
+      isObj(asObj(p.config).providerConfigRules),
     targets: (b) => [join(b.home, ".zcode", "v2", "provider_config.json")],
     createPath: (b) => join(b.home, ".zcode", "v2", "provider_config.json"),
     merge: (ctx) => {
@@ -456,13 +468,13 @@ function rules(): Rule[] {
       }
       const providerRules = [
         ...tRules.filter((x) => !(isObj(x) && x.providerId === "nous")),
-        ...eRules,
+        ...eRules
       ]
 
       const tModelRules = listOf(tmc.providerModelRules)
       const modelRules = [
         ...tModelRules.filter((x) => !(isObj(x) && x.providerId === "nous")),
-        ...listOf(emc.providerModelRules),
+        ...listOf(emc.providerModelRules)
       ]
       const manualRules = listOf(tmc.manualProviderModelRules)
 
@@ -479,19 +491,19 @@ function rules(): Rule[] {
             ...tmc,
             ...emc,
             providerModelRules: modelRules,
-            manualProviderModelRules: manualRules,
-          },
-        },
+            manualProviderModelRules: manualRules
+          }
+        }
       }
       const paths: string[][] = [
         ["config", "providerOrder"],
         ["config", "providerConfigRules", "providerRules"],
-        ["config", "modelConfigRules", "providerModelRules"],
+        ["config", "modelConfigRules", "providerModelRules"]
       ]
       if (base.schemaVersion === undefined && exp.schemaVersion !== undefined)
         paths.push(["schemaVersion"])
       return applyJson(ctx, merged, paths, notices)
-    },
+    }
   })
 
   // ---- DeepSeek Harness settings.yaml ----
@@ -503,7 +515,7 @@ function rules(): Rule[] {
     sniff: (p) => isObj(p) && isObj(p["llm-pi-ai"]) && isObj(asObj(p["llm-pi-ai"]).providers),
     targets: (b) => [
       join(b.home, ".dsh", "profiles", dshProfile(), "settings.yaml"),
-      join(b.home, ".dsh", "settings.yaml"),
+      join(b.home, ".dsh", "settings.yaml")
     ],
     createPath: (b) => join(b.home, ".dsh", "profiles", dshProfile(), "settings.yaml"),
     merge: (ctx) => {
@@ -517,7 +529,7 @@ function rules(): Rule[] {
           text: serializeByFormat(exp, "yaml"),
           merged: exp,
           changes: [],
-          notices,
+          notices
         }
       }
       const t = ctx.targetParsed
@@ -541,9 +553,9 @@ function rules(): Rule[] {
         merged,
         (text, tp, m) => spliceYamlKey(text, "llm-pi-ai", tp, m),
         notices,
-        "llm-pi-ai",
+        "llm-pi-ai"
       )
-    },
+    }
   })
 
   // ---- DeepSeek Harness desktop cordis patch ----
@@ -554,10 +566,16 @@ function rules(): Rule[] {
     format: "yaml",
     sniff: (p) =>
       Array.isArray(p) &&
-      p.some((e) => isObj(e) && typeof e.id === "string" && typeof e.name === "string" && e.name.startsWith("@deepseek-ai/")),
+      p.some(
+        (e) =>
+          isObj(e) &&
+          typeof e.id === "string" &&
+          typeof e.name === "string" &&
+          e.name.startsWith("@deepseek-ai/")
+      ),
     targets: (b) => [
       join(b.home, ".dsh", "cordis.patch.yml"),
-      join(b.home, ".dsh", "profiles", dshProfile(), "cordis.patch.yml"),
+      join(b.home, ".dsh", "profiles", dshProfile(), "cordis.patch.yml")
     ],
     createPath: (b) => join(b.home, ".dsh", "profiles", dshProfile(), "cordis.patch.yml"),
     merge: (ctx) => {
@@ -585,9 +603,9 @@ function rules(): Rule[] {
         merged,
         (text, tp, m) => spliceYamlRootArray(text, tp, m),
         notices,
-        "[]",
+        "[]"
       )
-    },
+    }
   })
 
   // ---- LiteLLM ----
@@ -598,7 +616,10 @@ function rules(): Rule[] {
     format: "yaml",
     sniff: (p) =>
       (Array.isArray(p) && isObj(p[0]) && "model_name" in p[0] && "litellm_params" in p[0]) ||
-      (isObj(p) && Array.isArray(p.model_list) && isObj(p.model_list[0]) && "litellm_params" in p.model_list[0]),
+      (isObj(p) &&
+        Array.isArray(p.model_list) &&
+        isObj(p.model_list[0]) &&
+        "litellm_params" in p.model_list[0]),
     targets: (b) => [join(b.home, ".litellm", "config.yaml")],
     createPath: (b) => join(b.home, ".litellm", "config.yaml"),
     merge: (ctx) => {
@@ -612,7 +633,9 @@ function rules(): Rule[] {
               throw errShape("model_list")
             })()
       const upsertEntries = (list: unknown[]): unknown[] => {
-        const kept = list.filter((x) => !isObj(x) || !String(x.model_name ?? "").startsWith("nous/"))
+        const kept = list.filter(
+          (x) => !isObj(x) || !String(x.model_name ?? "").startsWith("nous/")
+        )
         const items = entries.map((e) => {
           if (!isObj(e)) return e
           const old = list.find((y) => isObj(y) && y.model_name === e.model_name)
@@ -631,7 +654,13 @@ function rules(): Rule[] {
       if (Array.isArray(t)) {
         const merged = upsertEntries(t)
         if (deepEqual(t, merged)) return { text: ctx.targetText, merged, changes: [], notices }
-        return finishYaml(ctx, merged, (text, tp, m) => spliceYamlRootArray(text, tp, m), notices, "[]")
+        return finishYaml(
+          ctx,
+          merged,
+          (text, tp, m) => spliceYamlRootArray(text, tp, m),
+          notices,
+          "[]"
+        )
       }
       if (!isObj(t)) throw errShape("target")
       const current = t.model_list
@@ -642,9 +671,9 @@ function rules(): Rule[] {
         merged,
         (text, tp, m) => spliceYamlKey(text, "model_list", tp, m),
         notices,
-        "model_list",
+        "model_list"
       )
-    },
+    }
   })
 
   // ---- CLIProxyAPI ----
@@ -657,17 +686,18 @@ function rules(): Rule[] {
     targets: (b) => [
       join(b.home, ".config", "cli-proxy-api", "config.yaml"),
       "/opt/homebrew/etc/cliproxyapi.conf",
-      "/usr/local/etc/cliproxyapi.conf",
+      "/usr/local/etc/cliproxyapi.conf"
     ],
     // no createPath: without an existing config we cannot know where the proxy reads from
     merge: (ctx) => {
       const notices: Notice[] = []
       const exp = ctx.exportParsed
-      const entries = isObj(exp) && Array.isArray(exp["openai-compatibility"])
-        ? exp["openai-compatibility"]
-        : (() => {
-            throw errShape("openai-compatibility")
-          })()
+      const entries =
+        isObj(exp) && Array.isArray(exp["openai-compatibility"])
+          ? exp["openai-compatibility"]
+          : (() => {
+              throw errShape("openai-compatibility")
+            })()
       const upsertEntries = (list: unknown[]): unknown[] => {
         const kept = list.filter((x) => !isObj(x) || x.name !== "nous")
         const items = entries.map((e) => {
@@ -693,9 +723,9 @@ function rules(): Rule[] {
         merged,
         (text, tp, m) => spliceYamlKey(text, "openai-compatibility", tp, m),
         notices,
-        "openai-compatibility",
+        "openai-compatibility"
       )
-    },
+    }
   })
 
   // ---- OpenCode / Crush / MiMo Desktop (provider-map style, JSON) ----
@@ -726,7 +756,7 @@ function rules(): Rule[] {
       if (isObj(oldEntry)) preserveSecrets(entry, oldEntry)
       const merged: Record<string, unknown> = {
         ...base,
-        [opts.mapKey]: { ...tMap, nous: entry },
+        [opts.mapKey]: { ...tMap, nous: entry }
       }
       const addSchema =
         opts.schema !== undefined && base.$schema === undefined && exp.$schema !== undefined
@@ -734,7 +764,7 @@ function rules(): Rule[] {
       const paths: string[][] = [[opts.mapKey, "nous"]]
       if (addSchema) paths.push(["$schema"])
       return applyJson(ctx, merged, paths, notices)
-    },
+    }
   })
 
   // mimocode must be detected before opencode: both ship an
@@ -747,9 +777,8 @@ function rules(): Rule[] {
       mapKey: "provider",
       schema: MIMOCODE_EXPORT_SCHEMA,
       sniff: (p) =>
-        isObj(p) &&
-        (p.$schema === MIMOCODE_EXPORT_SCHEMA || hasModelFieldWith(p, "modalities")),
-      candidates: (b) => [join(xdgConfig(b.home), "mimocode", "mimocode.jsonc")],
+        isObj(p) && (p.$schema === MIMOCODE_EXPORT_SCHEMA || hasModelFieldWith(p, "modalities")),
+      candidates: (b) => [join(xdgConfig(b.home), "mimocode", "mimocode.jsonc")]
     }),
     providerMapRule({
       id: "opencode",
@@ -762,7 +791,10 @@ function rules(): Rule[] {
         (p.$schema === REF_EXPORT_SCHEMA ||
           (asObj(asObj(p.provider).nous).npm === "@ai-sdk/openai-compatible" &&
             !hasModelFieldWith(p, "modalities"))),
-      candidates: (b) => [join(xdgConfig(b.home), "opencode", "opencode.json"), join(b.cwd, "opencode.json")],
+      candidates: (b) => [
+        join(xdgConfig(b.home), "opencode", "opencode.json"),
+        join(b.cwd, "opencode.json")
+      ]
     }),
     providerMapRule({
       id: "crush",
@@ -773,8 +805,8 @@ function rules(): Rule[] {
       sniff: (p) =>
         isObj(p) &&
         (p.$schema === CRUSH_EXPORT_SCHEMA || asObj(asObj(p.providers).nous).type === "openai"),
-      candidates: (b) => [join(xdgConfig(b.home), "crush", "crush.json"), join(b.cwd, "crush.json")],
-    }),
+      candidates: (b) => [join(xdgConfig(b.home), "crush", "crush.json"), join(b.cwd, "crush.json")]
+    })
   )
 
   // ---- Zed ----
@@ -783,12 +815,13 @@ function rules(): Rule[] {
     displayName: "Zed",
     fileNames: ["zed-language-models.json"],
     format: "json",
-    sniff: (p) => isObj(p) && isObj(p.language_models) && isObj(asObj(p.language_models).openai_compatible),
+    sniff: (p) =>
+      isObj(p) && isObj(p.language_models) && isObj(asObj(p.language_models).openai_compatible),
     targets: (b) =>
       process.platform === "darwin"
         ? [
             join(b.home, "Library", "Application Support", "Zed", "settings.json"),
-            join(b.home, ".config", "zed", "settings.json"),
+            join(b.home, ".config", "zed", "settings.json")
           ]
         : [join(b.home, ".config", "zed", "settings.json")],
     createPath: (b) =>
@@ -806,10 +839,10 @@ function rules(): Rule[] {
       if (isObj(oldEntry)) preserveSecrets(entry, oldEntry)
       const merged = {
         ...base,
-        language_models: { ...lm, openai_compatible: { ...oa, nous: entry } },
+        language_models: { ...lm, openai_compatible: { ...oa, nous: entry } }
       }
       return applyJson(ctx, merged, [["language_models", "openai_compatible", "nous"]], notices)
-    },
+    }
   })
 
   // ---- Cherry Studio (bare provider entry → data.providers.nous) ----
@@ -827,7 +860,7 @@ function rules(): Rule[] {
     targets: (b) => [
       join(b.home, "Library", "Application Support", "CherryStudio", "User", "settings.json"),
       join(b.home, "Library", "Application Support", "CherryStudio", "settings.json"),
-      join(xdgConfig(b.home), "CherryStudio", "settings.json"),
+      join(xdgConfig(b.home), "CherryStudio", "settings.json")
     ],
     merge: (ctx) => {
       const notices: Notice[] = []
@@ -840,10 +873,7 @@ function rules(): Rule[] {
       if (Array.isArray(providers)) {
         const old = providers.find((x) => isObj(x) && x.id === entry.id)
         if (old) preserveSecrets(entry, old)
-        const list = [
-          ...providers.filter((x) => !(isObj(x) && x.id === entry.id)),
-          entry,
-        ]
+        const list = [...providers.filter((x) => !(isObj(x) && x.id === entry.id)), entry]
         const merged = { ...base, data: { ...data, providers: list } }
         return applyJson(ctx, merged, [["data", "providers"]], notices)
       }
@@ -852,10 +882,10 @@ function rules(): Rule[] {
       if (isObj(old)) preserveSecrets(entry, old)
       const merged = {
         ...base,
-        data: { ...data, providers: { ...tProviders, nous: entry } },
+        data: { ...data, providers: { ...tProviders, nous: entry } }
       }
       return applyJson(ctx, merged, [["data", "providers", "nous"]], notices)
-    },
+    }
   })
 
   // ---- GitHub Copilot style array targets (require --target) ----
@@ -890,10 +920,10 @@ function rules(): Rule[] {
       })
       const merged = [
         ...t.filter((x) => !isObj(x) || x[opts.filterKey] !== opts.filterValue),
-        ...items,
+        ...items
       ]
       return applyJsonRootArray(ctx, merged, notices)
-    },
+    }
   })
 
   list.push(
@@ -905,7 +935,7 @@ function rules(): Rule[] {
       filterValue: "nous",
       matchKey: "id",
       sniff: (p) =>
-        Array.isArray(p) && isObj(p[0]) && "sdkMode" in p[0] && "limit" in p[0] && "baseUrl" in p[0],
+        Array.isArray(p) && isObj(p[0]) && "sdkMode" in p[0] && "limit" in p[0] && "baseUrl" in p[0]
     }),
     arrayRule({
       id: "copilot-lm",
@@ -914,8 +944,8 @@ function rules(): Rule[] {
       filterKey: "name",
       filterValue: "nous",
       matchKey: "name",
-      sniff: (p) => Array.isArray(p) && isObj(p[0]) && p[0].vendor === "customendpoint",
-    }),
+      sniff: (p) => Array.isArray(p) && isObj(p[0]) && p[0].vendor === "customendpoint"
+    })
   )
 
   // ---- Chatbox: pasted into the app, nothing to merge ----
@@ -926,11 +956,15 @@ function rules(): Rule[] {
     format: "json",
     pasteOnly: true,
     sniff: (p) =>
-      isObj(p) && p.type === "openai" && isObj(p.settings) && typeof asObj(p.settings).apiHost === "string" && "iconUrl" in p,
+      isObj(p) &&
+      p.type === "openai" &&
+      isObj(p.settings) &&
+      typeof asObj(p.settings).apiHost === "string" &&
+      "iconUrl" in p,
     targets: () => [],
     merge: () => {
       throw new MergeError({ key: "pasteOnly" })
-    },
+    }
   })
 
   return list
@@ -960,7 +994,7 @@ const FORMAT_BY_EXT: Record<string, Format> = {
   ".json5": "json",
   ".yaml": "yaml",
   ".yml": "yaml",
-  ".toml": "toml",
+  ".toml": "toml"
 }
 
 /** Strip a browser's duplicate-download suffix: `config (1).toml` → `config.toml`. */
@@ -983,7 +1017,7 @@ function formatOf(fileName: string): Format | null {
 export function detectExport(
   fileName: string,
   text: string,
-  mode: "loose" | "strict" = "loose",
+  mode: "loose" | "strict" = "loose"
 ): Detection | null {
   const declared = formatOf(fileName)
   const attempts: Format[] = declared
@@ -1023,7 +1057,7 @@ async function resolveTargetPath(
   rule: Rule,
   base: TargetBase,
   override: string | undefined,
-  inputPath: string,
+  inputPath: string
 ): Promise<{ path: string } | { error: Notice }> {
   const isInput = (p: string): boolean => resolvePath(p) === resolvePath(inputPath)
   if (override) return { path: override }
@@ -1056,7 +1090,11 @@ export async function runMerge(files: string[], opts: RunOptions = {}): Promise<
   for (const file of files) {
     order.push(file)
     if (!(await fileExists(file))) {
-      outcomes.set(file, { input: file, status: "failed", message: { key: "fileMissing", args: [file] } })
+      outcomes.set(file, {
+        input: file,
+        status: "failed",
+        message: { key: "fileMissing", args: [file] }
+      })
       continue
     }
     const text = await Bun.file(file).text()
@@ -1100,7 +1138,7 @@ async function mergeLoaded(
   det: Detection,
   opts: RunOptions,
   base: TargetBase,
-  modelsPath: string | undefined,
+  modelsPath: string | undefined
 ): Promise<FileOutcome> {
   const rule = RULES.find((r) => r.id === det.ruleId)!
   const span = { input: file, ruleId: rule.id }
@@ -1126,7 +1164,12 @@ async function mergeLoaded(
       try {
         targetParsed = parseByFormat(raw, rule.format)
       } catch {
-        return { ...span, status: "failed", target: targetPath, message: { key: "parseTargetFail" } }
+        return {
+          ...span,
+          status: "failed",
+          target: targetPath,
+          message: { key: "parseTargetFail" }
+        }
       }
     }
   }
@@ -1140,17 +1183,23 @@ async function mergeLoaded(
       targetParsed,
       exportText: text,
       exportParsed,
-      modelsPath,
+      modelsPath
     })
   } catch (e) {
-    if (e instanceof MergeError) return { ...span, status: "failed", target: targetPath, message: e.notice }
+    if (e instanceof MergeError)
+      return { ...span, status: "failed", target: targetPath, message: e.notice }
     if (e instanceof SpliceError)
-      return { ...span, status: "failed", target: targetPath, message: { key: "errShape", args: [e.message] } }
+      return {
+        ...span,
+        status: "failed",
+        target: targetPath,
+        message: { key: "errShape", args: [e.message] }
+      }
     return {
       ...span,
       status: "failed",
       target: targetPath,
-      message: { key: "errShape", args: [e instanceof Error ? e.message : String(e)] },
+      message: { key: "errShape", args: [e instanceof Error ? e.message : String(e)] }
     }
   }
 
@@ -1185,7 +1234,7 @@ async function mergeLoaded(
       changes: result.changes,
       notices,
       written: true,
-      output: opts.print ? result.text : undefined,
+      output: opts.print ? result.text : undefined
     }
   }
 
@@ -1196,7 +1245,7 @@ async function mergeLoaded(
     changes: result.changes,
     notices,
     written: false,
-    output: opts.print ? result.text : undefined,
+    output: opts.print ? result.text : undefined
   }
 }
 
@@ -1223,7 +1272,7 @@ const NOTICE_SYMBOL: Record<string, string> = {
   commentsLost: "⚠",
   catalogWarning: "⚠",
   modelsCopied: "·",
-  fallbackRewrite: "·",
+  fallbackRewrite: "·"
 }
 
 function reportOutcome(o: FileOutcome, t: MergeCli, home: string): void {
@@ -1268,7 +1317,9 @@ function printRuleList(t: MergeCli, home: string, cwd: string): void {
     const created = rule.createPath?.(base) ?? null
     if (!rule.pasteOnly && cands.length === 0 && !created) note = ` (${t.listNeedTarget})`
     const primary = created ?? cands[0] ?? "-"
-    console.log(`  ${rule.displayName}  [${rule.fileNames.join(", ")}]  → ${displayPath(primary, home)}${note}`)
+    console.log(
+      `  ${rule.displayName}  [${rule.fileNames.join(", ")}]  → ${displayPath(primary, home)}${note}`
+    )
   }
 }
 
@@ -1316,8 +1367,8 @@ export async function main(argv: string[]): Promise<number> {
         "models-out": { type: "string" },
         list: { type: "boolean", short: "l" },
         lang: { type: "string" },
-        help: { type: "boolean", short: "h" },
-      },
+        help: { type: "boolean", short: "h" }
+      }
     })
     values = parsed.values
     positionals = parsed.positionals
@@ -1373,7 +1424,7 @@ export async function main(argv: string[]): Promise<number> {
     print: values.print === true,
     backup: values["no-backup"] !== true,
     apiKey: values["api-key"],
-    modelsOut: values["models-out"],
+    modelsOut: values["models-out"]
   }
 
   const outcomes = await runMerge(files, opts)
@@ -1391,7 +1442,7 @@ export async function main(argv: string[]): Promise<number> {
   console.log(
     `${t.summary}: ${count("merged")} ${t.countMerged} · ${count("created")} ${t.countCreated} · ` +
       `${count("unchanged")} ${t.countUnchanged} · ${count("skipped")} ${t.countSkipped} · ` +
-      `${count("failed")} ${t.countFailed}`,
+      `${count("failed")} ${t.countFailed}`
   )
 
   return outcomes.length === 0 || outcomes.some((o) => o.status === "failed") ? 1 : 0
