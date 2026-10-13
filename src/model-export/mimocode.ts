@@ -49,7 +49,7 @@ export interface MimocodeConfig {
 const INPUT_MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
 const OUTPUT_MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
 
-const MIMOCODE_USER_AGENT = "HermesAgent/0.21.6"
+const MIMOCODE_USER_AGENT = "HermesAgent/0.21.7"
 
 const buildModalities = (model: ExportableModel) => {
   const inputDeclared = model.architecture?.input_modalities ?? []
