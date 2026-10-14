@@ -661,6 +661,8 @@ export function App() {
             usage={activeExporter.usage}
             warning={activeExporter.warning}
             selectedCount={selectedModels.length}
+            programId={activeExporter.id}
+            modelIds={selectedModels.map((m) => m.id)}
             onClose={closeExportPreview}
           />
         )}

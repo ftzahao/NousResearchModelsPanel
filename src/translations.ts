@@ -175,7 +175,7 @@ export const translations = {
       "下载 dsh-desktop-cordis-patch.yml，打开当前 profile 的补丁文件：桌面端默认在 ~/.dsh/profiles/desktop/cordis.patch.yml（profile 名看 DSH_PROFILE，其它 profile 在 ~/.dsh/profiles/<profile>/cordis.patch.yml）",
       "把文件里的 llm-pi-ai 条目合并进去：补丁按 id 整条覆盖 config，已有同 id 条目要整块替换（想保留的字段一并写上），没有就追加为顶层数组的一项；文件里其它条目不要动，删成空文件会导致启动失败（要清空请写 []）",
       "也可以放进 ~/.dsh/cordis.patch.yml（home 级补丁，优先级高于 profile 级）",
-      '设置 API Key：把 NOUS_API_KEY=你的 Nous API Key 写进 ~/.dsh/.env，或在桌面端 设置 → 模型 里给 nous 提供商填入 Key（存进凭据存储，配置文件不落明文）',
+      "设置 API Key：把 NOUS_API_KEY=你的 Nous API Key 写进 ~/.dsh/.env，或在桌面端 设置 → 模型 里给 nous 提供商填入 Key（存进凭据存储，配置文件不落明文）",
       "重启 DeepSeek Harness 桌面端，在 设置 → 模型 里确认出现 nous 提供商、导出的模型已列出；若装有 dsh CLI，可用 dsh --profile desktop --dump-config 打印合成后的配置"
     ],
     codexWarning: "官方 API 格式不支持此方式，可以尝试用 API 代理工具（如 LiteLLM）",
@@ -233,8 +233,11 @@ export const translations = {
       usage: [
         "用法: bun run merge | deno run <merge.ts> [文件或目录 ...] [选项]",
         "把面板导出的配置文件自动合并进对应工具的目标配置（写入前生成 .bak 备份）",
+        "一条命令（无需下载文件）：deno run --no-lock --allow-read --allow-write --allow-env <merge.ts> --one <程序=模型ID,...>",
         "",
         "选项:",
+        "  -p, --program <程序=模型ID,...>  直接根据模型 ID 生成并合并（可重复，无需下载文件）",
+        "      --one <程序=模型ID,...>  等价于 -p，用于一条命令完成生成与合并（无需下载文件）",
         "  -t, --target <路径>      指定目标配置文件（仅支持单个输入文件）",
         "  -n, --dry-run           只预览合并结果，不写入文件",
         "      --print             输出合并后的完整文件内容（隐含 --dry-run）",
@@ -266,7 +269,8 @@ export const translations = {
       keptSecrets: "已保留目标文件中已有的 API Key",
       commentsLost: "被替换的片段含有注释，这些注释会丢失",
       fallbackRewrite: "文本定位失败，改为整文件重写",
-      catalogWarning: "未找到 models.json，model_catalog_json 保留原占位符；请把 config.toml 和 models.json 一起传入",
+      catalogWarning:
+        "未找到 models.json，model_catalog_json 保留原占位符；请把 config.toml 和 models.json 一起传入",
       errShape: "结构不符合预期：%s",
       summary: "完成",
       countMerged: "合并",
@@ -277,7 +281,17 @@ export const translations = {
       changesLabel: "变更",
       listHeader: "支持的导出格式与默认目标路径",
       listNeedTarget: "需 --target 指定",
-      listPasteOnly: "应用内导入，无文件合并"
+      listPasteOnly: "应用内导入，无文件合并",
+      programSyntax: "参数格式应为 程序=模型ID[,模型ID...]：%s",
+      unknownProgram: "未知程序：%s（用 --list 查看可用程序）",
+      fetchModelsFail: "拉取上游模型列表失败：%s",
+      unknownModel: "上游模型列表中没有这些模型 ID：%s",
+      programsHeader: "可用程序（-p）",
+      oneHeader: "一条命令（无需下载文件）",
+      oneCopy: "复制命令",
+      oneCopied: "已复制",
+      needSelection: "请先选择模型，再复制命令",
+      remoteNote: "运行时需要网络权限（--allow-net）拉取模型列表"
     }
   },
   en: {
@@ -457,7 +471,7 @@ export const translations = {
       "Download dsh-desktop-cordis-patch.yml and open your profile's patch file: ~/.dsh/profiles/desktop/cordis.patch.yml on the desktop app (the profile name is DSH_PROFILE; other profiles live in ~/.dsh/profiles/<profile>/cordis.patch.yml)",
       "Merge the llm-pi-ai entry into it: a patch replaces an entry's whole config by id, so an existing llm-pi-ai block is replaced as a whole (restate the fields you want to keep) and otherwise the entry is appended as one item of the top-level array; leave the file's other entries alone — an empty file fails boot (write [] to disable the layer)",
       "It can also go into ~/.dsh/cordis.patch.yml, the home-level patch that outranks the profile one",
-      'Set your API key: put NOUS_API_KEY=your Nous API key in ~/.dsh/.env, or enter it for the nous provider under Settings → Models in the desktop app (stored in the credential store, never written into the config)',
+      "Set your API key: put NOUS_API_KEY=your Nous API key in ~/.dsh/.env, or enter it for the nous provider under Settings → Models in the desktop app (stored in the credential store, never written into the config)",
       "Restart the DeepSeek Harness desktop app and confirm nous shows up under Settings → Models with the exported models listed; if the dsh CLI is installed, dsh --profile desktop --dump-config prints the composed config"
     ],
     codexWarning:
@@ -516,8 +530,11 @@ export const translations = {
       usage: [
         "Usage: bun run merge | deno run <merge.ts> [file or directory ...] [options]",
         "Automatically merges files exported from the dashboard into each tool's target config (writes a .bak backup first)",
+        "One command (no download): deno run --no-lock --allow-read --allow-write --allow-env <merge.ts> --one <prog=id,...>",
         "",
         "Options:",
+        "  -p, --program <prog=id,...>  generate and merge straight from model IDs (repeatable; no download)",
+        "      --one <prog=id,...>  same as -p, designed for the dashboard's one-command export: no file download",
         "  -t, --target <path>      target config file (single input file only)",
         "  -n, --dry-run           preview the merge without writing",
         "      --print             print the merged file content (implies --dry-run)",
@@ -561,7 +578,17 @@ export const translations = {
       changesLabel: "Changes",
       listHeader: "Supported export formats and default target paths",
       listNeedTarget: "requires --target",
-      listPasteOnly: "paste in app, no file merge"
+      listPasteOnly: "paste in app, no file merge",
+      programSyntax: "expected program=model-id[,model-id...]: %s",
+      unknownProgram: "unknown program: %s (see --list)",
+      fetchModelsFail: "failed to fetch the upstream model list: %s",
+      unknownModel: "model IDs not found in the upstream list: %s",
+      programsHeader: "Programs (-p)",
+      oneHeader: "One command (no download)",
+      oneCopy: "Copy command",
+      oneCopied: "Copied",
+      needSelection: "Select models first, then copy the command",
+      remoteNote: "Requires network permission (--allow-net) to fetch the model list"
     }
   }
 }

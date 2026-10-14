@@ -3,6 +3,7 @@
  * One-command merge for files exported from the NousResearch dashboard.
  *
  *   bun run merge [file or directory ...] [options]
+ *   bun run merge -p <program>=<model-id>[,<model-id>...] [options]
  *   deno run <remote-or-local>/merge.ts [file or directory ...] [options]
  *
  * Detects which exporter produced each file (by content, falling back to the
@@ -44,14 +45,20 @@ const yaml = formatModule(
 const toml = formatModule(
   await importModule(isDeno ? "https://esm.sh/smol-toml@1.9.1" : "smol-toml"),
 )
+const BigNumber: any = (
+  await importModule(isDeno ? "https://esm.sh/bignumber.js@11.1.5" : "bignumber.js")
+).default
 
 export const MERGE_CLI_MESSAGES = {
   zh: {
     usage: [
       "用法: bun run merge | deno run <merge.ts> [文件或目录 ...] [选项]",
       "把面板导出的配置文件自动合并进对应工具的目标配置（写入前生成 .bak 备份）",
+      "一条命令（无需下载文件）：deno run --no-lock --allow-read --allow-write --allow-env <merge.ts> --one <程序=模型ID,...>",
       "",
       "选项:",
+      "  -p, --program <程序=模型ID,...>  直接根据模型 ID 生成并合并（可重复，无需下载文件）",
+      "      --one <程序=模型ID,...>  等价于 -p，用于一条命令完成生成与合并（无需下载文件）",
       "  -t, --target <路径>      指定目标配置文件（仅支持单个输入文件）",
       "  -n, --dry-run           只预览合并结果，不写入文件",
       "      --print             输出合并后的完整文件内容（隐含 --dry-run）",
@@ -95,14 +102,27 @@ export const MERGE_CLI_MESSAGES = {
     changesLabel: "变更",
     listHeader: "支持的导出格式与默认目标路径",
     listNeedTarget: "需 --target 指定",
-    listPasteOnly: "应用内导入，无文件合并"
+    listPasteOnly: "应用内导入，无文件合并",
+    programSyntax: "参数格式应为 程序=模型ID[,模型ID...]：%s",
+    unknownProgram: "未知程序：%s（用 --list 查看可用程序）",
+    fetchModelsFail: "拉取上游模型列表失败：%s",
+    unknownModel: "上游模型列表中没有这些模型 ID：%s",
+    programsHeader: "可用程序（-p）",
+    oneHeader: "一条命令（无需下载文件）",
+    oneCopy: "复制命令",
+    oneCopied: "已复制",
+    needSelection: "请先选择模型，再复制命令",
+    remoteNote: "运行时需要网络权限（--allow-net）拉取模型列表"
   },
   en: {
     usage: [
       "Usage: bun run merge | deno run <merge.ts> [file or directory ...] [options]",
       "Automatically merges files exported from the dashboard into each tool's target config (writes a .bak backup first)",
+      "One command (no download): deno run --no-lock --allow-read --allow-write --allow-env <merge.ts> --one <prog=id,...>",
       "",
       "Options:",
+      "  -p, --program <prog=id,...>  generate and merge straight from model IDs (repeatable; no download)",
+      "      --one <prog=id,...>  same as -p, designed for the dashboard's one-command export: no file download",
       "  -t, --target <path>      target config file (single input file only)",
       "  -n, --dry-run           preview the merge without writing",
       "      --print             print the merged file content (implies --dry-run)",
@@ -146,7 +166,17 @@ export const MERGE_CLI_MESSAGES = {
     changesLabel: "Changes",
     listHeader: "Supported export formats and default target paths",
     listNeedTarget: "requires --target",
-    listPasteOnly: "paste in app, no file merge"
+    listPasteOnly: "paste in app, no file merge",
+    programSyntax: "expected program=model-id[,model-id...]: %s",
+    unknownProgram: "unknown program: %s (see --list)",
+    fetchModelsFail: "failed to fetch the upstream model list: %s",
+    unknownModel: "model IDs not found in the upstream list: %s",
+    programsHeader: "Programs (-p)",
+    oneHeader: "One command (no download)",
+    oneCopy: "Copy command",
+    oneCopied: "Copied",
+    needSelection: "Select models first, then copy the command",
+    remoteNote: "Requires network permission (--allow-net) to fetch the model list"
   }
 }
 
@@ -239,8 +269,16 @@ export interface RunOptions {
   backup?: boolean
   apiKey?: string
   modelsOut?: string
+  /** exports generated in memory from `--program`, merged alongside file inputs */
+  generated?: GeneratedExport[]
   cwd?: string
   home?: string
+}
+
+export interface GeneratedExport {
+  /** virtual path (not read from disk) that names the export for detection and sibling lookup */
+  file: string
+  text: string
 }
 
 // ---------------------------------------------------------------------------
@@ -1835,6 +1873,1307 @@ export function detectExport(
 }
 
 // ---------------------------------------------------------------------------
+// exporters (copied from src/model-export; keep in sync — see merge.test.ts)
+// ---------------------------------------------------------------------------
+
+/** the string-valued keys of Model["pricing"], i.e. everything except overrides/original */
+export type PriceField =
+  | "prompt"
+  | "completion"
+  | "image"
+  | "audio"
+  | "input_cache_read"
+  | "input_cache_write"
+  | "input_cache_write_1h"
+  | "web_search"
+  | "internal_reasoning"
+
+export interface Model {
+  id: string
+  name: string
+  created: number
+  description: string
+  context_length: number
+  architecture: {
+    modality: string
+    input_modalities: string[]
+    output_modalities: string[]
+    tokenizer: string
+  }
+  pricing: {
+    prompt: string
+    completion: string
+    image?: string
+    audio?: string
+    input_cache_read?: string
+    input_cache_write?: string
+    input_cache_write_1h?: string
+    web_search?: string
+    internal_reasoning?: string
+    overrides?: Array<{
+      min_prompt_tokens?: number
+      max_prompt_tokens?: number
+      utc_days?: string[]
+      utc_start?: number
+      utc_end?: number
+      prompt?: string
+      completion?: string
+      input_cache_read?: string
+      input_cache_write?: string
+    }>
+    original?: {
+      prompt?: string
+      completion?: string
+      image?: string
+      audio?: string
+      input_cache_read?: string
+      input_cache_write?: string
+      web_search?: string
+      internal_reasoning?: string
+    }
+  }
+  top_provider: {
+    context_length: number
+    max_completion_tokens: number
+    is_moderated: boolean
+  }
+  supported_parameters: string[]
+  benchmarks?: {
+    artificial_analysis?: {
+      intelligence_index?: number
+      coding_index?: number
+      agentic_index?: number
+    }
+    design_arena?: Array<{
+      arena: string
+      category: string
+      elo: number
+      win_rate: number
+      rank: number
+    }>
+  }
+  reasoning?: {
+    mandatory: boolean
+    default_enabled?: boolean
+    supported_efforts: string[]
+    default_effort: string
+  }
+  synthesizedFreeVariant?: boolean
+  alias_target?: { name: string; slug: string }
+  aliases?: string[]
+}
+
+// The exporters consume the same API models the dashboard renders, so this is an
+// alias rather than a second hand-maintained copy of the response shape.
+type ExportableModel = Model
+
+export const GCMP_BASE_URL = "https://inference-api.nousresearch.com/v1"
+export const GCMP_LIMIT = { rpm: 180, tpm: 720000 }
+export const NOUS_API_HOST = "https://inference-api.nousresearch.com"
+export const NOUS_API_KEY_ENV = "NOUS_API_KEY"
+
+export const getContextWindow = (model: ExportableModel): number =>
+  model.top_provider?.context_length ?? model.context_length ?? 0
+
+// API prices are per-token; the tool configs below expect USD per 1M tokens
+export const toPerMillion = (perToken: string) =>
+  new BigNumber(perToken).times(1e6).decimalPlaces(6).toNumber()
+
+export function deriveContextTokens(model: ExportableModel): {
+  maxInputTokens: number
+  maxOutputTokens: number
+} {
+  const contextWindow = getContextWindow(model)
+  // reserve 1/8 of the context window for output, capped at the provider's max output
+  const context = new BigNumber(contextWindow)
+  const declaredMaxOutput = model.top_provider?.max_completion_tokens ?? 0
+  const maxOutputTokens =
+    contextWindow > 0
+      ? BigNumber.min(context.dividedToIntegerBy(8), declaredMaxOutput || Infinity).toNumber()
+      : 0
+  const maxInputTokens = BigNumber.max(context.minus(maxOutputTokens), 0).toNumber()
+  return { maxInputTokens, maxOutputTokens }
+}
+
+export const hasImageInput = (model: ExportableModel) =>
+  model.architecture?.input_modalities?.includes("image") ?? false
+export const isReasoningModel = (model: ExportableModel) =>
+  (model.reasoning?.supported_efforts?.length ?? 0) > 0
+export const supportsToolCalling = (model: ExportableModel) =>
+  model.supported_parameters?.includes("tools") ?? false
+
+export const pricingOf = (model: ExportableModel): Partial<Record<PriceField, string>> =>
+  model.pricing ?? {}
+
+// codex
+export interface CodexReasoningLevel {
+  effort: string
+  description: string
+}
+
+export interface ModelCatalogEntry {
+  slug: string
+  display_name: string
+  description: string
+  context_window: number
+  max_context_window: number
+  input_modalities: string[]
+  supported_in_api: boolean
+  visibility: "list"
+  shell_type: "unified_exec"
+  priority: number
+  truncation_policy: { mode: "tokens" | "bytes"; limit: number }
+  default_reasoning_level: string
+  supported_reasoning_levels: CodexReasoningLevel[]
+  support_verbosity: false
+  experimental_supported_tools: string[]
+  model_messages: { instructions_template: string }
+}
+
+export interface ModelCatalog {
+  models: ModelCatalogEntry[]
+}
+
+// Efforts accepted in the catalog JSON. Extends the official config enum ("max"/"ultra"
+// are not valid model_reasoning_effort values) because some models do support them.
+const CODEX_KNOWN_EFFORTS = ["minimal", "low", "medium", "high", "xhigh", "max", "ultra"]
+
+// Efforts valid for the official model_reasoning_effort config key
+const CODEX_CONFIG_EFFORTS = ["minimal", "low", "medium", "high", "xhigh"]
+
+// Codex's InputModality enum is closed (no unknown-value fallback), so anything outside
+// this set fails the whole catalog parse
+const CODEX_KNOWN_MODALITIES = ["text", "image", "audio"]
+
+function buildCodexInputModalities(model: ExportableModel): string[] {
+  const known = [...new Set(model.architecture?.input_modalities ?? [])].filter((modality) =>
+    CODEX_KNOWN_MODALITIES.includes(modality)
+  )
+  // a dropped field defaults Codex to [text, image], so text-only models must say so explicitly
+  return known.length ? known : ["text"]
+}
+
+const CODEX_EFFORT_DESCRIPTIONS: Record<string, string> = {
+  minimal: "Minimal reasoning depth",
+  low: "Fast responses with lighter reasoning",
+  medium: "Balances speed and reasoning depth for everyday tasks",
+  high: "Greater reasoning depth for complex problems",
+  xhigh: "Extra high reasoning depth for complex problems",
+  max: "Maximum reasoning depth for the hardest problems",
+  ultra: "Maximum reasoning with automatic task delegation"
+}
+
+export const CODEX_MODEL_INSTRUCTIONS =
+  "You are Codex, a coding agent powered by this model. You share a workspace with the user and collaborate until their goal is handled. Follow the repository's existing conventions, keep changes minimal and focused, and verify your work when possible."
+
+export function buildModelCatalogJson(models: ExportableModel[]): ModelCatalog {
+  return {
+    models: models.map((model, index) => {
+      const contextWindow = getContextWindow(model)
+      const efforts = effectiveCodexEfforts(model)
+      return {
+        slug: model.id,
+        display_name: model.name,
+        description: model.description || model.name,
+        context_window: contextWindow,
+        max_context_window: contextWindow,
+        input_modalities: buildCodexInputModalities(model),
+        supported_in_api: true,
+        visibility: "list" as const,
+        shell_type: "unified_exec" as const,
+        priority: index + 10,
+        truncation_policy: { mode: "tokens" as const, limit: 10000 },
+        default_reasoning_level: effectiveCodexDefaultEffort(model, efforts),
+        supported_reasoning_levels: efforts.map((effort) => ({
+          effort,
+          description: CODEX_EFFORT_DESCRIPTIONS[effort] ?? `Reasoning level ${effort}`
+        })),
+        support_verbosity: false as const,
+        experimental_supported_tools: [],
+        model_messages: { instructions_template: CODEX_MODEL_INSTRUCTIONS }
+      }
+    })
+  }
+}
+
+export const tomlString = (value: string) => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+
+// Effective reasoning effort: filtered to Codex's official enum, with the default inside it
+export function effectiveCodexEfforts(model: ExportableModel): string[] {
+  const knownEfforts = (model.reasoning?.supported_efforts ?? []).filter((effort) =>
+    CODEX_KNOWN_EFFORTS.includes(effort)
+  )
+  return knownEfforts.length ? knownEfforts : ["medium"]
+}
+
+export function effectiveCodexDefaultEffort(model: ExportableModel, efforts: string[]): string {
+  const requestedDefault = model.reasoning?.default_effort
+  return requestedDefault && efforts.includes(requestedDefault)
+    ? requestedDefault
+    : (efforts[0] ?? "medium")
+}
+
+// The official model_reasoning_effort key only accepts up to xhigh. If the default is an
+// extended effort (max/ultra), fall back to the highest official effort the model supports
+// so the config stays parseable while the catalog still advertises max/ultra
+export function configReasoningEffort(defaultEffort: string, efforts: string[]): string {
+  if (CODEX_CONFIG_EFFORTS.includes(defaultEffort)) return defaultEffort
+  const official = efforts.filter((effort) => CODEX_CONFIG_EFFORTS.includes(effort))
+  return official.at(-1) ?? "xhigh"
+}
+
+export function buildCodexConfigToml(models: ExportableModel[]): string {
+  const firstModel = models[0]
+  const efforts = firstModel ? effectiveCodexEfforts(firstModel) : []
+  const defaultEffort = firstModel ? effectiveCodexDefaultEffort(firstModel, efforts) : ""
+  return `# Codex CLI config snippet for the Nous Research Inference API.
+# Merge these settings into ~/.codex/config.toml, then point
+# model_catalog_json below at the absolute path of the exported models.json.
+
+model_provider = "nous"
+model = "${tomlString(firstModel?.id ?? "")}"
+model_reasoning_effort = "${tomlString(configReasoningEffort(defaultEffort, efforts))}"
+model_catalog_json = "<PATH_TO_MODELS_JSON>"
+
+# Follow the system proxy (Clash/Verge, corporate PAC, ...) for Codex's own
+# outbound requests. Key is singular — the plural "respect_system_proxies"
+# parses as an unknown feature and is silently ignored. Merge this key into an
+# existing [features] table if you already have one.
+[features]
+respect_system_proxy = true
+
+[model_providers.nous]
+name = "Nous Research"
+base_url = "${GCMP_BASE_URL}"
+env_key = "NOUS_API_KEY"
+env_key_instructions = "Set this to your Nous Research API key (portal.nousresearch.com)."
+wire_api = "responses"
+request_max_retries = 4
+stream_max_retries = 5
+stream_idle_timeout_ms = 600000
+`
+}
+
+// codex-osaurus
+// Osaurus serves every chat API from one local port (override with OSU_PORT) and
+// forwards requests to the remote providers configured in its Management window.
+export const OSAURUS_DEFAULT_PORT = 1337
+export const OSAURUS_BASE_URL = `http://127.0.0.1:${OSAURUS_DEFAULT_PORT}/v1`
+
+// Convention for the Nous Research remote provider in Osaurus: name it "nous",
+// then its models are addressed as nous/<model-id> (e.g. nous/xiaomi/mimo-v2.6-flash).
+export const OSAURUS_NOUS_PROVIDER = "nous"
+
+export const osaurusModelId = (modelId: string) =>
+  modelId.startsWith(`${OSAURUS_NOUS_PROVIDER}/`)
+    ? modelId
+    : `${OSAURUS_NOUS_PROVIDER}/${modelId}`
+
+// Same catalog as the direct Codex export, but slugged the way Osaurus addresses
+// remote models so /model switches keep matching the provider's model names.
+export function buildCodexOsaurusModelCatalogJson(models: ExportableModel[]): ModelCatalog {
+  const catalog = buildModelCatalogJson(models)
+  return { models: catalog.models.map((entry) => ({ ...entry, slug: osaurusModelId(entry.slug) })) }
+}
+
+export function buildCodexOsaurusConfigToml(models: ExportableModel[]): string {
+  const firstModel = models[0]
+  const efforts = firstModel ? effectiveCodexEfforts(firstModel) : []
+  const defaultEffort = firstModel ? effectiveCodexDefaultEffort(firstModel, efforts) : ""
+  const modelId = firstModel ? osaurusModelId(firstModel.id) : ""
+  return `# Codex CLI config snippet routed through the local Osaurus proxy.
+# Prerequisite: Osaurus is running with a Remote Provider for the Nous Research
+# Inference API (Management window -> Cloud Models -> Add Provider -> Custom,
+# host inference-api.nousresearch.com, base path /v1, provider name "nous",
+# key stored in Keychain) — its models are then addressed as nous/<model-id>.
+# Merge these settings into ~/.codex/config.toml, then point
+# model_catalog_json below at the absolute path of the exported models.json.
+
+model_provider = "osaurus"
+model = "${tomlString(modelId)}"
+model_reasoning_effort = "${tomlString(configReasoningEffort(defaultEffort, efforts))}"
+model_catalog_json = "<PATH_TO_MODELS_JSON>"
+
+# Follow the system proxy (Clash/Verge, corporate PAC, ...) for Codex's own
+# outbound requests. Key is singular — the plural "respect_system_proxies"
+# parses as an unknown feature and is silently ignored. Merge this key into an
+# existing [features] table if you already have one.
+[features]
+respect_system_proxy = true
+
+[model_providers.osaurus]
+name = "Osaurus"
+base_url = "${OSAURUS_BASE_URL}"
+wire_api = "responses"
+request_max_retries = 4
+stream_max_retries = 5
+stream_idle_timeout_ms = 600000
+# Loopback calls need no credential: Codex talks to Osaurus without a key and
+# Osaurus authenticates upstream with the key from its Keychain. If your Osaurus
+# server requires an access key, uncomment the next line and export it:
+# env_key = "OSAURUS_API_KEY"
+`
+}
+
+// gcmp
+export interface GcmpCompatibleModelEntry {
+  baseUrl: string
+  capabilities: { imageInput: boolean; toolCalling: boolean }
+  contextWindow: number
+  endpoint: string
+  id: string
+  limit: { rpm: number; tpm: number }
+  maxInputTokens: number
+  maxOutputTokens: number
+  model: string
+  modelsEndpoint: string
+  name: string
+  provider: string
+  reasoningEffort?: string[]
+  sdkMode: string
+  tokenPricing?: { USD: number[] }
+  tooltip?: string
+}
+
+export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompatibleModelEntry[] {
+  return models.map((model) => {
+    const contextWindow = getContextWindow(model)
+    const { maxInputTokens, maxOutputTokens } = deriveContextTokens(model)
+    const pricing: Partial<Record<PriceField, string>> = model.pricing ?? {}
+    const promptPrice = pricing.prompt != null ? toPerMillion(pricing.prompt) : 0
+    const completionPrice = pricing.completion != null ? toPerMillion(pricing.completion) : 0
+    const usd: number[] = [promptPrice, completionPrice]
+    if (pricing.input_cache_read != null) usd.push(toPerMillion(pricing.input_cache_read))
+    if (pricing.input_cache_write != null) usd.push(toPerMillion(pricing.input_cache_write))
+    return {
+      baseUrl: GCMP_BASE_URL,
+      capabilities: {
+        imageInput: model.architecture?.input_modalities?.includes("image") ?? false,
+        toolCalling: model.supported_parameters?.includes("tools") ?? false
+      },
+      contextWindow,
+      endpoint: "/chat/completions",
+      id: model.id,
+      limit: GCMP_LIMIT,
+      maxInputTokens,
+      maxOutputTokens,
+      model: model.id,
+      modelsEndpoint: "/models",
+      name: model.name,
+      provider: "nous",
+      ...(model.reasoning?.supported_efforts?.length
+        ? { reasoningEffort: model.reasoning.supported_efforts }
+        : {}),
+      sdkMode: "openai",
+      ...(promptPrice || completionPrice ? { tokenPricing: { USD: usd } } : {}),
+      ...(model.description ? { tooltip: model.description } : {})
+    }
+  })
+}
+
+// github-copilot
+export interface GithubCopilotLanguageModelEntry {
+  id: string
+  name: string
+  url: string
+  toolCalling: boolean
+  vision: boolean
+  maxInputTokens: number
+  maxOutputTokens: number
+  thinking?: boolean
+  supportsReasoningEffort?: string[]
+}
+
+export interface GithubCopilotLanguageModelsProvider {
+  name: string
+  vendor: "customendpoint"
+  apiType: "chat-completions"
+  apiKey: string
+  models: GithubCopilotLanguageModelEntry[]
+}
+
+export function buildGithubCopilotLanguageModels(
+  models: ExportableModel[]
+): GithubCopilotLanguageModelsProvider[] {
+  return [
+    {
+      name: "nous",
+      vendor: "customendpoint",
+      apiType: "chat-completions",
+      apiKey: "${input:nousApiKey}",
+      models: models.map((model) => {
+        const { maxInputTokens, maxOutputTokens } = deriveContextTokens(model)
+        const efforts = model.reasoning?.supported_efforts
+        return {
+          id: model.id,
+          name: model.name,
+          url: `${GCMP_BASE_URL}/chat/completions`,
+          toolCalling: model.supported_parameters?.includes("tools") ?? false,
+          vision: model.architecture?.input_modalities?.includes("image") ?? false,
+          maxInputTokens,
+          maxOutputTokens,
+          ...(efforts?.length ? { thinking: true, supportsReasoningEffort: efforts } : {})
+        }
+      })
+    }
+  ]
+}
+
+// zcode
+export interface ZcodeInputFormat {
+  supportsText: boolean
+  supportsImage: boolean
+  supportsVideo: boolean
+  supportsAudio: boolean
+  supportsPdf: boolean
+}
+
+export interface ZcodeModelProperties {
+  contextWindow?: number
+  inputFormat: ZcodeInputFormat
+  outputFormat: { supportsText: boolean }
+  supportsToolCall: boolean
+  supportsJsonSchemaOutput: boolean
+  supportsNativeWebSearch: boolean
+}
+
+export interface ZcodeModelOptionSpecs {
+  maxOutputTokens?: { max: number; map: string }
+  reasoningLevel?: { values: string[]; map: string }
+}
+
+export interface ZcodeModelConfig {
+  enabled: true
+  properties: ZcodeModelProperties
+  optionSpecs?: ZcodeModelOptionSpecs
+}
+
+export interface ZcodeModelRule {
+  modelId: string
+  providerId: string
+  config: ZcodeModelConfig
+}
+
+export interface ZcodeProviderRule {
+  providerId: string
+  providerName: string
+  config: {
+    group: "standard-personal"
+    access: { type: "api-key"; apiKey: string; apiKeyManagementUrl?: string }
+    api: { type: "openai-chat-completions"; baseUrl: string }
+    personalModelIds: string[]
+    modelOrder: string[]
+  }
+}
+
+export interface ZcodeConfig {
+  schemaVersion: 1
+  config: {
+    providerOrder: string[]
+    providerConfigRules: { providerRules: ZcodeProviderRule[] }
+    modelConfigRules: {
+      providerModelRules: ZcodeModelRule[]
+      manualProviderModelRules: []
+    }
+  }
+}
+
+// fixed id so every export replaces the same provider entry in ~/.zcode/v2/provider_config.json;
+// "builtin:" / "account:" prefixes are reserved for ZCode's own providers
+// schema is the open-source client's zod contracts: packages/provider/src/config/rule-data-schema.ts
+// and packages/shared/src/model-config.ts in https://github.com/zai-org/ZCode
+const ZCODE_PROVIDER_ID = "nous"
+// ZCode's reasoningLevel option vocabulary (from the bundled provider catalog);
+// values must be sorted by ascending semantic strength
+const ZCODE_KNOWN_LEVELS = ["disabled", "none", "minimal", "low", "medium", "high", "xhigh", "max"]
+// ZCode's default openai-chat-completions map sends max_completion_tokens; the Nous gateway wants max_tokens
+const ZCODE_MAX_TOKENS_MAP = "{'max_tokens': maxOutputTokens}"
+const ZCODE_REASONING_MAP = '{"reasoning_effort": reasoningLevel}'
+// Nous Portal is where inference API keys are managed; ZCode's settings UI links to it
+const NOUS_API_KEY_MANAGEMENT_URL = "https://portal.nousresearch.com"
+
+function buildZcodeReasoningValues(efforts: string[] | undefined): string[] {
+  const values = new Set<string>()
+  for (const effort of efforts ?? []) {
+    const level = effort.toLowerCase()
+    if (ZCODE_KNOWN_LEVELS.includes(level)) values.add(level)
+  }
+  // ZCode's schema expects values ordered from weakest to strongest
+  return ZCODE_KNOWN_LEVELS.filter((level) => values.has(level))
+}
+
+export function buildZcodeConfig(models: ExportableModel[]): ZcodeConfig {
+  const modelIds = models.map((model) => model.id)
+  return {
+    schemaVersion: 1,
+    config: {
+      providerOrder: [ZCODE_PROVIDER_ID],
+      providerConfigRules: {
+        providerRules: [
+          {
+            providerId: ZCODE_PROVIDER_ID,
+            providerName: ZCODE_PROVIDER_ID,
+            config: {
+              group: "standard-personal",
+              access: {
+                type: "api-key",
+                apiKey: "${input:nousApiKey}",
+                apiKeyManagementUrl: NOUS_API_KEY_MANAGEMENT_URL
+              },
+              api: { type: "openai-chat-completions", baseUrl: GCMP_BASE_URL },
+              personalModelIds: modelIds,
+              modelOrder: modelIds
+            }
+          }
+        ]
+      },
+      modelConfigRules: {
+        providerModelRules: models.map((model) => {
+          const contextWindow = getContextWindow(model)
+          const { maxOutputTokens } = deriveContextTokens(model)
+          const inputModalities = model.architecture?.input_modalities?.length
+            ? model.architecture.input_modalities
+            : ["text"]
+          const outputModalities = model.architecture?.output_modalities?.length
+            ? model.architecture.output_modalities
+            : ["text"]
+          const parameters = model.supported_parameters ?? []
+          const reasoningValues = buildZcodeReasoningValues(model.reasoning?.supported_efforts)
+          const optionSpecs: ZcodeModelOptionSpecs = {
+            ...(reasoningValues.length
+              ? { reasoningLevel: { values: reasoningValues, map: ZCODE_REASONING_MAP } }
+              : {}),
+            ...(maxOutputTokens > 0
+              ? { maxOutputTokens: { max: maxOutputTokens, map: ZCODE_MAX_TOKENS_MAP } }
+              : {})
+          }
+          return {
+            modelId: model.id,
+            config: {
+              enabled: true as const,
+              properties: {
+                ...(contextWindow > 0 ? { contextWindow } : {}),
+                inputFormat: {
+                  supportsText: inputModalities.includes("text"),
+                  supportsImage: inputModalities.includes("image"),
+                  supportsVideo: inputModalities.includes("video"),
+                  supportsAudio: inputModalities.includes("audio"),
+                  // the API's "file" modality covers document uploads such as PDFs
+                  supportsPdf: inputModalities.includes("file")
+                },
+                outputFormat: { supportsText: outputModalities.includes("text") },
+                supportsToolCall: supportsToolCalling(model),
+                supportsJsonSchemaOutput: parameters.includes("structured_outputs"),
+                supportsNativeWebSearch: parameters.includes("web_search_options")
+              },
+              ...(Object.keys(optionSpecs).length ? { optionSpecs } : {})
+            },
+            providerId: ZCODE_PROVIDER_ID
+          }
+        }),
+        manualProviderModelRules: []
+      }
+    }
+  }
+}
+
+// dsh
+export type DshModality = "text" | "image"
+
+export interface DshModelProfile {
+  id: string
+  name: string
+  contextWindow: number
+  maxTokens: number
+  input?: DshModality[]
+  reasoningEfforts?: false | Record<string, string | null>
+}
+
+export interface DshProviderProfile {
+  displayName: string
+  apiKeyEnv: string
+  api: "openai-completions"
+  baseURL: string
+  compat: { supportsDeveloperRole: false; maxTokensField: "max_tokens" }
+  models: DshModelProfile[]
+}
+
+export interface DshSettings {
+  "llm-pi-ai": { providers: Record<string, DshProviderProfile> }
+}
+
+// fixed route id so every export replaces the same provider instead of duplicating it
+export const DSH_PROVIDER_ID = "nous"
+export const DSH_API_KEY_ENV = "NOUS_API_KEY"
+// the pi-ai loader entry both DSH surfaces (settings.yaml and the desktop profile patch) target
+export const DSH_LLM_PI_AI_ID = "llm-pi-ai"
+
+// pi-ai only accepts its own level names as reasoningEfforts keys and rejects the whole section otherwise
+const DSH_THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"]
+// the API calls the level that turns thinking off "none"; pi-ai calls it "off"
+const DSH_EFFORT_ALIASES: Record<string, string> = { none: "off" }
+
+function buildDshReasoningEfforts(efforts: string[] | undefined) {
+  const declared = new Map<string, string>()
+  for (const effort of efforts ?? []) {
+    const level = DSH_EFFORT_ALIASES[effort] ?? effort
+    if (!DSH_THINKING_LEVELS.includes(level)) continue
+    // the value is the wire spelling dispatch sends when that level is picked
+    declared.set(level, effort)
+  }
+  if (declared.size === 0) return undefined
+  // reasoningEfforts must offer a level beyond "off"; "off" alone is not a reasoning model
+  if ([...declared.keys()].every((level) => level === "off")) return false
+  return Object.fromEntries(declared) as Record<string, string | null>
+}
+
+export function buildDshProviderProfile(models: ExportableModel[]): DshProviderProfile {
+  return {
+    displayName: "nous",
+    apiKeyEnv: DSH_API_KEY_ENV,
+    api: "openai-completions",
+    baseURL: GCMP_BASE_URL,
+    // pi-ai treats an unrecognized gateway URL as plain OpenAI; these are the docs' first corrections
+    compat: { supportsDeveloperRole: false, maxTokensField: "max_tokens" },
+    models: models.map((model) => {
+      const contextWindow = getContextWindow(model)
+      const { maxOutputTokens } = deriveContextTokens(model)
+      const input = (model.architecture?.input_modalities ?? []).filter(
+        (modality): modality is DshModality => modality === "text" || modality === "image"
+      )
+      const reasoningEfforts = buildDshReasoningEfforts(model.reasoning?.supported_efforts)
+      const entry: DshModelProfile = {
+        id: model.id,
+        name: model.name,
+        contextWindow,
+        maxTokens: maxOutputTokens,
+        // only images need declaring: text is the route's default input
+        ...(input.includes("image") ? { input } : {}),
+        ...(reasoningEfforts === undefined ? {} : { reasoningEfforts })
+      }
+      return entry
+    })
+  }
+}
+
+export function buildDshProviderConfig(models: ExportableModel[]): DshSettings {
+  return {
+    [DSH_LLM_PI_AI_ID]: {
+      providers: {
+        [DSH_PROVIDER_ID]: buildDshProviderProfile(models)
+      }
+    }
+  }
+}
+
+// dsh-desktop
+// the desktop app composes its config from a profile, and a profile's user layer is a
+// cordis.patch.yml: a top-level YAML array of id-targeted patch entries applied after the
+// bundle layers, so one entry of exactly this shape is what the desktop app mounts.
+export interface DshDesktopPatchEntry {
+  id: typeof DSH_LLM_PI_AI_ID
+  name: string
+  config: { providers: Record<string, DshProviderProfile> }
+}
+
+// `name` must be the bundling package, otherwise the patch targets no entry and only
+// prints a stderr warning at boot
+const DSH_DESKTOP_PATCH_PACKAGE = "@deepseek-ai/dsh-llm-pi-ai"
+
+export function buildDshDesktopPatch(models: ExportableModel[]): DshDesktopPatchEntry[] {
+  return [
+    {
+      id: DSH_LLM_PI_AI_ID,
+      name: DSH_DESKTOP_PATCH_PACKAGE,
+      config: {
+        providers: {
+          [DSH_PROVIDER_ID]: buildDshProviderProfile(models)
+        }
+      }
+    }
+  ]
+}
+
+// litellm
+// ---- LiteLLM (proxy config.yaml) ----
+
+export interface LitellmModelEntry {
+  model_name: string
+  litellm_params: {
+    model: string
+    api_base: string
+    api_key: string
+  }
+}
+
+export function buildLitellmConfig(models: ExportableModel[]): LitellmModelEntry[] {
+  return models.map((model) => ({
+    model_name: `nous/${model.id}`,
+    litellm_params: {
+      model: `openai/${model.id}`,
+      api_base: GCMP_BASE_URL,
+      api_key: `os.environ/${NOUS_API_KEY_ENV}`
+    }
+  }))
+}
+
+// cliproxyapi
+// ---- CLIProxyAPI (config.yaml openai-compatibility fragment) ----
+
+export type CliproxyapiModality = "text" | "image"
+
+export interface CliproxyapiApiKeyEntry {
+  "api-key": string
+}
+
+export interface CliproxyapiModelEntry {
+  name: string
+  alias: string
+  "display-name"?: string
+  "max-context-length"?: number
+  "input-modalities"?: CliproxyapiModality[]
+  "output-modalities"?: CliproxyapiModality[]
+  thinking?: { levels: string[] }
+}
+
+export interface CliproxyapiProviderEntry {
+  name: string
+  "base-url": string
+  "api-key-entries": CliproxyapiApiKeyEntry[]
+  models: CliproxyapiModelEntry[]
+  headers: Record<string, string>
+}
+
+export interface CliproxyapiConfig {
+  "openai-compatibility": CliproxyapiProviderEntry[]
+}
+
+// fixed provider name so every export replaces the same openai-compatibility entry
+const CLIPROXYAPI_PROVIDER_NAME = "nous"
+// CLIProxyAPI reads provider api keys as literal config values (no env expansion),
+// so the export ships a placeholder the user replaces
+const CLIPROXYAPI_API_KEY_PLACEHOLDER = "YOUR_NOUS_API_KEY"
+
+// openai-compatibility only understands text/image modalities; video, file, audio and embeddings are dropped
+const CLIPROXYAPI_KNOWN_MODALITIES = ["text", "image"]
+// thinking level vocabulary from CLIProxyAPI's internal/thinking; undeclared levels fail request validation
+const CLIPROXYAPI_KNOWN_LEVELS = [
+  "none",
+  "auto",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max"
+]
+
+function buildCliproxyapiModalities(raw: string[] | undefined): CliproxyapiModality[] {
+  const known = [...new Set(raw ?? [])].filter((modality): modality is CliproxyapiModality =>
+    CLIPROXYAPI_KNOWN_MODALITIES.includes(modality)
+  )
+  return known.length ? known : ["text"]
+}
+
+function buildCliproxyapiThinkingLevels(efforts: string[] | undefined): string[] {
+  const levels = new Set<string>()
+  for (const effort of efforts ?? []) {
+    const level = effort.toLowerCase()
+    if (CLIPROXYAPI_KNOWN_LEVELS.includes(level)) levels.add(level)
+  }
+  return [...levels]
+}
+
+export function buildCliproxyapiConfig(models: ExportableModel[]): CliproxyapiConfig {
+  return {
+    "openai-compatibility": [
+      {
+        name: CLIPROXYAPI_PROVIDER_NAME,
+        "base-url": GCMP_BASE_URL,
+        "api-key-entries": [{ "api-key": CLIPROXYAPI_API_KEY_PLACEHOLDER }],
+        headers: {
+          "User-Agent": "HermesAgent/0.21.7",
+          Authorization: "Bearer " + CLIPROXYAPI_API_KEY_PLACEHOLDER
+        },
+        models: models.map((model) => {
+          const contextWindow = getContextWindow(model)
+          const outputModalities = buildCliproxyapiModalities(model.architecture?.output_modalities)
+          const levels = buildCliproxyapiThinkingLevels(model.reasoning?.supported_efforts)
+          return {
+            name: model.id,
+            // empty alias: CPA falls back to the upstream name, so the client-visible id is unchanged
+            alias: "",
+            ...(model.name ? { "display-name": model.name } : {}),
+            ...(contextWindow > 0 ? { "max-context-length": contextWindow } : {}),
+            "input-modalities": buildCliproxyapiModalities(model.architecture?.input_modalities),
+            // text is the default output; only image-producing models need declaring
+            ...(outputModalities.includes("image")
+              ? { "output-modalities": outputModalities }
+              : {}),
+            ...(levels.length ? { thinking: { levels } } : {})
+          }
+        })
+      }
+    ]
+  }
+}
+
+// opencode
+// ---- OpenCode (opencode.json, native v2 shape) ----
+// Field names per https://opencode.ai/v2/docs/providers/ and the V1→V2
+// migration guide: provider→providers, npm→package (with the aisdk: prefix),
+// options→settings, tool_call/attachment→capabilities. V1's reasoning,
+// attachment, and tool_call flags are ignored by v2 with a warning, so the
+// export no longer emits them.
+
+export type OpencodeModality = "text" | "image"
+
+export interface OpencodeModelCapabilities {
+  tools: boolean
+  input: OpencodeModality[]
+  output: OpencodeModality[]
+}
+
+export interface OpencodeModelEntry {
+  name: string
+  limit: { context: number; input: number; output: number }
+  capabilities: OpencodeModelCapabilities
+}
+
+export interface OpencodeProviderEntry {
+  package: "aisdk:@ai-sdk/openai-compatible"
+  name: string
+  settings: { baseURL: string; apiKey: string }
+  models: Record<string, OpencodeModelEntry>
+}
+
+export interface OpencodeConfig {
+  $schema: string
+  providers: Record<string, OpencodeProviderEntry>
+}
+
+// v2 always writes capabilities, so fall back to text-only output
+const buildCapabilities = (model: ExportableModel): OpencodeModelCapabilities => {
+  const inputDeclared = model.architecture?.input_modalities ?? []
+  const outputDeclared = model.architecture?.output_modalities ?? []
+  const pick = (declared: string[]) =>
+    (["text", "image"] as const).filter((modality) => declared.includes(modality))
+  const input = pick(inputDeclared)
+  const output = pick(outputDeclared)
+  return {
+    tools: supportsToolCalling(model),
+    input: input.length > 0 ? input : ["text"],
+    output: output.length > 0 ? output : ["text"]
+  }
+}
+
+export function buildOpencodeConfig(models: ExportableModel[]): OpencodeConfig {
+  const modelEntries = Object.fromEntries(
+    models.map((model) => {
+      const contextWindow = getContextWindow(model)
+      const { maxInputTokens, maxOutputTokens } = deriveContextTokens(model)
+      const entry: OpencodeModelEntry = {
+        name: model.name,
+        limit: { context: contextWindow, input: maxInputTokens, output: maxOutputTokens },
+        capabilities: buildCapabilities(model)
+      }
+      return [model.id, entry]
+    })
+  )
+  return {
+    $schema: "https://opencode.ai/config.json",
+    providers: {
+      nous: {
+        package: "aisdk:@ai-sdk/openai-compatible",
+        name: "nous",
+        settings: {
+          baseURL: GCMP_BASE_URL,
+          apiKey: "{env:NOUS_API_KEY}"
+        },
+        models: modelEntries
+      }
+    }
+  }
+}
+
+// crush
+// ---- Crush (crush.json) ----
+
+export interface CrushModelEntry {
+  id: string
+  name: string
+  context_window: number
+  default_max_tokens: number
+  cost_per_1m_in: number
+  cost_per_1m_out: number
+  cost_per_1m_in_cached: number
+  cost_per_1m_out_cached: number
+  can_reason: boolean
+  supports_attachments: boolean
+}
+
+export interface CrushProviderEntry {
+  id: string
+  name: string
+  type: "openai"
+  base_url: string
+  api_key: string
+  models: CrushModelEntry[]
+}
+
+export interface CrushConfig {
+  $schema: string
+  providers: Record<string, CrushProviderEntry>
+}
+
+export function buildCrushConfig(models: ExportableModel[]): CrushConfig {
+  return {
+    $schema: "https://charm.land/crush.json",
+    providers: {
+      nous: {
+        id: "nous",
+        name: "nous",
+        type: "openai",
+        base_url: GCMP_BASE_URL,
+        api_key: `$${NOUS_API_KEY_ENV}`,
+        models: models.map((model) => {
+          const pricing: Partial<Record<PriceField, string>> = model.pricing ?? {}
+          const contextWindow = getContextWindow(model)
+          const { maxOutputTokens } = deriveContextTokens(model)
+          return {
+            id: model.id,
+            name: model.name,
+            context_window: contextWindow,
+            default_max_tokens: maxOutputTokens,
+            // all four cost fields are schema-required; cache-write has no API price
+            cost_per_1m_in: pricing.prompt != null ? toPerMillion(pricing.prompt) : 0,
+            cost_per_1m_out: pricing.completion != null ? toPerMillion(pricing.completion) : 0,
+            cost_per_1m_in_cached:
+              pricing.input_cache_read != null ? toPerMillion(pricing.input_cache_read) : 0,
+            cost_per_1m_out_cached: 0,
+            can_reason: isReasoningModel(model),
+            supports_attachments: hasImageInput(model)
+          }
+        })
+      }
+    }
+  }
+}
+
+// chatbox
+// ---- Chatbox (one-click provider import) ----
+
+export type ChatboxCapability = "vision" | "reasoning" | "tool_use"
+
+export interface ChatboxModelEntry {
+  modelId: string
+  nickname: string
+  type: "chat"
+  capabilities?: ChatboxCapability[]
+  contextWindow?: number
+  maxOutput?: number
+}
+
+export interface ChatboxProviderConfig {
+  id: string
+  name: string
+  type: "openai"
+  iconUrl: string
+  urls: { website: string }
+  settings: {
+    apiHost: string
+    models: ChatboxModelEntry[]
+  }
+}
+
+export function buildChatboxProviderConfig(models: ExportableModel[]): ChatboxProviderConfig {
+  return {
+    id: "nous",
+    name: "nous",
+    type: "openai",
+    iconUrl: "https://nousresearch.com/favicon.ico",
+    urls: { website: "https://nousresearch.com" },
+    settings: {
+      // chatbox appends /v1/chat/completions itself, so no /v1 here
+      apiHost: NOUS_API_HOST,
+      models: models.map((model) => {
+        const contextWindow = getContextWindow(model)
+        const { maxOutputTokens } = deriveContextTokens(model)
+        const capabilities: ChatboxCapability[] = []
+        if (hasImageInput(model)) capabilities.push("vision")
+        if (isReasoningModel(model)) capabilities.push("reasoning")
+        if (supportsToolCalling(model)) capabilities.push("tool_use")
+        return {
+          modelId: model.id,
+          nickname: model.name,
+          type: "chat",
+          ...(capabilities.length ? { capabilities } : {}),
+          ...(contextWindow ? { contextWindow } : {}),
+          ...(maxOutputTokens ? { maxOutput: maxOutputTokens } : {})
+        }
+      })
+    }
+  }
+}
+
+// cherry-studio
+// ---- Cherry Studio (provider entry for settings.json data.providers) ----
+
+export type CherryStudioCapability = "vision" | "reasoning" | "function_calling"
+
+export interface CherryStudioModelEntry {
+  id: string
+  name: string
+  provider: string
+  group: string
+  description?: string
+  capabilities?: Array<{ type: CherryStudioCapability }>
+}
+
+export interface CherryStudioProviderEntry {
+  id: string
+  type: "openai"
+  name: string
+  apiKey: string
+  apiHost: string
+  models: CherryStudioModelEntry[]
+  enabled: boolean
+  isSystem: false
+}
+
+export function buildCherryStudioProvider(models: ExportableModel[]): CherryStudioProviderEntry {
+  return {
+    id: "nous",
+    type: "openai",
+    name: "nous",
+    apiKey: "",
+    // cherry studio appends /v1 itself, so no /v1 here
+    apiHost: NOUS_API_HOST,
+    models: models.map((model) => {
+      const capabilities: CherryStudioCapability[] = []
+      if (hasImageInput(model)) capabilities.push("vision")
+      if (isReasoningModel(model)) capabilities.push("reasoning")
+      if (supportsToolCalling(model)) capabilities.push("function_calling")
+      return {
+        id: model.id,
+        name: model.name,
+        provider: "nous",
+        group: "nous",
+        ...(model.description ? { description: model.description } : {}),
+        ...(capabilities.length ? { capabilities: capabilities.map((type) => ({ type })) } : {})
+      }
+    }),
+    enabled: true,
+    isSystem: false
+  }
+}
+
+// zed
+// ---- Zed (language_models.openai_compatible settings fragment) ----
+
+// Zed's reasoning_effort enum for OpenAI-compatible providers
+const ZED_KNOWN_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+
+export type ZedReasoningEffort = (typeof ZED_KNOWN_EFFORTS)[number]
+
+export interface ZedModelCapabilities {
+  tools: boolean
+  images: boolean
+  parallel_tool_calls: boolean
+  prompt_cache_key: boolean
+  chat_completions: boolean
+  interleaved_reasoning: boolean
+  max_tokens_parameter: boolean
+}
+
+export interface ZedAvailableModel {
+  name: string
+  display_name?: string
+  max_tokens: number
+  max_output_tokens?: number
+  reasoning_effort?: ZedReasoningEffort
+  capabilities?: ZedModelCapabilities
+}
+
+export interface ZedOpenAiCompatibleProvider {
+  api_url: string
+  available_models: ZedAvailableModel[]
+}
+
+export interface ZedSettings {
+  language_models: {
+    openai_compatible: Record<string, ZedOpenAiCompatibleProvider>
+  }
+}
+
+// fixed provider id so every export replaces the same entry; Zed derives the env
+// var name from it (NOUS → NOUS_API_KEY)
+const ZED_PROVIDER_ID = "nous"
+
+function buildZedReasoningEffort(
+  efforts: string[] | undefined,
+  defaultEffort: string | undefined
+): ZedReasoningEffort | undefined {
+  const known = efforts?.filter((e): e is ZedReasoningEffort => ZED_KNOWN_EFFORTS.includes(e)) ?? []
+  const nonNone = known.filter((effort) => effort !== "none")
+  const usableDefault =
+    defaultEffort && defaultEffort !== "none" && ZED_KNOWN_EFFORTS.includes(defaultEffort)
+      ? (defaultEffort as ZedReasoningEffort)
+      : undefined
+  // Zed's provider setup only exposes non-none levels: prefer the model's default,
+  // falling back to its first supported non-none effort
+  return usableDefault ?? nonNone[0]
+}
+
+// emitted in full (not just deviations from Zed's defaults) so exports stay stable if
+// Zed changes them; max_tokens_parameter is true because the gateway expects the output
+// limit as max_tokens, not max_completion_tokens (same fix the DeepSeek Harness compat applies)
+function buildZedCapabilities(model: ExportableModel): ZedModelCapabilities {
+  return {
+    tools: supportsToolCalling(model),
+    images: hasImageInput(model),
+    parallel_tool_calls: false,
+    prompt_cache_key: false,
+    chat_completions: true,
+    interleaved_reasoning: false,
+    max_tokens_parameter: true
+  }
+}
+
+export function buildZedSettings(models: ExportableModel[]): ZedSettings {
+  return {
+    language_models: {
+      openai_compatible: {
+        [ZED_PROVIDER_ID]: {
+          api_url: GCMP_BASE_URL,
+          available_models: models.map((model) => {
+            const contextWindow = getContextWindow(model)
+            const { maxOutputTokens } = deriveContextTokens(model)
+            const reasoningEffort = buildZedReasoningEffort(
+              model.reasoning?.supported_efforts,
+              model.reasoning?.default_effort
+            )
+            return {
+              name: model.id,
+              ...(model.name ? { display_name: model.name } : {}),
+              max_tokens: contextWindow,
+              ...(maxOutputTokens ? { max_output_tokens: maxOutputTokens } : {}),
+              ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+              capabilities: buildZedCapabilities(model)
+            }
+          })
+        }
+      }
+    }
+  }
+}
+
+// mimocode
+// ---- Xiaomi MiMo Desktop (mimocode.jsonc) ----
+// Model entry fields per https://mimo.xiaomi.com/mimocode/config.json ProviderConfig
+
+export interface MimocodeCost {
+  input: number
+  output: number
+  cache_read?: number
+  cache_write?: number
+}
+
+export interface MimocodeModelEntry {
+  id: string
+  name: string
+  attachment: boolean
+  reasoning: boolean
+  temperature: boolean
+  tool_call: boolean
+  cost?: MimocodeCost
+  limit: { context: number; input: number; output: number }
+  modalities: { input: string[]; output: string[] }
+  headers: Record<string, string>
+}
+
+export interface MimocodeProviderEntry {
+  id: string
+  name: string
+  npm: "@ai-sdk/openai-compatible"
+  models: Record<string, MimocodeModelEntry>
+  options: { apiKey: string; baseURL: string }
+}
+
+export interface MimocodeConfig {
+  $schema: string
+  provider: Record<string, MimocodeProviderEntry>
+}
+
+// modality enum from the mimocode config schema
+const INPUT_MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
+const OUTPUT_MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
+
+const MIMOCODE_USER_AGENT = "HermesAgent/0.21.7"
+
+const buildModalities = (model: ExportableModel) => {
+  const inputDeclared = model.architecture?.input_modalities ?? []
+  const outputDeclared = model.architecture?.output_modalities ?? []
+  const input = INPUT_MODALITIES.filter((modality) => inputDeclared.includes(modality))
+  const output = OUTPUT_MODALITIES.filter((modality) => outputDeclared.includes(modality))
+  return {
+    input: input.length > 0 ? input : ["text"],
+    output: output.length > 0 ? output : ["text"]
+  }
+}
+
+// cost is USD per 1M tokens; omit unless the API reports both required rates
+const buildCost = (model: ExportableModel): MimocodeCost | undefined => {
+  const pricing = model.pricing
+  if (!pricing?.prompt || !pricing?.completion) return undefined
+  const cost: MimocodeCost = {
+    input: toPerMillion(pricing.prompt),
+    output: toPerMillion(pricing.completion)
+  }
+  if (pricing.input_cache_read) cost.cache_read = toPerMillion(pricing.input_cache_read)
+  if (pricing.input_cache_write) cost.cache_write = toPerMillion(pricing.input_cache_write)
+  return cost
+}
+
+export function buildMimocodeConfig(models: ExportableModel[]): MimocodeConfig {
+  const modelEntries = Object.fromEntries(
+    models.map((model) => {
+      const contextWindow = getContextWindow(model)
+      const { maxInputTokens, maxOutputTokens } = deriveContextTokens(model)
+      const cost = buildCost(model)
+      const entry: MimocodeModelEntry = {
+        id: model.id,
+        name: model.name,
+        attachment: hasImageInput(model),
+        reasoning: isReasoningModel(model),
+        temperature: model.supported_parameters?.includes("temperature") ?? false,
+        tool_call: supportsToolCalling(model),
+        ...(cost ? { cost } : {}),
+        limit: { context: contextWindow, input: maxInputTokens, output: maxOutputTokens },
+        modalities: buildModalities(model),
+        headers: { "User-Agent": MIMOCODE_USER_AGENT }
+      }
+      return [model.id, entry]
+    })
+  )
+  return {
+    $schema: "https://mimo.xiaomi.com/mimocode/config.json",
+    provider: {
+      nous: {
+        id: "nous",
+        name: "nous",
+        npm: "@ai-sdk/openai-compatible",
+        models: modelEntries,
+        options: {
+          apiKey: "{env:NOUS_API_KEY}",
+          baseURL: GCMP_BASE_URL
+        }
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // merge pipeline
 // ---------------------------------------------------------------------------
 
@@ -1870,6 +3209,7 @@ export async function runMerge(files: string[], opts: RunOptions = {}): Promise<
   const outcomes = new Map<string, FileOutcome>()
   const loaded: { file: string; text: string; det: Detection }[] = []
   const order: string[] = []
+  const generatedFiles = new Set((opts.generated ?? []).map((g) => g.file))
 
   // phase 1: read + detect
   for (const file of files) {
@@ -1891,9 +3231,19 @@ export async function runMerge(files: string[], opts: RunOptions = {}): Promise<
     loaded.push({ file, text, det })
   }
 
+  for (const g of opts.generated ?? []) {
+    order.push(g.file)
+    const det = detectExport(g.file, g.text, "loose")
+    if (!det) {
+      outcomes.set(g.file, { input: g.file, status: "failed", message: { key: "unrecognized" } })
+      continue
+    }
+    loaded.push({ file: g.file, text: g.text, det })
+  }
+
   // phase 1.5: a Codex config.toml brings its sibling models.json along
   for (const item of [...loaded]) {
-    if (item.det.ruleId !== "codex") continue
+    if (item.det.ruleId !== "codex" || generatedFiles.has(item.file)) continue
     const sibling = join(dirname(item.file), "models.json")
     if (order.includes(sibling)) continue
     if (!(await fileExists(sibling))) continue
@@ -2041,6 +3391,186 @@ async function mergeLoaded(
 
 export const RULE_LIST_ORDER = RULES
 
+const MODELS_API_URL = "https://inference-api.nousresearch.com/v1/models"
+
+interface ExportFileSpec {
+  fileName: string
+  format: Format
+  /** pasted into the app UI instead of merged into a config file (e.g. Chatbox) */
+  pasteOnly?: boolean
+  build: (models: ExportableModel[]) => unknown
+}
+
+/** Mirrors `exporterRegistry` in src/model-export/registry.ts; merge.test.ts keeps them in sync. */
+export const EXPORT_PROGRAMS: { id: string; files: ExportFileSpec[] }[] = [
+  {
+    id: "codex",
+    files: [
+      { fileName: "config.toml", format: "toml", build: buildCodexConfigToml },
+      { fileName: "models.json", format: "json", build: buildModelCatalogJson }
+    ]
+  },
+  {
+    id: "codex-osaurus",
+    files: [
+      { fileName: "config.toml", format: "toml", build: buildCodexOsaurusConfigToml },
+      { fileName: "models.json", format: "json", build: buildCodexOsaurusModelCatalogJson }
+    ]
+  },
+  {
+    id: "github-copilot-gcmp",
+    files: [{ fileName: "gcmp-compatible-models.json", format: "json", build: buildGcmpCompatibleModels }]
+  },
+  {
+    id: "github-copilot-language-models",
+    files: [
+      { fileName: "chatLanguageModels.json", format: "json", build: buildGithubCopilotLanguageModels }
+    ]
+  },
+  {
+    id: "zcode",
+    files: [{ fileName: "zcode-provider-config.json", format: "json", build: buildZcodeConfig }]
+  },
+  {
+    id: "deepseek-harness",
+    files: [{ fileName: "dsh-llm-pi-ai.yaml", format: "yaml", build: buildDshProviderConfig }]
+  },
+  {
+    id: "deepseek-harness-desktop",
+    files: [{ fileName: "dsh-desktop-cordis-patch.yml", format: "yaml", build: buildDshDesktopPatch }]
+  },
+  {
+    id: "litellm",
+    files: [{ fileName: "litellm-config.yaml", format: "yaml", build: buildLitellmConfig }]
+  },
+  {
+    id: "cliproxyapi",
+    files: [{ fileName: "cliproxyapi-config.yaml", format: "yaml", build: buildCliproxyapiConfig }]
+  },
+  {
+    id: "opencode",
+    files: [{ fileName: "opencode.json", format: "json", build: buildOpencodeConfig }]
+  },
+  {
+    id: "crush",
+    files: [{ fileName: "crush.json", format: "json", build: buildCrushConfig }]
+  },
+  {
+    id: "chatbox",
+    files: [{ fileName: "chatbox-nous-provider.json", format: "json", pasteOnly: true, build: buildChatboxProviderConfig }]
+  },
+  {
+    id: "cherry-studio",
+    files: [{ fileName: "cherry-studio-nous.json", format: "json", build: buildCherryStudioProvider }]
+  },
+  {
+    id: "zed",
+    files: [{ fileName: "zed-language-models.json", format: "json", build: buildZedSettings }]
+  },
+  {
+    id: "mimocode",
+    files: [{ fileName: "mimocode.jsonc", format: "json", build: buildMimocodeConfig }]
+  }
+]
+
+interface ProgramSpec {
+  program: string
+  ids: string[]
+}
+
+function parseProgramSpecs(raws: string[]): ProgramSpec[] {
+  const byProgram = new Map<string, string[]>()
+  for (const raw of raws) {
+    const eq = raw.indexOf("=")
+    const program = eq > 0 ? raw.slice(0, eq).trim() : ""
+    const ids = eq > 0 ? raw.slice(eq + 1).split(",").map((s) => s.trim()).filter(Boolean) : []
+    if (!program || ids.length === 0) throw new MergeError({ key: "programSyntax", args: [raw] })
+    byProgram.set(program, [...(byProgram.get(program) ?? []), ...ids])
+  }
+  return [...byProgram].map(([program, ids]) => ({ program, ids: [...new Set(ids)] }))
+}
+
+async function fetchUpstreamModels(): Promise<ExportableModel[]> {
+  const res = await fetch(MODELS_API_URL, { signal: AbortSignal.timeout(15_000) })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const body = (await res.json()) as { data?: ExportableModel[] }
+  return body.data ?? []
+}
+
+const serializeGenerated = (value: unknown, format: Format): string =>
+  format === "yaml"
+    ? yaml.stringify(value)
+    : format === "toml"
+      ? String(value)
+      : JSON.stringify(value, null, 2)
+
+async function generateExports(raws: string[]): Promise<GeneratedExport[]> {
+  const specs = parseProgramSpecs(raws)
+  for (const spec of specs) {
+    if (!EXPORT_PROGRAMS.some((p) => p.id === spec.program))
+      throw new MergeError({ key: "unknownProgram", args: [spec.program] })
+  }
+
+  let upstream: ExportableModel[]
+  try {
+    upstream = await fetchUpstreamModels()
+  } catch (e) {
+    throw new MergeError({
+      key: "fetchModelsFail",
+      args: [e instanceof Error ? e.message : String(e)]
+    })
+  }
+  const byId = new Map(upstream.map((m) => [m.id, m]))
+
+  const generated: GeneratedExport[] = []
+  for (const spec of specs) {
+    const missing = spec.ids.filter((id) => !byId.has(id))
+    if (missing.length > 0)
+      throw new MergeError({ key: "unknownModel", args: [missing.join(", ")] })
+    const models = spec.ids.map((id) => byId.get(id)!)
+    const program = EXPORT_PROGRAMS.find((p) => p.id === spec.program)!
+    for (const file of program.files) {
+      generated.push({
+        file: join(GENERATED_DIR, program.id, file.fileName),
+        text: serializeGenerated(file.build(models), file.format)
+      })
+    }
+  }
+  return generated
+}
+
+const GENERATED_DIR = "<generated>"
+
+/** Remote entrypoint the dashboard embeds in its one-command export block. */
+export const REMOTE_MERGE_URL =
+  "https://raw.githubusercontent.com/ftzahao/NousResearchModelsPanel/main/scripts/merge.ts"
+
+const DENO_ONE_PREFIX = `deno run --no-lock --allow-read --allow-write --allow-env --allow-net ${REMOTE_MERGE_URL}`
+
+const REMOTE_NOTE_KEY = "remoteNote"
+const PASTE_ONLY_NOTE_KEY = "pasteOnly"
+
+/**
+ * Single copy-paste command that generates the config for `program` from `ids`
+ * and merges it in place — no download, no separate merge step.
+ * Returns `{ note }` for paste-only programs or an empty selection, so the
+ * dashboard can render guidance instead of a command.
+ */
+export function buildOneCommand(
+  program: string,
+  ids: string[],
+  lang: "zh" | "en"
+): { command: string } | { note: string } {
+  const spec = EXPORT_PROGRAMS.find((p) => p.id === program)
+  if (!spec) throw new Error(`unknown program: ${program}`)
+  const pasteOnly = spec.files.every((f) => f.pasteOnly === true)
+  if (pasteOnly) return { note: MERGE_CLI_MESSAGES[lang][PASTE_ONLY_NOTE_KEY as "pasteOnly"] }
+  if (ids.length === 0) return { note: MERGE_CLI_MESSAGES[lang].needSelection }
+  return {
+    command: `${DENO_ONE_PREFIX} --one ${program}=${ids.map(encodeURIComponent).join(",")}`
+  }
+}
+
 function pickLang(arg: string | undefined): Lang {
   if (arg === "zh" || arg === "en") return arg
   const env = process.env.LC_ALL || process.env.LANG || ""
@@ -2138,6 +3668,8 @@ export async function main(argv: string[]): Promise<number> {
     list?: boolean
     lang?: string
     help?: boolean
+    program?: string[]
+    one?: string[]
   }
   let values: CliValues
   let positionals: string[]
@@ -2154,7 +3686,9 @@ export async function main(argv: string[]): Promise<number> {
         "models-out": { type: "string" },
         list: { type: "boolean", short: "l" },
         lang: { type: "string" },
-        help: { type: "boolean", short: "h" }
+        help: { type: "boolean", short: "h" },
+        program: { type: "string", short: "p", multiple: true },
+        one: { type: "string", multiple: true }
       }
     })
     values = parsed.values
@@ -2167,6 +3701,7 @@ export async function main(argv: string[]): Promise<number> {
   const lang = pickLang(values.lang)
   const t = MERGE_CLI_MESSAGES[lang]
   const home = process.env.HOME ?? homedir()
+  const programs = [...(values.program ?? []), ...(values.one ?? [])]
 
   if (values.help) {
     printUsage(t)
@@ -2174,12 +3709,25 @@ export async function main(argv: string[]): Promise<number> {
   }
   if (values.list) {
     printRuleList(t, home, process.cwd())
+    console.log(`\n${t.programsHeader}:`)
+    for (const p of EXPORT_PROGRAMS) console.log(`  ${p.id}`)
     return 0
+  }
+
+  let generated: GeneratedExport[] = []
+  if (programs.length > 0) {
+    try {
+      generated = await generateExports(programs)
+    } catch (e) {
+      if (!(e instanceof MergeError)) throw e
+      console.log(`✗ ${fmt(t[e.notice.key], ...(e.notice.args ?? []))}`)
+      return 1
+    }
   }
 
   let paths = positionals
   let scanned: string | null = null
-  if (paths.length === 0) {
+  if (paths.length === 0 && programs.length === 0) {
     const downloads = join(home, "Downloads")
     if (await isDir(downloads)) {
       paths = [downloads]
@@ -2192,12 +3740,12 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   const files = await collectInputs(paths, home)
-  if (files.length === 0) {
+  if (files.length === 0 && generated.length === 0) {
     if (scanned) console.log(`${t.scanning}: ${displayPath(scanned, home)}`)
     console.log(`✗ ${t.noExportFiles}`)
     return 1
   }
-  if (values.target && files.length > 1) {
+  if (values.target && files.length + generated.length > 1) {
     console.log(`✗ ${t.multiTarget}`)
     return 1
   }
@@ -2211,7 +3759,8 @@ export async function main(argv: string[]): Promise<number> {
     print: values.print === true,
     backup: values["no-backup"] !== true,
     apiKey: values["api-key"],
-    modelsOut: values["models-out"]
+    modelsOut: values["models-out"],
+    generated
   }
 
   const outcomes = await runMerge(files, opts)

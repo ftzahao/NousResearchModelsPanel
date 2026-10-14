@@ -2,11 +2,17 @@ import { describe, expect, test } from "bun:test"
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { stringify as yamlStringify } from "yaml"
 import { exporterRegistry } from "../src/model-export"
+import { buildOneCommand as buildOneCommandBrowser } from "../src/model-export/one-command"
+import { imageModel, model, pricedModel } from "../src/model-export/test-fixtures"
 import { translations } from "../src/translations"
 import {
+  EXPORT_PROGRAMS,
   MERGE_CLI_MESSAGES,
+  buildOneCommand,
   type FileOutcome,
+  type Format,
   type RunOptions,
   KNOWN_NAMES,
   detectExport,
@@ -912,5 +918,125 @@ model_list:
     const outcome = await merge1(target, { home, cwd: home })
     expect(outcome.status).toBe("skipped")
     expect(outcome.message?.key).toBe("sameFile")
+  })
+})
+
+describe("generated exports from model IDs", () => {
+  const sample = [model, imageModel, pricedModel] as unknown as Parameters<
+    (typeof exporterRegistry)[number]["build"]
+  >[0]
+  const serializeFor = (file: { format: Format; build: (m: any) => unknown }, models: unknown) =>
+    file.format === "yaml"
+      ? yamlStringify(file.build(models))
+      : file.format === "toml"
+        ? String(file.build(models))
+        : JSON.stringify(file.build(models), null, 2)
+
+  test("copied builders match the app's registry output byte-for-byte", () => {
+    const serialize = (value: unknown, format?: string) =>
+      format === "yaml"
+        ? yamlStringify(value)
+        : format === "toml"
+          ? String(value)
+          : JSON.stringify(value, null, 2)
+    for (const program of EXPORT_PROGRAMS) {
+      const app = exporterRegistry.find((e) => e.id === program.id)!
+      expect(app).toBeDefined()
+      const appFiles = [
+        { fileName: app.fileName, format: app.format, build: app.build },
+        ...(app.extraFiles ?? [])
+      ]
+      expect(program.files.map((f) => f.fileName)).toEqual(appFiles.map((f) => f.fileName))
+      program.files.forEach((file, i) => {
+        const expected = serialize(appFiles[i]!.build(sample), appFiles[i]!.format)
+        expect(serialize(file.build(sample), file.format)).toBe(expected)
+      })
+    }
+  })
+
+  test("a -p export is merged into the target like a file input", async () => {
+    const home = tmp()
+    const text = serializeFor(
+      EXPORT_PROGRAMS.find((p) => p.id === "crush")!.files[0]!,
+      sample,
+    )
+    const outcomes = await runMerge([], {
+      home,
+      cwd: home,
+      generated: [{ file: join(home, "virtual", "crush.json"), text }],
+    })
+    expect(outcomes).toHaveLength(1)
+    expect(outcomes[0]!.status).toBe("created")
+    expect(outcomes[0]!.target).toBe(join(home, ".config", "crush", "crush.json"))
+    expect(await Bun.file(outcomes[0]!.target!).text()).toContain("nous")
+  })
+
+  test("a Codex program does not pick up a models.json from the working directory", async () => {
+    const home = tmp()
+    const codex = EXPORT_PROGRAMS.find((p) => p.id === "codex")!
+    const text = serializeFor(codex.files[0]!, sample)
+    const outcomes = await runMerge([], {
+      home,
+      cwd: home,
+      generated: [{ file: join(home, "virtual", "config.toml"), text }],
+    })
+    expect(outcomes.some((o) => o.ruleId === "codex-models")).toBe(false)
+  })
+
+  describe("buildOneCommand", () => {
+    test("builds a URL-encoded one-liner for a file-merging program", () => {
+      const result = buildOneCommand("crush", ["google/gemini-4-argon", "qwen/qwen3-coder"], "zh")
+      expect(result).toHaveProperty("command")
+      const command = (result as { command: string }).command
+      expect(command).toContain("deno run --no-lock")
+      expect(command).toContain("--allow-net")
+      expect(command).toContain("--one crush=google%2Fgemini-4-argon,qwen%2Fqwen3-coder")
+      // the generated command must parse back into the same program spec
+      const arg = command.slice(command.indexOf("--one ") + 6)
+      const [program, ids] = [arg.slice(0, arg.indexOf("=")), arg.slice(arg.indexOf("=") + 1)]
+      expect(program).toBe("crush")
+      expect(ids.split(",").map(decodeURIComponent)).toEqual([
+        "google/gemini-4-argon",
+        "qwen/qwen3-coder"
+      ])
+    })
+
+    test("returns the paste-only note for Chatbox", () => {
+      const result = buildOneCommand("chatbox", ["qwen/qwen3-coder"], "en")
+      expect(result).toEqual({ note: MERGE_CLI_MESSAGES.en.pasteOnly })
+    })
+
+    test("returns the selection note when nothing is selected", () => {
+      const result = buildOneCommand("opencode", [], "en")
+      expect(result).toEqual({ note: MERGE_CLI_MESSAGES.en.needSelection })
+    })
+
+    test("throws for an unknown program", () => {
+      expect(() => buildOneCommand("nope", ["x"], "zh")).toThrow(/unknown program/)
+    })
+
+    test("browser mirror (src/model-export/one-command.ts) stays in sync", () => {
+      for (const program of EXPORT_PROGRAMS) {
+        for (const ids of [[], ["google/gemini-4-argon", "qwen/qwen3-coder"]]) {
+          for (const lang of ["zh", "en"] as const) {
+            const cli = buildOneCommand(program.id, ids, lang)
+            const browser = buildOneCommandBrowser(program.id, ids, lang)
+            if ("command" in cli && "command" in browser) {
+              expect(browser.command).toBe(cli.command)
+            } else {
+              // notes differ only in how unknown programs are surfaced; both
+              // plain objects for known programs
+              expect(browser).toEqual(cli)
+            }
+          }
+        }
+      }
+      // unknown programs: CLI throws (fail fast); the browser helper only
+      // special-cases paste-only ids, so anything else still gets a command
+      expect(() => buildOneCommand("nope", ["x"], "zh")).toThrow()
+      expect(buildOneCommandBrowser("nope", ["x"], "zh")).toEqual({
+        command: expect.stringContaining("--one nope=x")
+      })
+    })
   })
 })

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react"
-import { Check, Copy, Download } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Check, Copy, Download, Terminal } from "lucide-react"
 import { useTheme } from "../contexts"
 import { useLang } from "../i18n"
 import type { ExportPreviewFile } from "../types"
+import { buildOneCommand } from "../model-export/one-command"
 import { ModalShell } from "./ModalShell"
 
 export function ExportPreviewModal({
@@ -10,18 +11,30 @@ export function ExportPreviewModal({
   usage,
   warning,
   selectedCount,
+  programId,
+  modelIds,
   onClose
 }: {
   files: ExportPreviewFile[]
   usage?: string[]
   warning?: string
   selectedCount: number
+  /** exporter/program id (e.g. "codex"), used to build the one-command export */
+  programId?: string
+  /** model ids of the current selection, embedded into the one-command export */
+  modelIds?: string[]
   onClose: () => void
 }) {
   const { theme } = useTheme()
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const [copiedFile, setCopiedFile] = useState<string | null>(null)
+  const [copiedCommand, setCopiedCommand] = useState(false)
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const oneCommand = useMemo(() => {
+    if (!programId) return null
+    return buildOneCommand(programId, modelIds ?? [], lang)
+  }, [programId, modelIds, lang])
 
   useEffect(
     () => () => {
@@ -29,6 +42,18 @@ export function ExportPreviewModal({
     },
     []
   )
+
+  const handleCopyCommand = async () => {
+    if (!oneCommand || !("command" in oneCommand)) return
+    try {
+      await navigator.clipboard.writeText(oneCommand.command)
+      setCopiedCommand(true)
+      if (copyTimer.current) clearTimeout(copyTimer.current)
+      copyTimer.current = setTimeout(() => setCopiedCommand(false), 2000)
+    } catch {
+      // clipboard unavailable (e.g. permissions denied)
+    }
+  }
 
   const handleCopy = async (file: ExportPreviewFile) => {
     try {
@@ -85,6 +110,43 @@ export function ExportPreviewModal({
               </li>
             ))}
           </ol>
+        </div>
+      ) : null}
+      {oneCommand ? (
+        <div
+          className={`mb-3 rounded-xl border p-3 ${theme === "dark" ? "border-brand-500/30 bg-brand-500/5" : "border-brand-200 bg-brand-50"}`}
+        >
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p
+              className={`flex items-center gap-1.5 text-[11px] font-bold ${theme === "dark" ? "text-brand-300" : "text-brand-700"}`}
+            >
+              <Terminal size={12} /> {t.mergeCli.oneHeader}
+            </p>
+            {"command" in oneCommand ? (
+              <button
+                type="button"
+                onClick={handleCopyCommand}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${theme === "dark" ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              >
+                {copiedCommand ? <Check size={11} /> : <Copy size={11} />}
+                {copiedCommand ? t.mergeCli.oneCopied : t.mergeCli.oneCopy}
+              </button>
+            ) : null}
+          </div>
+          {"command" in oneCommand ? (
+            <pre
+              className={`rounded-xl border p-3 text-[11px] leading-relaxed font-mono whitespace-pre-wrap break-all ${theme === "dark" ? "text-gray-300 border-white/10 bg-black/30" : "text-gray-700 border-gray-200 bg-white"}`}
+            >
+              {oneCommand.command}
+            </pre>
+          ) : (
+            <p className={`text-[11px] leading-relaxed ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+              {oneCommand.note}
+            </p>
+          )}
+          <p className={`mt-1.5 text-[10px] leading-relaxed ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+            {t.mergeCli.remoteNote}
+          </p>
         </div>
       ) : null}
       {files.map((file) => (

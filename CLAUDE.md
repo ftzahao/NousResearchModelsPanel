@@ -10,8 +10,8 @@ Bun + React 19 single-page dashboard for browsing the [NousResearch Inference AP
 - `bun run typecheck` — `tsc --noEmit`
 - `deno check --no-lock scripts/merge.ts` — type-check the standalone Deno entrypoint
 - `bun run build` — runs `build.sh`, bundling `index.html` + `src/root.tsx` + Tailwind CSS into static assets in `docs/`
-- `bun run merge [files|dirs]` — merge downloaded export files into each tool's target config (`scripts/merge.ts`; `--dry-run` to preview, `--list` for formats/targets)
-- `deno run --no-lock --allow-read --allow-write --allow-env <raw merge.ts URL> [files|dirs]` — run the same standalone merge CLI remotely with Deno
+- `bun run merge [files|dirs]` — merge downloaded export files into each tool's target config (`scripts/merge.ts`; `--dry-run` to preview, `--list` for formats/targets); `-p <program>=<model-id>,...` generates and merges directly from model IDs without downloading anything
+- `deno run --no-lock --allow-read --allow-write --allow-env <raw merge.ts URL> [files|dirs]` — run the same standalone merge CLI remotely with Deno (`--one <program>=<model-id>,...` generates and merges from model IDs without downloading anything)
 
 ## Architecture
 

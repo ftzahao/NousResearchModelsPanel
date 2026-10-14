@@ -10,8 +10,8 @@ Bun + React 19 single-page dashboard for browsing the [NousResearch Inference AP
 - `bun run typecheck` — `tsc --noEmit`
 - `deno check --no-lock scripts/merge.ts` — type-check the standalone Deno entrypoint
 - `bun run build` — runs `build.sh`, bundling `index.html` + `src/root.tsx` + Tailwind CSS into static assets in `docs/`
-- `bun run merge [files|dirs]` — merge downloaded export files into each tool's target config (`scripts/merge.ts`; `--dry-run` to preview, `--list` for formats/targets)
-- `deno run --no-lock --allow-read --allow-write --allow-env <raw merge.ts URL> [files|dirs]` — run the same standalone merge CLI remotely with Deno
+- `bun run merge [files|dirs]` — merge downloaded export files into each tool's target config (`scripts/merge.ts`; `--dry-run` to preview, `--list` for formats/targets); `-p <program>=<model-id>,...` generates and merges directly from model IDs without downloading anything
+- `deno run --no-lock --allow-read --allow-write --allow-env <raw merge.ts URL> [files|dirs]` — run the same standalone merge CLI remotely with Deno (`--one <program>=<model-id>,...` generates and merges from model IDs without downloading anything)
 
 ## Architecture
 
@@ -20,7 +20,7 @@ Bun + React 19 single-page dashboard for browsing the [NousResearch Inference AP
 - `src/hooks/` — `useModels.ts` (browser-side fetch of the API), `useCurrency.ts` (CNY/USD rate state)
 - `src/components/` — presentational components plus `charts.tsx` (Recharts)
 - `src/model-export.ts` — the only place that maps selected models to tool config formats; keep conversions there
-- `scripts/merge.ts` — self-contained Bun/Deno CLI that parses and splices exports into tool configs; keep runtime code and text-splicing primitives in this file (tests in `scripts/merge.test.ts`)
+- `scripts/merge.ts` — self-contained Bun/Deno CLI that parses and splices exports into tool configs, and (for `-p`) builds exports from model IDs using a copy of the `src/model-export` builders; keep runtime code and text-splicing primitives in this file (tests in `scripts/merge.test.ts`, which checks the copies against the app's output)
 - `src/i18n.ts`, `src/translations.ts`, `src/contexts.tsx`, `src/types.ts`, `src/utils.ts` — translations, theme/currency contexts, shared types, helpers
 
 ## Conventions

@@ -53,6 +53,18 @@ bun run merge ~/Downloads/opencode.json  # merge specific files (directories wor
 bun run merge -- --dry-run               # preview the merge without writing
 bun run merge -- --list                  # list supported formats and their default targets
 bun run merge -- --api-key <your-key>    # replace placeholders in the export with a real key
+bun run merge -p codex=<model-id>,<model-id> -p opencode=<model-id>   # generate and merge straight from model IDs, no download
+```
+
+`-p <program>=<model-id>[,<model-id>...]` fetches the model list from the Nous API, builds each program's config from the given IDs and merges it like a downloaded file. It can be repeated to configure several programs in one run. Run `--list` to see the program names. Deno needs `--allow-net` for this option. `--one` is an alias of `-p` tailored for the dashboard's "one command" export: copy that command from the export preview and paste it into a terminal to generate and merge without downloading any files first.
+
+For example, to set up OpenCode and Crush with Gemini 4 Argon:
+
+```bash
+$ bun run merge -p opencode=google/gemini-4-argon -p crush=google/gemini-4-argon --lang en
++ opencode.json → Created ~/.config/opencode/opencode.json
++ crush.json → Created ~/.config/crush/crush.json
+Done: 0 merged · 2 created · 0 unchanged · 0 skipped · 0 failed
 ```
 
 The merge implementation is a standalone TypeScript file, so Deno can execute it directly from GitHub without cloning the repository:

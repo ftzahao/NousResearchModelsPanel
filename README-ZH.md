@@ -53,6 +53,18 @@ bun run merge ~/Downloads/opencode.json  # 合并指定文件（也支持目录�
 bun run merge -- --dry-run               # 只预览合并结果，不写入
 bun run merge -- --list                  # 列出支持的格式与默认目标路径
 bun run merge -- --api-key <你的Key>     # 用真实 Key 替换导出中的占位符
+bun run merge -p codex=<模型ID>,<模型ID> -p opencode=<模型ID>   # 直接根据模型 ID 生成并合并，无需下载文件
+```
+
+`-p <程序>=<模型ID>[,<模型ID>...]` 会从 Nous API 拉取模型列表，按给定的 ID 生成对应程序的配置，并像合并下载的文件一样写入。可重复使用，一次配置多个程序。用 `--list` 查看可用的程序名。使用 Deno 时，该选项需要 `--allow-net` 权限。`--one` 与 `-p` 等价，专为面板「一条命令」导出设计：在导出预览中复制那条命令，粘贴到终端即可完成生成与合并，无需先下载任何文件。
+
+例如，用 Gemini 4 Argon 配置 OpenCode 和 Crush：
+
+```bash
+$ bun run merge -p opencode=google/gemini-4-argon -p crush=google/gemini-4-argon --lang en
++ opencode.json → Created ~/.config/opencode/opencode.json
++ crush.json → Created ~/.config/crush/crush.json
+Done: 0 merged · 2 created · 0 unchanged · 0 skipped · 0 failed
 ```
 
 合并逻辑集中在单个 TypeScript 文件中，因此无需克隆仓库，Deno 可直接从 GitHub 远程执行：
