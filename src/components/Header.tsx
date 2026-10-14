@@ -99,6 +99,15 @@ export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab)
               API <ExternalLink size={10} />
             </a>
             <a
+              href="https://hermes-agent.nousresearch.com"
+              target="_blank"
+              rel="noopener"
+              className={`hidden sm:flex px-3 py-1.5 rounded-lg text-xs items-center gap-1 ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}
+              title="Hermes Agent"
+            >
+              Hermes <ExternalLink size={10} />
+            </a>
+            <a
               href="https://github.com/ftzahao/NousResearchModelsPanel"
               target="_blank"
               rel="noopener"
