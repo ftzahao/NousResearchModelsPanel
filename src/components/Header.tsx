@@ -6,7 +6,8 @@ import {
   Moon,
   Globe,
   DollarSign,
-  ChevronDown
+  ChevronDown,
+  GitBranch
 } from "lucide-react"
 import { useTheme, useCurrency } from "../contexts"
 import { useLang } from "../i18n"
@@ -96,6 +97,15 @@ export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab)
               className={`hidden sm:flex px-3 py-1.5 rounded-lg text-xs items-center gap-1 ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}
             >
               API <ExternalLink size={10} />
+            </a>
+            <a
+              href="https://github.com/ftzahao/NousResearchModelsPanel"
+              target="_blank"
+              rel="noopener"
+              className={`px-2 sm:px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border flex items-center gap-1 transition-colors ${theme === "dark" ? "text-gray-400 border-gray-500/40 hover:text-gray-200 hover:border-gray-400" : "text-gray-500 border-gray-400/50 hover:text-brand-600 hover:border-brand-500"}`}
+              title="GitHub"
+            >
+              <GitBranch size={12} /> <span className="hidden sm:inline">GitHub</span>
             </a>
             <button
               onClick={toggleTheme}
