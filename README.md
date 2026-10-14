@@ -34,7 +34,7 @@ Select models, then choose a format in the export menu. Each format targets one 
 | DeepSeek Harness desktop patch            | `dsh-desktop-cordis-patch.yml`      | DeepSeek Harness desktop profile `cordis.patch.yml` (`llm-pi-ai` entry) |
 | LiteLLM `config.yaml`                     | `litellm-config.yaml`               | LiteLLM proxy `model_list` entries for an OpenAI-compatible upstream     |
 | CLIProxyAPI `config.yaml`                 | `cliproxyapi-config.yaml`           | CLIProxyAPI `openai-compatibility` provider fragment                     |
-| OpenCode `opencode.json`                  | `opencode.json`                     | OpenCode provider (`@ai-sdk/openai-compatible`)                          |
+| OpenCode `opencode.json`                  | `opencode.json`                     | OpenCode v2 `providers.nous` entry (`aisdk:@ai-sdk/openai-compatible`)   |
 | Crush `crush.json`                        | `crush.json`                        | Crush provider (`type: openai`)                                          |
 | Chatbox provider import                   | `chatbox-nous-provider.json`        | Chatbox one-click provider import JSON                                   |
 | Cherry Studio provider                    | `cherry-studio-nous.json`           | Cherry Studio `data.providers.nous` entry                                |

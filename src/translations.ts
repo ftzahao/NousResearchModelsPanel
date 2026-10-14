@@ -195,7 +195,7 @@ export const translations = {
     ],
     opencodeConfig: "OpenCode opencode.json",
     opencodeUsage: [
-      "下载 opencode.json，把 provider.nous 合并进 ~/.config/opencode/opencode.json（项目级配置则放在项目根目录）",
+      "下载 opencode.json，把 providers.nous 合并进 ~/.config/opencode/opencode.json（项目级配置则放在项目根目录）",
       '设置 API Key：export NOUS_API_KEY="你的 Nous API Key"（配置中通过 {env:NOUS_API_KEY} 引用）',
       "重启 opencode，用 /models 选择 nous 下的模型"
     ],
@@ -478,7 +478,7 @@ export const translations = {
     ],
     opencodeConfig: "OpenCode opencode.json",
     opencodeUsage: [
-      "Download opencode.json and merge provider.nous into ~/.config/opencode/opencode.json (project-level config goes in the project root)",
+      "Download opencode.json and merge providers.nous into ~/.config/opencode/opencode.json (project-level config goes in the project root)",
       'Set your API key: export NOUS_API_KEY="your Nous API key" (referenced as {env:NOUS_API_KEY} in the config)',
       "Restart opencode and pick a nous model with /models"
     ],

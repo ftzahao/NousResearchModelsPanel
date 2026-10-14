@@ -262,7 +262,7 @@ describe("detectExport", () => {
     ["cliproxyapi-config.yaml", "openai-compatibility:\n  - name: nous\n", "cliproxyapi"],
     [
       "opencode.json",
-      '{"$schema":"https://opencode.ai/config.json","provider":{"nous":{"npm":"@ai-sdk/openai-compatible"}}}',
+      '{"$schema":"https://opencode.ai/config.json","providers":{"nous":{"package":"aisdk:@ai-sdk/openai-compatible"}}}',
       "opencode",
     ],
     ["crush.json", '{"$schema":"https://charm.land/crush.json","providers":{"nous":{"type":"openai"}}}', "crush"],
@@ -367,12 +367,18 @@ test("every dashboard export file name is handled by a merge rule", () => {
 
 const OPENCODE_EXPORT = {
   $schema: "https://opencode.ai/config.json",
-  provider: {
+  providers: {
     nous: {
-      npm: "@ai-sdk/openai-compatible",
+      package: "aisdk:@ai-sdk/openai-compatible",
       name: "nous",
-      options: { baseURL: "https://inference-api.nousresearch.com/v1", apiKey: "{env:NOUS_API_KEY}" },
-      models: { "xiaomi/mimo-v2.6-flash": { name: "MiMo", limit: { context: 1024, output: 128 } } },
+      settings: { baseURL: "https://inference-api.nousresearch.com/v1", apiKey: "{env:NOUS_API_KEY}" },
+      models: {
+        "xiaomi/mimo-v2.6-flash": {
+          name: "MiMo",
+          limit: { context: 1024, input: 896, output: 128 },
+          capabilities: { tools: true, input: ["text"], output: ["text"] },
+        },
+      },
     },
   },
 }
@@ -388,9 +394,9 @@ describe("runMerge end to end", () => {
       `{
   // my own comment
   "$schema": "https://opencode.ai/config.json",
-  "provider": {
-    "anthropic": { "npm": "@ai-sdk/anthropic", "name": "anthropic" },
-    "nous": { "npm": "@ai-sdk/openai-compatible", "name": "stale-entry" }
+  "providers": {
+    "anthropic": { "name": "anthropic" },
+    "nous": { "name": "stale-entry" }
   }
 }`,
     )
@@ -404,13 +410,38 @@ describe("runMerge end to end", () => {
     const text = await read(target)
     expect(text).toContain("// my own comment")
     const parsed = Bun.JSONC.parse(text) as Record<string, any>
-    expect(parsed.provider.anthropic.name).toBe("anthropic")
-    expect(parsed.provider.nous.name).toBe("nous")
-    expect(parsed.provider.nous.models["xiaomi/mimo-v2.6-flash"].limit.context).toBe(1024)
+    expect(parsed.providers.anthropic.name).toBe("anthropic")
+    expect(parsed.providers.nous.name).toBe("nous")
+    expect(parsed.providers.nous.package).toBe("aisdk:@ai-sdk/openai-compatible")
+    expect(parsed.providers.nous.models["xiaomi/mimo-v2.6-flash"].limit.context).toBe(1024)
 
     const second = await merge1(exportFile, { home, cwd })
     expect(second.status).toBe("unchanged")
     expect(second.written).toBe(false)
+  })
+
+  test("opencode: writes the v2 providers key into an unconverted v1 target", async () => {
+    const home = tmp()
+    const exportFile = await put(join(home, "opencode.json"), JSON.stringify(OPENCODE_EXPORT))
+    const target = join(home, ".config", "opencode", "opencode.json")
+    await put(
+      target,
+      `{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "anthropic": { "npm": "@ai-sdk/anthropic", "name": "anthropic" }
+  }
+}`,
+    )
+
+    const outcome = await merge1(exportFile, { home, cwd: home })
+    expect(outcome.status).toBe("merged")
+    const parsed = Bun.JSONC.parse(await read(target)) as Record<string, any>
+    // untouched v1 map stays as-is...
+    expect(parsed.provider.anthropic.name).toBe("anthropic")
+    // ...while the exported entry lands under the native v2 key
+    expect(parsed.providers.nous.name).toBe("nous")
+    expect(parsed.providers.nous.settings.baseURL).toBe("https://inference-api.nousresearch.com/v1")
   })
 
   test("opencode: creates the config when the target is missing", async () => {

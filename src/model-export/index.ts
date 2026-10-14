@@ -39,7 +39,13 @@ export { buildLitellmConfig } from "./litellm"
 export type { LitellmModelEntry } from "./litellm"
 
 export { buildOpencodeConfig } from "./opencode"
-export type { OpencodeConfig, OpencodeModelEntry, OpencodeProviderEntry } from "./opencode"
+export type {
+  OpencodeConfig,
+  OpencodeModelCapabilities,
+  OpencodeModelEntry,
+  OpencodeModality,
+  OpencodeProviderEntry
+} from "./opencode"
 
 export { buildCrushConfig } from "./crush"
 export type { CrushConfig, CrushModelEntry, CrushProviderEntry } from "./crush"

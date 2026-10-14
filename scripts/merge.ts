@@ -1513,39 +1513,43 @@ function rules(): Rule[] {
     id: string
     displayName: string
     fileName: string
-    mapKey: string
+    /** single key, or [exportKey, targetKey] when the formats disagree */
+    mapKey: string | [exportKey: string, targetKey: string]
     schema?: string
     sniff: (p: unknown) => boolean
     candidates: (b: TargetBase) => string[]
-  }): Rule => ({
-    id: opts.id,
-    displayName: opts.displayName,
-    fileNames: [opts.fileName],
-    format: "json",
-    sniff: opts.sniff,
-    targets: opts.candidates,
-    createPath: (b) => opts.candidates(b)[0] ?? null,
-    merge: (ctx) => {
-      const notices: Notice[] = []
-      const exp = ctx.exportParsed
-      if (!isObj(exp)) throw errShape(opts.mapKey)
-      const entry = exportNousEntry(exp, opts.mapKey, "nous")
-      const base = asObj(ctx.targetParsed)
-      const tMap = child(base, opts.mapKey)
-      const oldEntry = tMap.nous
-      if (isObj(oldEntry)) preserveSecrets(entry, oldEntry)
-      const merged: Record<string, unknown> = {
-        ...base,
-        [opts.mapKey]: { ...tMap, nous: entry }
+  }): Rule => {
+    const [exportKey, targetKey] = Array.isArray(opts.mapKey) ? opts.mapKey : [opts.mapKey, opts.mapKey]
+    return {
+      id: opts.id,
+      displayName: opts.displayName,
+      fileNames: [opts.fileName],
+      format: "json",
+      sniff: opts.sniff,
+      targets: opts.candidates,
+      createPath: (b) => opts.candidates(b)[0] ?? null,
+      merge: (ctx) => {
+        const notices: Notice[] = []
+        const exp = ctx.exportParsed
+        if (!isObj(exp)) throw errShape(exportKey)
+        const entry = exportNousEntry(exp, exportKey, "nous")
+        const base = asObj(ctx.targetParsed)
+        const tMap = child(base, targetKey)
+        const oldEntry = tMap.nous
+        if (isObj(oldEntry)) preserveSecrets(entry, oldEntry)
+        const merged: Record<string, unknown> = {
+          ...base,
+          [targetKey]: { ...tMap, nous: entry }
+        }
+        const addSchema =
+          opts.schema !== undefined && base.$schema === undefined && exp.$schema !== undefined
+        if (addSchema) merged.$schema = exp.$schema
+        const paths: string[][] = [[targetKey, "nous"]]
+        if (addSchema) paths.push(["$schema"])
+        return applyJson(ctx, merged, paths, notices)
       }
-      const addSchema =
-        opts.schema !== undefined && base.$schema === undefined && exp.$schema !== undefined
-      if (addSchema) merged.$schema = exp.$schema
-      const paths: string[][] = [[opts.mapKey, "nous"]]
-      if (addSchema) paths.push(["$schema"])
-      return applyJson(ctx, merged, paths, notices)
     }
-  })
+  }
 
   // mimocode must be detected before opencode: both ship an
   // `@ai-sdk/openai-compatible` provider.nous entry
@@ -1564,12 +1568,13 @@ function rules(): Rule[] {
       id: "opencode",
       displayName: "OpenCode",
       fileName: "opencode.json",
-      mapKey: "provider",
+      // native v2 exports live under `providers`; v1 targets still use `provider`
+      mapKey: ["providers", "providers"],
       schema: REF_EXPORT_SCHEMA,
       sniff: (p) =>
         isObj(p) &&
         (p.$schema === REF_EXPORT_SCHEMA ||
-          (asObj(asObj(p.provider).nous).npm === "@ai-sdk/openai-compatible" &&
+          (asObj(asObj(p.providers).nous).package === "aisdk:@ai-sdk/openai-compatible" &&
             !hasModelFieldWith(p, "modalities"))),
       candidates: (b) => [
         join(xdgConfig(b.home), "opencode", "opencode.json"),
