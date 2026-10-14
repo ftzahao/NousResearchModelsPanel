@@ -2,6 +2,7 @@ import React from "react"
 import BigNumber from "bignumber.js"
 import { FileText, Image as ImageIcon, Mic, Video, Layers, Cpu } from "lucide-react"
 import type { Lang, Currency, Model } from "./types"
+export type { Lang, Currency, Model }
 
 export const providerColors: Record<string, string> = {
   anthropic: "#D97706",
@@ -138,6 +139,52 @@ export function formatCtx(n: number): string {
   }
   if (bnN.gte(1000)) return `${stripZeros(bnN.div(1000).toFixed(1))}K`
   return `${n}`
+}
+
+/** One `label: value` line of the copyable card summary. */
+export interface ParamsLine {
+  label: string
+  value: string
+}
+
+/**
+ * The card's headline numbers as ordered `label: value` lines, used by the
+ * copy button (and rendered on the card itself). Free prices show the
+ * localized Free label; absent values are skipped.
+ */
+export function modelParamsLines(
+  model: Model,
+  lang: Lang = "zh",
+  currency: Currency = "USD",
+  exchangeRate: number = 7.25
+): ParamsLine[] {
+  const labels =
+    lang === "zh"
+      ? { context: "上下文", maxOutput: "最大输出", prompt: "输入", completion: "输出", intelligence: "智能指数" }
+      : { context: "Context", maxOutput: "Max Output", prompt: "Prompt", completion: "Complete", intelligence: "Intelligence" }
+  const free = lang === "zh" ? "免费" : "Free"
+  const fmt = (v: string | undefined) =>
+    v == null ? undefined : isFreePrice(v) ? free : formatPrice(v, lang, currency, exchangeRate)
+
+  const lines: ParamsLine[] = [{ label: labels.context, value: formatCtx(model.context_length) }]
+  const topCtx = model.top_provider?.context_length
+  if (topCtx && topCtx !== model.context_length) {
+    lines[0]!.value += ` (${formatCtx(topCtx)})`
+  }
+  if (model.top_provider?.max_completion_tokens) {
+    lines.push({ label: labels.maxOutput, value: formatCtx(model.top_provider.max_completion_tokens) })
+  }
+  lines.push({ label: labels.prompt, value: fmt(model.pricing?.prompt) ?? "—" })
+  lines.push({ label: labels.completion, value: fmt(model.pricing?.completion) ?? "—" })
+
+  const intel = model.benchmarks?.artificial_analysis?.intelligence_index
+  if (intel != null) lines.push({ label: labels.intelligence, value: `${intel}` })
+  return lines
+}
+
+/** The copy button payload: model id on its own line, then `label: value` lines. */
+export function formatParamsForCopy(lines: ParamsLine[], id: string): string {
+  return [id, ...lines.map((l) => `${l.label}: ${l.value}`)].join("\n")
 }
 
 export function formatDate(ts: number, lang: Lang = "zh"): string {

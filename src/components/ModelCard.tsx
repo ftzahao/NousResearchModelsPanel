@@ -1,5 +1,5 @@
-import { memo } from "react"
-import { ChevronDown, ChevronUp, Brain, Shield } from "lucide-react"
+import { memo, useMemo, useState } from "react"
+import { ChevronDown, ChevronUp, Brain, Shield, Copy, Check } from "lucide-react"
 import type { Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
@@ -16,7 +16,9 @@ import {
   currencyUnit,
   getProviderColor,
   getDiscount,
-  formatDiscount
+  formatDiscount,
+  modelParamsLines,
+  formatParamsForCopy
 } from "../utils"
 
 // memoized: the handlers below are id-based so every card in the grid can share one
@@ -67,6 +69,22 @@ export const ModelCard = memo(function ModelCard({
   const isRouter = model.id.startsWith("~")
   const discount = getDiscount(model)
   const isDark = theme === "dark"
+  const [copied, setCopied] = useState(false)
+  const paramsLines = useMemo(
+    () => modelParamsLines(model, lang, currency, exchangeRate),
+    [model, lang, currency, exchangeRate]
+  )
+
+  const handleCopyParams = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard
+      ?.writeText(formatParamsForCopy(paramsLines, model.id))
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      })
+      .catch(() => {})
+  }
 
   return (
     <div
@@ -166,6 +184,21 @@ export const ModelCard = memo(function ModelCard({
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <FavoriteButton active={favorite} onToggle={() => onToggleFavorite(model.id)} />
+            <button
+              type="button"
+              title={copied ? t.copied : t.copyParams}
+              aria-label={copied ? t.copied : t.copyParams}
+              onClick={handleCopyParams}
+              className={`p-0.5 rounded flex-shrink-0 transition-colors ${
+                copied
+                  ? "text-green-400"
+                  : isDark
+                    ? "text-gray-500 hover:text-gray-300 hover:bg-white/10"
+                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+            </button>
             {model.reasoning?.mandatory && (
               <span title="Reasoning mandatory">
                 <Brain size={14} className={isDark ? "text-brand-400" : "text-brand-600"} />

@@ -42,6 +42,7 @@ export const translations = {
     loading: "正在从 NousResearch API 加载模型...",
     loadFailed: "加载模型失败",
     context: "上下文",
+    copyParams: "复制主要参数",
     promptPrice: "输入价格",
     completePrice: "输出价格",
     pricingDetails: "价格详情",
@@ -162,7 +163,17 @@ export const translations = {
       "配置同样开启了 [features] respect_system_proxy；若开启后 127.0.0.1 反复提示重新连接，请把本机地址加入系统代理的绕过列表，或注释掉该行"
     ],
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
+    gcmpUsage: [
+      "下载 gcmp-compatible-models.json（JSON 数组，每个模型一条，provider 固定为 nous）",
+      "该文件对应 Copilot 的 gcmp.compatibleModels 兼容模型列表，交给读取该配置的 GCMP 工具；本导出不含 API Key（baseUrl 指向 inference-api.nousresearch.com/v1，limit 固定为 rpm 180 / tpm 720000）",
+      "用 bun run merge 合并时，gcmp 规则没有默认目标文件，必须用 --target 指向已有的目标 JSON（如 bun run merge gcmp-compatible-models.json --target <目标文件.json>）；已有文件须是 JSON 数组，合并时替换 provider=nous 的条目、保留其它条目"
+    ],
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
+    githubCopilotUsage: [
+      "下载 chatLanguageModels.json（数组，含一个 name=nous、vendor=customendpoint、apiType=chat-completions 的提供商条目）",
+      "apiKey 占位为 ${input:nousApiKey}：在 Copilot 中通过自定义端点提供商填入，或用 bun run merge --api-key <你的Key> 替换；目标文件已有真实 Key 时合并会保留它",
+      "用 bun run merge 合并时，chatLanguageModels 规则没有默认目标文件，必须用 --target 指向 Copilot 的 chatLanguageModels.json（数组，合并时替换 name=nous 的条目、保留其它提供商）"
+    ],
     zcodeProviders: "ZCode provider_config.json 配置",
     zcodeUsage: [
       "下载 zcode-provider-config.json，合并进 ~/.zcode/v2/provider_config.json：把 providerConfigRules.providerRules、modelConfigRules.providerModelRules 与 providerOrder 里的数组项追加进去（已有同名 providerId 时替换该项，不要整体覆盖文件）",
@@ -170,6 +181,11 @@ export const translations = {
       "ZCode 运行中会自动加载配置，无需重启；在模型列表里即可看到 nous 的模型"
     ],
     deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider",
+    deepseekHarnessUsage: [
+      "下载 dsh-llm-pi-ai.yaml，把 llm-pi-ai.providers.nous 条目合并进 DeepSeek Harness 的 settings.yaml（默认 ~/.dsh/profiles/<profile>/settings.yaml，profile 名看 DSH_PROFILE；home 级 ~/.dsh/settings.yaml 也受支持，重复导入时覆盖同名 nous 提供商）",
+      "API Key 通过环境变量读取：把 NOUS_API_KEY=你的 Nous API Key 写进 Harness 的环境（或 ~/.dsh/.env），配置里只存 apiKeyEnv 引用、不落明文",
+      "重启 Harness（或热重载配置）后，在提供商列表中即可看到 nous 与导出的模型；不想用命令行可直接用 bun run merge dsh-llm-pi-ai.yaml 一键合并"
+    ],
     deepseekHarnessDesktop: "DeepSeek Harness 桌面端 cordis.patch.yml",
     deepseekHarnessDesktopUsage: [
       "下载 dsh-desktop-cordis-patch.yml，打开当前 profile 的补丁文件：桌面端默认在 ~/.dsh/profiles/desktop/cordis.patch.yml（profile 名看 DSH_PROFILE，其它 profile 在 ~/.dsh/profiles/<profile>/cordis.patch.yml）",
@@ -337,6 +353,7 @@ export const translations = {
     loading: "Loading models from NousResearch API...",
     loadFailed: "Failed to load models",
     context: "Context",
+    copyParams: "Copy key params",
     promptPrice: "Prompt",
     completePrice: "Complete",
     pricingDetails: "Pricing Details",
@@ -458,7 +475,17 @@ export const translations = {
       "The config also enables [features] respect_system_proxy; if loopback requests to 127.0.0.1 then keep prompting to reconnect, add your local addresses to the system proxy bypass list or comment that line out"
     ],
     gcmpCompatible: "GitHub Copilot gcmp.compatibleModels",
+    gcmpUsage: [
+      "Download gcmp-compatible-models.json (a JSON array with one entry per model, provider fixed to nous)",
+      "This is Copilot's gcmp.compatibleModels compatible-model list for GCMP tooling that reads it; the export carries no API key (baseUrl points at inference-api.nousresearch.com/v1, limit is fixed at rpm 180 / tpm 720000)",
+      "When merging with bun run merge, the gcmp rule has no default target — pass --target pointing at your existing target JSON (e.g. bun run merge gcmp-compatible-models.json --target <target.json>); the target must be a JSON array, and the merge replaces provider=nous entries while keeping the rest"
+    ],
     githubCopilotLanguageModels: "GitHub Copilot chatLanguageModels.json",
+    githubCopilotUsage: [
+      "Download chatLanguageModels.json (an array holding one name=nous, vendor=customendpoint, apiType=chat-completions provider entry)",
+      "apiKey ships as the ${input:nousApiKey} placeholder: enter it in Copilot's custom endpoint provider, or replace it with bun run merge --api-key <your-key>; a real key already present in the target file is kept by the merge",
+      "When merging with bun run merge, the chatLanguageModels rule has no default target — pass --target pointing at Copilot's chatLanguageModels.json (an array; the merge replaces the name=nous entry and keeps other providers)"
+    ],
     zcodeProviders: "ZCode provider_config.json",
     zcodeUsage: [
       "Download zcode-provider-config.json and merge it into ~/.zcode/v2/provider_config.json: append the entries of providerConfigRules.providerRules, modelConfigRules.providerModelRules and providerOrder (replace an entry with the same providerId instead of overwriting the file)",
@@ -466,6 +493,11 @@ export const translations = {
       "ZCode reloads the config while running, so the nous models appear without a restart"
     ],
     deepseekHarnessProviders: "DeepSeek Harness settings.yaml provider",
+    deepseekHarnessUsage: [
+      "Download dsh-llm-pi-ai.yaml and merge its llm-pi-ai.providers.nous entry into DeepSeek Harness's settings.yaml (default ~/.dsh/profiles/<profile>/settings.yaml, profile name comes from DSH_PROFILE; the home-level ~/.dsh/settings.yaml works too, and re-importing replaces the same nous provider)",
+      "The API key is read from the environment: put NOUS_API_KEY=your Nous API key in Harness's environment (or ~/.dsh/.env) — the config stores only the apiKeyEnv reference, never the plaintext key",
+      "Restart Harness (or hot-reload the config) and the nous provider with the exported models appears in the provider list; alternatively just run bun run merge dsh-llm-pi-ai.yaml to merge in one command"
+    ],
     deepseekHarnessDesktop: "DeepSeek Harness desktop cordis.patch.yml",
     deepseekHarnessDesktopUsage: [
       "Download dsh-desktop-cordis-patch.yml and open your profile's patch file: ~/.dsh/profiles/desktop/cordis.patch.yml on the desktop app (the profile name is DSH_PROFILE; other profiles live in ~/.dsh/profiles/<profile>/cordis.patch.yml)",

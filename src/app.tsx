@@ -336,13 +336,13 @@ export function App() {
           case "codex-osaurus":
             return { ...exporter, label: t.codexOsaurusSetup, usage: t.codexOsaurusUsage }
           case "github-copilot-gcmp":
-            return { ...exporter, label: t.gcmpCompatible }
+            return { ...exporter, label: t.gcmpCompatible, usage: t.gcmpUsage }
           case "github-copilot-language-models":
-            return { ...exporter, label: t.githubCopilotLanguageModels }
+            return { ...exporter, label: t.githubCopilotLanguageModels, usage: t.githubCopilotUsage }
           case "zcode":
             return { ...exporter, label: t.zcodeProviders, usage: t.zcodeUsage }
           case "deepseek-harness":
-            return { ...exporter, label: t.deepseekHarnessProviders }
+            return { ...exporter, label: t.deepseekHarnessProviders, usage: t.deepseekHarnessUsage }
           case "deepseek-harness-desktop":
             return { ...exporter, label: t.deepseekHarnessDesktop, usage: t.deepseekHarnessDesktopUsage }
           case "litellm":
