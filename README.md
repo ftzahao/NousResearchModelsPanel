@@ -70,12 +70,12 @@ Done: 0 merged · 2 created · 0 unchanged · 0 skipped · 0 failed
 The merge implementation is a standalone TypeScript file, so Deno can execute it directly from GitHub without cloning the repository:
 
 ```bash
-deno run --no-lock --allow-read --allow-write --allow-env \
+deno run --no-lock --reload=<merge.ts URL> --allow-read --allow-write --allow-env --allow-net \
   https://raw.githubusercontent.com/ftzahao/NousResearchModelsPanel/main/scripts/merge.ts \
   ~/Downloads
 ```
 
-Deno needs read, write and environment permissions to inspect and update local configs. Its first run downloads the pinned YAML/TOML parser modules.
+Deno needs read, write and environment permissions to inspect and update local configs (`--allow-net` fetches the model list for `-p`/`--one`). `--reload=<URL>` busts Deno's module cache for this script only, so a changed `merge.ts` on `main` is always picked up — the pinned YAML/TOML parser modules keep their cache. Its first run downloads those parser modules.
 
 Files are detected by content (the file name is only a fallback, and duplicate-download suffixes like `config (1).toml` are stripped); a Codex `config.toml` automatically picks up a sibling `models.json` and points `model_catalog_json` at its absolute path; re-running a merge that changes nothing reports "unchanged" without touching the file. Every spliced result is re-parsed and deep-compared against the expected merge before anything is written.
 

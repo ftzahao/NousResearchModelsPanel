@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
 import { stringify as yamlStringify } from "yaml"
 import { exporterRegistry } from "../src/model-export"
@@ -10,7 +10,10 @@ import { translations } from "../src/translations"
 import {
   EXPORT_PROGRAMS,
   MERGE_CLI_MESSAGES,
+  REMOTE_MERGE_URL,
   buildOneCommand,
+  main,
+  parseProgramSpecs,
   type FileOutcome,
   type Format,
   type RunOptions,
@@ -984,21 +987,23 @@ describe("generated exports from model IDs", () => {
   })
 
   describe("buildOneCommand", () => {
-    test("builds a URL-encoded one-liner for a file-merging program", () => {
+    test("builds a one-liner with raw model ids and a cache-busting --reload", () => {
       const result = buildOneCommand("crush", ["google/gemini-4-argon", "qwen/qwen3-coder"], "zh")
       expect(result).toHaveProperty("command")
       const command = (result as { command: string }).command
       expect(command).toContain("deno run --no-lock")
       expect(command).toContain("--allow-net")
-      expect(command).toContain("--one crush=google%2Fgemini-4-argon,qwen%2Fqwen3-coder")
+      // model ids stay verbatim: `xiaomi/mimo-v2.6-flash` must not become
+      // `xiaomi%2Fmimo-v2.6-flash` (the upstream API would not match it)
+      expect(command).toContain("--one crush=google/gemini-4-argon,qwen/qwen3-coder")
+      // Deno caches the remote entry module; reload only that URL so a changed
+      // merge.ts on main is picked up on the next run
+      expect(command).toContain(`--reload=${REMOTE_MERGE_URL}`)
       // the generated command must parse back into the same program spec
       const arg = command.slice(command.indexOf("--one ") + 6)
       const [program, ids] = [arg.slice(0, arg.indexOf("=")), arg.slice(arg.indexOf("=") + 1)]
       expect(program).toBe("crush")
-      expect(ids.split(",").map(decodeURIComponent)).toEqual([
-        "google/gemini-4-argon",
-        "qwen/qwen3-coder"
-      ])
+      expect(ids.split(",")).toEqual(["google/gemini-4-argon", "qwen/qwen3-coder"])
     })
 
     test("returns the paste-only note for Chatbox", () => {
@@ -1038,5 +1043,21 @@ describe("generated exports from model IDs", () => {
         command: expect.stringContaining("--one nope=x")
       })
     })
+  })
+
+  test("--one accepts raw model ids (slash must not be percent-encoded)", () => {
+    expect(parseProgramSpecs(["zed=xiaomi/mimo-v2.6-flash,deepseek/deepseek-v4-flash"])).toEqual([
+      { program: "zed", ids: ["xiaomi/mimo-v2.6-flash", "deepseek/deepseek-v4-flash"] }
+    ])
+  })
+
+  test("--one still decodes percent-encoded ids from older generated commands", () => {
+    expect(parseProgramSpecs(["zed=xiaomi%2Fmimo-v2.6-flash,openai%2Fgpt-6-luna"])).toEqual([
+      { program: "zed", ids: ["xiaomi/mimo-v2.6-flash", "openai/gpt-6-luna"] }
+    ])
+    // not valid percent-encoding: keep the raw id instead of throwing
+    expect(parseProgramSpecs(["crush=acme/100%"])).toEqual([
+      { program: "crush", ids: ["acme/100%"] }
+    ])
   })
 })

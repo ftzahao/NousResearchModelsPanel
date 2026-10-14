@@ -54,7 +54,7 @@ export const MERGE_CLI_MESSAGES = {
     usage: [
       "用法: bun run merge | deno run <merge.ts> [文件或目录 ...] [选项]",
       "把面板导出的配置文件自动合并进对应工具的目标配置（写入前生成 .bak 备份）",
-      "一条命令（无需下载文件）：deno run --no-lock --allow-read --allow-write --allow-env <merge.ts> --one <程序=模型ID,...>",
+      "一条命令（无需下载文件）：deno run --no-lock --reload=<merge.ts URL> --allow-read --allow-write --allow-env --allow-net <merge.ts> --one <程序=模型ID,...>",
       "",
       "选项:",
       "  -p, --program <程序=模型ID,...>  直接根据模型 ID 生成并合并（可重复，无需下载文件）",
@@ -112,13 +112,13 @@ export const MERGE_CLI_MESSAGES = {
     oneCopy: "复制命令",
     oneCopied: "已复制",
     needSelection: "请先选择模型，再复制命令",
-    remoteNote: "运行时需要网络权限（--allow-net）拉取模型列表"
+    remoteNote: "运行时需要网络权限（--allow-net）拉取模型列表；--reload 确保每次都取最新的 merge.ts"
   },
   en: {
     usage: [
       "Usage: bun run merge | deno run <merge.ts> [file or directory ...] [options]",
       "Automatically merges files exported from the dashboard into each tool's target config (writes a .bak backup first)",
-      "One command (no download): deno run --no-lock --allow-read --allow-write --allow-env <merge.ts> --one <prog=id,...>",
+      "One command (no download): deno run --no-lock --reload=<merge.ts URL> --allow-read --allow-write --allow-env --allow-net <merge.ts> --one <prog=id,...>",
       "",
       "Options:",
       "  -p, --program <prog=id,...>  generate and merge straight from model IDs (repeatable; no download)",
@@ -176,7 +176,7 @@ export const MERGE_CLI_MESSAGES = {
     oneCopy: "Copy command",
     oneCopied: "Copied",
     needSelection: "Select models first, then copy the command",
-    remoteNote: "Requires network permission (--allow-net) to fetch the model list"
+    remoteNote: "Requires network permission (--allow-net) to fetch the model list; --reload always re-fetches the latest merge.ts"
   }
 }
 
@@ -3478,12 +3478,30 @@ interface ProgramSpec {
   ids: string[]
 }
 
-function parseProgramSpecs(raws: string[]): ProgramSpec[] {
+export function parseProgramSpecs(raws: string[]): ProgramSpec[] {
   const byProgram = new Map<string, string[]>()
   for (const raw of raws) {
     const eq = raw.indexOf("=")
     const program = eq > 0 ? raw.slice(0, eq).trim() : ""
-    const ids = eq > 0 ? raw.slice(eq + 1).split(",").map((s) => s.trim()).filter(Boolean) : []
+    const ids =
+      eq > 0
+        ? raw
+            .slice(eq + 1)
+            .split(",")
+            // ids are shown verbatim in the generated command; older dashboard
+            // builds percent-encoded them (`xiaomi%2Fmimo`), so decode to the
+            // literal id the upstream API expects, but keep raw text when the
+            // id is not valid percent-encoding (e.g. a literal `100%`)
+            .map((s) => {
+              const id = s.trim()
+              try {
+                return decodeURIComponent(id)
+              } catch {
+                return id
+              }
+            })
+            .filter(Boolean)
+        : []
     if (!program || ids.length === 0) throw new MergeError({ key: "programSyntax", args: [raw] })
     byProgram.set(program, [...(byProgram.get(program) ?? []), ...ids])
   }
@@ -3545,7 +3563,10 @@ const GENERATED_DIR = "<generated>"
 export const REMOTE_MERGE_URL =
   "https://raw.githubusercontent.com/ftzahao/NousResearchModelsPanel/main/scripts/merge.ts"
 
-const DENO_ONE_PREFIX = `deno run --no-lock --allow-read --allow-write --allow-env --allow-net ${REMOTE_MERGE_URL}`
+// `--reload=<url>` busts Deno's module cache for this script only (scoped, so
+// the pinned esm.sh parsers keep their cache) — a changed merge.ts is picked
+// up on the very next run instead of serving a stale copy.
+const DENO_ONE_PREFIX = `deno run --no-lock --reload=${REMOTE_MERGE_URL} --allow-read --allow-write --allow-env --allow-net ${REMOTE_MERGE_URL}`
 
 const REMOTE_NOTE_KEY = "remoteNote"
 const PASTE_ONLY_NOTE_KEY = "pasteOnly"
@@ -3567,7 +3588,7 @@ export function buildOneCommand(
   if (pasteOnly) return { note: MERGE_CLI_MESSAGES[lang][PASTE_ONLY_NOTE_KEY as "pasteOnly"] }
   if (ids.length === 0) return { note: MERGE_CLI_MESSAGES[lang].needSelection }
   return {
-    command: `${DENO_ONE_PREFIX} --one ${program}=${ids.map(encodeURIComponent).join(",")}`
+    command: `${DENO_ONE_PREFIX} --one ${program}=${ids.join(",")}`
   }
 }
 

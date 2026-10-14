@@ -6,8 +6,8 @@
  * no export download, no separate merge step.
  *
  * Kept dependency-free so the browser bundle never pulls in `scripts/merge.ts`
- * (which uses Node APIs). `scripts/merge.ts` mirrors this logic; merge.test.ts
- * keeps the two in sync.
+ * (which uses Node APIs). `scripts/merge.ts` mirrors this logic (raw ids,
+ * `--reload` cache-bust); merge.test.ts keeps the two in sync.
  */
 import { translations } from "../translations"
 import type { Lang } from "../types"
@@ -17,18 +17,14 @@ export type OneCommandResult = { command: string } | { note: string }
 const REMOTE_MERGE_URL =
   "https://raw.githubusercontent.com/ftzahao/NousResearchModelsPanel/main/scripts/merge.ts"
 
-const DENO_ONE_PREFIX = `deno run --no-lock --allow-read --allow-write --allow-env --allow-net ${REMOTE_MERGE_URL}`
+const DENO_ONE_PREFIX = `deno run --no-lock --reload=${REMOTE_MERGE_URL} --allow-read --allow-write --allow-env --allow-net ${REMOTE_MERGE_URL}`
 
 const PASTE_ONLY_PROGRAM_IDS = new Set(["chatbox"])
 
-export function buildOneCommand(
-  program: string,
-  ids: string[],
-  lang: Lang
-): OneCommandResult {
+export function buildOneCommand(program: string, ids: string[], lang: Lang): OneCommandResult {
   const t = translations[lang].mergeCli
   if (PASTE_ONLY_PROGRAM_IDS.has(program)) return { note: t.pasteOnly }
   if (ids.length === 0) return { note: t.needSelection }
-  const arg = `${program}=${ids.map(encodeURIComponent).join(",")}`
+  const arg = `${program}=${ids.join(",")}`
   return { command: `${DENO_ONE_PREFIX} --one ${arg}` }
 }

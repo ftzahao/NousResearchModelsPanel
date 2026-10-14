@@ -233,7 +233,7 @@ export const translations = {
       usage: [
         "用法: bun run merge | deno run <merge.ts> [文件或目录 ...] [选项]",
         "把面板导出的配置文件自动合并进对应工具的目标配置（写入前生成 .bak 备份）",
-        "一条命令（无需下载文件）：deno run --no-lock --allow-read --allow-write --allow-env <merge.ts> --one <程序=模型ID,...>",
+        "一条命令（无需下载文件）：deno run --no-lock --reload=<merge.ts URL> --allow-read --allow-write --allow-env --allow-net <merge.ts> --one <程序=模型ID,...>",
         "",
         "选项:",
         "  -p, --program <程序=模型ID,...>  直接根据模型 ID 生成并合并（可重复，无需下载文件）",
@@ -291,7 +291,7 @@ export const translations = {
       oneCopy: "复制命令",
       oneCopied: "已复制",
       needSelection: "请先选择模型，再复制命令",
-      remoteNote: "运行时需要网络权限（--allow-net）拉取模型列表"
+      remoteNote: "运行时需要网络权限（--allow-net）拉取模型列表；--reload 确保每次都取最新的 merge.ts"
     }
   },
   en: {
@@ -530,7 +530,7 @@ export const translations = {
       usage: [
         "Usage: bun run merge | deno run <merge.ts> [file or directory ...] [options]",
         "Automatically merges files exported from the dashboard into each tool's target config (writes a .bak backup first)",
-        "One command (no download): deno run --no-lock --allow-read --allow-write --allow-env <merge.ts> --one <prog=id,...>",
+        "One command (no download): deno run --no-lock --reload=<merge.ts URL> --allow-read --allow-write --allow-env --allow-net <merge.ts> --one <prog=id,...>",
         "",
         "Options:",
         "  -p, --program <prog=id,...>  generate and merge straight from model IDs (repeatable; no download)",
@@ -588,7 +588,7 @@ export const translations = {
       oneCopy: "Copy command",
       oneCopied: "Copied",
       needSelection: "Select models first, then copy the command",
-      remoteNote: "Requires network permission (--allow-net) to fetch the model list"
+      remoteNote: "Requires network permission (--allow-net) to fetch the model list; --reload always re-fetches the latest merge.ts"
     }
   }
 }
