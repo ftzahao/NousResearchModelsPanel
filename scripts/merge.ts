@@ -39,11 +39,9 @@ const formatModule = (loaded: any): TextFormatModule => {
   return source
 }
 
-const yaml = formatModule(
-  await importModule(isDeno ? "https://esm.sh/yaml@2.9.1" : "yaml"),
-)
+const yaml = formatModule(await importModule(isDeno ? "https://esm.sh/yaml@2.9.1" : "yaml"))
 const toml = formatModule(
-  await importModule(isDeno ? "https://esm.sh/smol-toml@1.9.1" : "smol-toml"),
+  await importModule(isDeno ? "https://esm.sh/smol-toml@1.9.1" : "smol-toml")
 )
 const BigNumber: any = (
   await importModule(isDeno ? "https://esm.sh/bignumber.js@11.1.5" : "bignumber.js")
@@ -112,7 +110,8 @@ export const MERGE_CLI_MESSAGES = {
     oneCopy: "复制命令",
     oneCopied: "已复制",
     needSelection: "请先选择模型，再复制命令",
-    remoteNote: "运行时需要网络权限（--allow-net）拉取模型列表；--reload 确保每次都取最新的 merge.ts"
+    remoteNote:
+      "运行时需要网络权限（--allow-net）拉取模型列表；--reload 确保每次都取最新的 merge.ts"
   },
   en: {
     usage: [
@@ -176,7 +175,8 @@ export const MERGE_CLI_MESSAGES = {
     oneCopy: "Copy command",
     oneCopied: "Copied",
     needSelection: "Select models first, then copy the command",
-    remoteNote: "Requires network permission (--allow-net) to fetch the model list; --reload always re-fetches the latest merge.ts"
+    remoteNote:
+      "Requires network permission (--allow-net) to fetch the model list; --reload always re-fetches the latest merge.ts"
   }
 }
 
@@ -664,8 +664,7 @@ export function parseByFormat(text: string, format: Format): unknown {
 const ensureNewline = (s: string): string => (s.endsWith("\n") ? s : s + "\n")
 
 export function serializeByFormat(value: unknown, format: Format, indent = "  "): string {
-  if (format === "yaml")
-    return ensureNewline(yaml.stringify(value) ?? "")
+  if (format === "yaml") return ensureNewline(yaml.stringify(value) ?? "")
   if (format === "toml") return ensureNewline(toml.stringify(value) ?? "")
   return JSON.stringify(value, null, indent) + "\n"
 }
@@ -825,7 +824,7 @@ function insertIntoObject(
   key: string,
   value: unknown,
   childrenCol: number,
-  indent: string,
+  indent: string
 ): string {
   const close = scanJsonValue(s, objStart) - 1
   if (s[close] !== "}") throw new SpliceError(`unbalanced object at ${objStart}`)
@@ -855,7 +854,7 @@ function rewriteJson(merged: unknown, indent: string, original: string): SpliceO
   return {
     text: JSON.stringify(merged, null, indent) + "\n",
     action: "rewrite",
-    commentLoss: hasJsonComments(original),
+    commentLoss: hasJsonComments(original)
   }
 }
 
@@ -863,7 +862,7 @@ export function spliceJsonPath(
   text: string,
   path: readonly string[],
   merged: unknown,
-  indent: string,
+  indent: string
 ): SpliceOutcome {
   const value = getAtPath(merged, path)
   if (value === undefined) throw new SpliceError(`missing merged value at ${path.join(".")}`)
@@ -897,7 +896,7 @@ export function spliceJsonPath(
       return {
         text: text.slice(0, span.valueStart) + rendered + text.slice(span.valueEnd),
         action: "replace",
-        commentLoss: hasJsonComments(old),
+        commentLoss: hasJsonComments(old)
       }
     }
 
@@ -907,7 +906,7 @@ export function spliceJsonPath(
     return {
       text: insertIntoObject(text, container, seg, subtree, childrenCol, indent),
       action: "insert",
-      commentLoss: false,
+      commentLoss: false
     }
   }
   throw new SpliceError(`unreachable path ${path.join(".")}`)
@@ -929,7 +928,7 @@ export function spliceYamlKey(
   text: string,
   key: string,
   targetParsed: unknown,
-  merged: unknown,
+  merged: unknown
 ): SpliceOutcome {
   const value = getAtPath(merged, [key])
   const current = isObj(targetParsed) ? targetParsed[key] : undefined
@@ -946,7 +945,7 @@ export function spliceYamlKey(
       return {
         text: serializeByFormat(merged, "yaml"),
         action: "rewrite",
-        commentLoss: hasHashComments(text),
+        commentLoss: hasHashComments(text)
       }
     const block = yamlBlockLines(key, value)
     const base = text.replace(/\s*$/, "")
@@ -977,14 +976,14 @@ export function spliceYamlKey(
   return {
     text: next.join("\n"),
     action: "replace",
-    commentLoss: hasHashComments(region),
+    commentLoss: hasHashComments(region)
   }
 }
 
 export function spliceYamlRootArray(
   text: string,
   targetParsed: unknown,
-  merged: unknown,
+  merged: unknown
 ): SpliceOutcome {
   if (!Array.isArray(targetParsed)) throw new SpliceError("target is not a YAML sequence")
   if (deepEqual(targetParsed, merged)) return { text, action: "skip", commentLoss: false }
@@ -1005,7 +1004,7 @@ export function spliceYamlRootArray(
     return {
       text: mergedLines.join("\n") + "\n",
       action: "replace",
-      commentLoss: hasHashComments(lines.slice(i).join("\n")),
+      commentLoss: hasHashComments(lines.slice(i).join("\n"))
     }
   }
 
@@ -1020,7 +1019,7 @@ export function spliceYamlRootArray(
   return {
     text: next.join("\n"),
     action: "replace",
-    commentLoss: hasHashComments(region),
+    commentLoss: hasHashComments(region)
   }
 }
 
@@ -1045,7 +1044,7 @@ export function spliceToml(
   text: string,
   targetParsed: unknown,
   ops: readonly TomlOp[],
-  merged: unknown,
+  merged: unknown
 ): TomlSpliceOutcome {
   let lines = text.split("\n")
   const changes: string[] = []
@@ -1125,20 +1124,16 @@ export function spliceToml(
     text: lines.join("\n"),
     action: changes.length ? "replace" : "skip",
     commentLoss,
-    changes,
+    changes
   }
 }
 
-function rewriteTomlOutcome(
-  text: string,
-  merged: unknown,
-  changes: string[],
-): TomlSpliceOutcome {
+function rewriteTomlOutcome(text: string, merged: unknown, changes: string[]): TomlSpliceOutcome {
   return {
     text: serializeByFormat(merged, "toml"),
     action: "rewrite",
     commentLoss: hasHashComments(text),
-    changes,
+    changes
   }
 }
 
@@ -1557,7 +1552,9 @@ function rules(): Rule[] {
     sniff: (p: unknown) => boolean
     candidates: (b: TargetBase) => string[]
   }): Rule => {
-    const [exportKey, targetKey] = Array.isArray(opts.mapKey) ? opts.mapKey : [opts.mapKey, opts.mapKey]
+    const [exportKey, targetKey] = Array.isArray(opts.mapKey)
+      ? opts.mapKey
+      : [opts.mapKey, opts.mapKey]
     return {
       id: opts.id,
       displayName: opts.displayName,
@@ -2165,9 +2162,7 @@ export const OSAURUS_BASE_URL = `http://127.0.0.1:${OSAURUS_DEFAULT_PORT}/v1`
 export const OSAURUS_NOUS_PROVIDER = "nous"
 
 export const osaurusModelId = (modelId: string) =>
-  modelId.startsWith(`${OSAURUS_NOUS_PROVIDER}/`)
-    ? modelId
-    : `${OSAURUS_NOUS_PROVIDER}/${modelId}`
+  modelId.startsWith(`${OSAURUS_NOUS_PROVIDER}/`) ? modelId : `${OSAURUS_NOUS_PROVIDER}/${modelId}`
 
 // Same catalog as the direct Codex export, but slugged the way Osaurus addresses
 // remote models so /model switches keep matching the provider's model names.
@@ -2692,7 +2687,7 @@ export function buildCliproxyapiConfig(models: ExportableModel[]): CliproxyapiCo
         "base-url": GCMP_BASE_URL,
         "api-key-entries": [{ "api-key": CLIPROXYAPI_API_KEY_PLACEHOLDER }],
         headers: {
-          "User-Agent": "HermesAgent/0.21.7",
+          "User-Agent": "HermesAgent/0.22.2",
           Authorization: "Bearer " + CLIPROXYAPI_API_KEY_PLACEHOLDER
         },
         models: models.map((model) => {
@@ -3109,7 +3104,7 @@ export interface MimocodeConfig {
 const INPUT_MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
 const OUTPUT_MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
 
-const MIMOCODE_USER_AGENT = "HermesAgent/0.21.7"
+const MIMOCODE_USER_AGENT = "HermesAgent/0.22.2"
 
 const buildModalities = (model: ExportableModel) => {
   const inputDeclared = model.architecture?.input_modalities ?? []
@@ -3419,12 +3414,18 @@ export const EXPORT_PROGRAMS: { id: string; files: ExportFileSpec[] }[] = [
   },
   {
     id: "github-copilot-gcmp",
-    files: [{ fileName: "gcmp-compatible-models.json", format: "json", build: buildGcmpCompatibleModels }]
+    files: [
+      { fileName: "gcmp-compatible-models.json", format: "json", build: buildGcmpCompatibleModels }
+    ]
   },
   {
     id: "github-copilot-language-models",
     files: [
-      { fileName: "chatLanguageModels.json", format: "json", build: buildGithubCopilotLanguageModels }
+      {
+        fileName: "chatLanguageModels.json",
+        format: "json",
+        build: buildGithubCopilotLanguageModels
+      }
     ]
   },
   {
@@ -3437,7 +3438,9 @@ export const EXPORT_PROGRAMS: { id: string; files: ExportFileSpec[] }[] = [
   },
   {
     id: "deepseek-harness-desktop",
-    files: [{ fileName: "dsh-desktop-cordis-patch.yml", format: "yaml", build: buildDshDesktopPatch }]
+    files: [
+      { fileName: "dsh-desktop-cordis-patch.yml", format: "yaml", build: buildDshDesktopPatch }
+    ]
   },
   {
     id: "litellm",
@@ -3457,11 +3460,20 @@ export const EXPORT_PROGRAMS: { id: string; files: ExportFileSpec[] }[] = [
   },
   {
     id: "chatbox",
-    files: [{ fileName: "chatbox-nous-provider.json", format: "json", pasteOnly: true, build: buildChatboxProviderConfig }]
+    files: [
+      {
+        fileName: "chatbox-nous-provider.json",
+        format: "json",
+        pasteOnly: true,
+        build: buildChatboxProviderConfig
+      }
+    ]
   },
   {
     id: "cherry-studio",
-    files: [{ fileName: "cherry-studio-nous.json", format: "json", build: buildCherryStudioProvider }]
+    files: [
+      { fileName: "cherry-studio-nous.json", format: "json", build: buildCherryStudioProvider }
+    ]
   },
   {
     id: "zed",
