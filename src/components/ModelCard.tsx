@@ -244,16 +244,19 @@ export const ModelCard = memo(function ModelCard({
             </div>
             <div
               title={`${t.context}: ${model.context_length.toLocaleString()}`}
-              className={`text-sm font-medium font-mono truncate ${isDark ? "text-gray-200" : "text-gray-700"}`}
+              className={`text-sm font-medium font-mono ${isDark ? "text-gray-200" : "text-gray-700"}`}
             >
               {formatCtx(model.context_length)}
-              {model.top_provider?.context_length &&
-                model.top_provider.context_length !== model.context_length && (
-                  <span className={isDark ? "text-gray-500 ml-1" : "text-gray-400 ml-1"}>
-                    ({formatCtx(model.top_provider.context_length)})
-                  </span>
-                )}
             </div>
+            {model.top_provider?.context_length &&
+              model.top_provider.context_length !== model.context_length && (
+                <div
+                  title={`${t.context}: ${model.top_provider.context_length.toLocaleString()}`}
+                  className={`text-[10px] font-mono ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                >
+                  {formatCtx(model.top_provider.context_length)}
+                </div>
+              )}
           </div>
           {model.top_provider?.max_completion_tokens ? (
             <div className="flex-1 min-w-0 px-3">
