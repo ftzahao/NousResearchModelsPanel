@@ -98,6 +98,8 @@ export function App() {
   const [showReasoning, setShowReasoning] = useState(false)
   const [showFree, setShowFree] = useState(false)
   const [showDiscount, setShowDiscount] = useState(false)
+  const [showInputDiscount, setShowInputDiscount] = useState(false)
+  const [showOutputDiscount, setShowOutputDiscount] = useState(false)
   const [showFavorites, setShowFavorites] = useState(false)
   const [favorites, setFavorites] = useState<Set<string>>(() => {
     try {
@@ -231,6 +233,8 @@ export function App() {
     if (showReasoning) result = result.filter((m) => m.reasoning)
     if (showFree) result = result.filter((m) => isFreePrice(m.pricing?.prompt))
     if (showDiscount) result = result.filter((m) => getDiscount(m) !== null)
+    if (showInputDiscount) result = result.filter((m) => getDiscount(m)?.prompt != null)
+    if (showOutputDiscount) result = result.filter((m) => getDiscount(m)?.completion != null)
     if (showFavorites) result = result.filter((m) => favorites.has(m.id))
 
     if (sortBy === "custom") {
@@ -242,6 +246,12 @@ export function App() {
       switch (sortBy) {
         case "newest":
           return b.created - a.created
+        case "favorites-first": {
+          const aFav = favorites.has(a.id) ? 1 : 0
+          const bFav = favorites.has(b.id) ? 1 : 0
+          if (aFav !== bFav) return bFav - aFav
+          return b.created - a.created
+        }
         case "prompt-asc":
           return bn(a.pricing?.prompt)
             .minus(b.pricing?.prompt ?? "0")
@@ -279,6 +289,8 @@ export function App() {
     showReasoning,
     showFree,
     showDiscount,
+    showInputDiscount,
+    showOutputDiscount,
     showFavorites,
     favorites
   ])
@@ -304,6 +316,8 @@ export function App() {
     showReasoning,
     showFree,
     showDiscount,
+    showInputDiscount,
+    showOutputDiscount,
     showFavorites
   ])
 
@@ -507,6 +521,10 @@ export function App() {
                 setShowFree={setShowFree}
                 showDiscount={showDiscount}
                 setShowDiscount={setShowDiscount}
+                showInputDiscount={showInputDiscount}
+                setShowInputDiscount={setShowInputDiscount}
+                showOutputDiscount={showOutputDiscount}
+                setShowOutputDiscount={setShowOutputDiscount}
                 showFavorites={showFavorites}
                 setShowFavorites={handleSetShowFavorites}
                 favoriteCount={favorites.size}

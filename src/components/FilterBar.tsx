@@ -10,7 +10,9 @@ import {
   X,
   BadgePercent,
   Star,
-  AlertTriangle
+  AlertTriangle,
+  ArrowDownToLine,
+  ArrowUpFromLine
 } from "lucide-react"
 import { XCircle } from "lucide-react"
 import type { ViewMode } from "../types"
@@ -32,6 +34,10 @@ export function FilterBar({
   setShowFree,
   showDiscount,
   setShowDiscount,
+  showInputDiscount,
+  setShowInputDiscount,
+  showOutputDiscount,
+  setShowOutputDiscount,
   showFavorites,
   setShowFavorites,
   favoriteCount,
@@ -56,6 +62,10 @@ export function FilterBar({
   setShowFree: (v: boolean) => void
   showDiscount: boolean
   setShowDiscount: (v: boolean) => void
+  showInputDiscount: boolean
+  setShowInputDiscount: (v: boolean) => void
+  showOutputDiscount: boolean
+  setShowOutputDiscount: (v: boolean) => void
   showFavorites: boolean
   setShowFavorites: (v: boolean) => void
   favoriteCount: number
@@ -222,6 +232,7 @@ export function FilterBar({
             className={selectClass}
           >
             <option value="newest">{t.newest}</option>
+            <option value="favorites-first">{t.favoritesFirst}</option>
             <option value="prompt-asc">{t.priceLowHigh}</option>
             <option value="prompt-desc">{t.priceHighLow}</option>
             <option value="context">{t.contextLength}</option>
@@ -277,6 +288,34 @@ export function FilterBar({
             }`}
           >
             <BadgePercent size={12} /> {t.discount}
+          </button>
+          <button
+            onClick={() => setShowInputDiscount(!showInputDiscount)}
+            className={`px-2 sm:px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
+              showInputDiscount
+                ? isDark
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                  : "bg-amber-100 text-amber-700 border-amber-300"
+                : isDark
+                  ? "bg-gray-900/50 text-gray-400 border-white/5"
+                  : "bg-gray-100 text-gray-500 border-gray-200"
+            }`}
+          >
+            <ArrowDownToLine size={12} /> {t.inputDiscount}
+          </button>
+          <button
+            onClick={() => setShowOutputDiscount(!showOutputDiscount)}
+            className={`px-2 sm:px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
+              showOutputDiscount
+                ? isDark
+                  ? "bg-orange-500/20 text-orange-300 border-orange-500/30"
+                  : "bg-orange-100 text-orange-700 border-orange-300"
+                : isDark
+                  ? "bg-gray-900/50 text-gray-400 border-white/5"
+                  : "bg-gray-100 text-gray-500 border-gray-200"
+            }`}
+          >
+            <ArrowUpFromLine size={12} /> {t.outputDiscount}
           </button>
           <button
             onClick={() => setShowFavorites(!showFavorites)}
