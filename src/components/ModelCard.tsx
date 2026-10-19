@@ -12,7 +12,6 @@ import {
   isFreePrice,
   isNewModel,
   formatPrice,
-  formatCtx,
   currencyUnit,
   getProviderColor,
   getDiscount,
@@ -235,8 +234,8 @@ export const ModelCard = memo(function ModelCard({
         <ModalityFlow model={model} />
 
         {/* Quick stats */}
-        <div className={`flex divide-x mt-3 ${isDark ? "divide-white/10" : "divide-gray-200"}`}>
-          <div className="flex-1 min-w-0 pr-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3">
+          <div className="min-w-0">
             <div
               className={`text-[10px] font-mono uppercase tracking-wider ${textMuted(isDark)}`}
             >
@@ -246,7 +245,7 @@ export const ModelCard = memo(function ModelCard({
               title={`${t.context}: ${model.context_length.toLocaleString()}`}
               className={`text-sm font-medium font-mono ${isDark ? "text-gray-200" : "text-gray-700"}`}
             >
-              {formatCtx(model.context_length)}
+              {model.context_length.toLocaleString()}
             </div>
             {model.top_provider?.context_length &&
               model.top_provider.context_length !== model.context_length && (
@@ -254,12 +253,12 @@ export const ModelCard = memo(function ModelCard({
                   title={`${t.context}: ${model.top_provider.context_length.toLocaleString()}`}
                   className={`text-[10px] font-mono ${isDark ? "text-gray-500" : "text-gray-400"}`}
                 >
-                  {formatCtx(model.top_provider.context_length)}
+                  {model.top_provider.context_length.toLocaleString()}
                 </div>
               )}
           </div>
           {model.top_provider?.max_completion_tokens ? (
-            <div className="flex-1 min-w-0 px-3">
+            <div className="min-w-0">
               <div
                 className={`text-[10px] font-mono uppercase tracking-wider ${textMuted(isDark)}`}
               >
@@ -268,11 +267,11 @@ export const ModelCard = memo(function ModelCard({
               <div
                 className={`text-sm font-medium font-mono truncate ${isDark ? "text-gray-200" : "text-gray-700"}`}
               >
-                {formatCtx(model.top_provider.max_completion_tokens)}
+                {model.top_provider.max_completion_tokens.toLocaleString()}
               </div>
             </div>
           ) : null}
-          <div className="flex-1 min-w-0 px-3">
+          <div className="min-w-0">
             <div
               className={`text-[10px] font-mono uppercase tracking-wider ${textMuted(isDark)}`}
             >
@@ -305,7 +304,7 @@ export const ModelCard = memo(function ModelCard({
               </div>
             )}
           </div>
-          <div className="flex-1 min-w-0 pl-3">
+          <div className="min-w-0">
             <div
               className={`text-[10px] font-mono uppercase tracking-wider ${textMuted(isDark)}`}
             >

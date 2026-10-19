@@ -6,7 +6,6 @@ import { useTheme, useCurrency } from "../contexts"
 import {
   isFreePrice,
   isNewModel,
-  formatCtx,
   formatPriceShort,
   getProviderColor,
   getDiscount,
@@ -154,7 +153,7 @@ export const CompactModelCard = memo(function CompactModelCard({
       <div
         className={`mt-2 flex items-center justify-between gap-1 text-[10px] font-mono ${textFaint(isDark)}`}
       >
-        <span title={t.context}>{formatCtx(model.context_length)}</span>
+        <span title={t.context}>{model.context_length.toLocaleString()}</span>
         <span
           className={isDark ? "text-brand-300" : "text-brand-700"}
           title={`${t.promptPrice} (${t.perM})`}

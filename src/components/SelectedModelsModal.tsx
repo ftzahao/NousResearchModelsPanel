@@ -2,7 +2,7 @@ import { X, Crosshair, Trash2, ListChecks } from "lucide-react"
 import type { Model } from "../types"
 import { useTheme, useCurrency } from "../contexts"
 import { useLang } from "../i18n"
-import { formatPrice, formatCtx, getProvider, getProviderColor, currencyUnit, textMuted } from "../utils"
+import { formatPrice, getProvider, getProviderColor, currencyUnit, textMuted } from "../utils"
 import { ModalShell } from "./ModalShell"
 
 export function SelectedModelsModal({
@@ -85,7 +85,7 @@ export function SelectedModelsModal({
               </div>
               <div className="hidden sm:flex items-center gap-3 text-[10px] flex-shrink-0">
                 <span className={textMuted(isDark)}>
-                  {t.context} {formatCtx(model.context_length)}
+                  {t.context} {model.context_length.toLocaleString()}
                 </span>
                 <span className={`font-mono ${isDark ? "text-brand-300" : "text-brand-700"}`}>
                   {formatPrice(model.pricing?.prompt, lang, currency, exchangeRate)}

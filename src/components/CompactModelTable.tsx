@@ -6,7 +6,6 @@ import { useTheme, useCurrency } from "../contexts"
 import {
   isFreePrice,
   isNewModel,
-  formatCtx,
   formatPriceShort,
   getProviderColor,
   getDiscount,
@@ -137,7 +136,7 @@ export const CompactModelTable = memo(function CompactModelTable({
                       </span>
                     </div>
                   </td>
-                  <td className={`${td} font-mono`}>{formatCtx(model.context_length)}</td>
+                  <td className={`${td} font-mono`}>{model.context_length.toLocaleString()}</td>
                   <td
                     className={`${td} text-right font-mono ${isDark ? "text-brand-300" : "text-brand-700"}`}
                   >

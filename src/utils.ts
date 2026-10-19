@@ -177,7 +177,9 @@ export function modelParamsLines(
   const lines: ParamsLine[] = [{ label: labels.context, value: formatCtx(model.context_length) }]
   const topCtx = model.top_provider?.context_length
   if (topCtx && topCtx !== model.context_length) {
-    lines[0]!.value += ` (${formatCtx(topCtx)})`
+    const formattedTopCtx = formatCtx(topCtx)
+    const formattedCtx = formatCtx(model.context_length)
+    lines[0]!.value += ` (${formattedTopCtx === formattedCtx ? topCtx.toLocaleString() : formattedTopCtx})`
   }
   if (model.top_provider?.max_completion_tokens) {
     lines.push({ label: labels.maxOutput, value: formatCtx(model.top_provider.max_completion_tokens) })
