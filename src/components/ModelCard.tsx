@@ -281,20 +281,24 @@ export const ModelCard = memo(function ModelCard({
               >
                 {t.freeLabel}
               </div>
-            ) : (
-              <div className="flex items-baseline gap-1.5">
+            ) : discount?.prompt ? (
+              <div className="flex flex-col">
                 <div
                   className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-300" : "text-brand-700"}`}
                 >
                   {formatPrice(model.pricing.prompt, lang, currency, exchangeRate)}
                 </div>
-                {discount?.prompt && (
-                  <div
-                    className={`text-[10px] font-mono line-through flex-shrink-0 ${isDark ? "text-gray-600" : "text-gray-400"}`}
-                  >
-                    {formatPrice(discount.prompt.originalPrice, lang, currency, exchangeRate)}
-                  </div>
-                )}
+                <div
+                  className={`text-[10px] font-mono line-through ${isDark ? "text-gray-600" : "text-gray-400"}`}
+                >
+                  {formatPrice(discount.prompt.originalPrice, lang, currency, exchangeRate)}
+                </div>
+              </div>
+            ) : (
+              <div
+                className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-300" : "text-brand-700"}`}
+              >
+                {formatPrice(model.pricing.prompt, lang, currency, exchangeRate)}
               </div>
             )}
           </div>
@@ -310,20 +314,24 @@ export const ModelCard = memo(function ModelCard({
               >
                 {t.freeLabel}
               </div>
-            ) : (
-              <div className="flex items-baseline gap-1.5">
+            ) : discount?.completion ? (
+              <div className="flex flex-col">
                 <div
                   className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-400" : "text-brand-600"}`}
                 >
                   {formatPrice(model.pricing.completion, lang, currency, exchangeRate)}
                 </div>
-                {discount?.completion && (
-                  <div
-                    className={`text-[10px] font-mono line-through flex-shrink-0 ${isDark ? "text-gray-600" : "text-gray-400"}`}
-                  >
-                    {formatPrice(discount.completion.originalPrice, lang, currency, exchangeRate)}
-                  </div>
-                )}
+                <div
+                  className={`text-[10px] font-mono line-through ${isDark ? "text-gray-600" : "text-gray-400"}`}
+                >
+                  {formatPrice(discount.completion.originalPrice, lang, currency, exchangeRate)}
+                </div>
+              </div>
+            ) : (
+              <div
+                className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-400" : "text-brand-600"}`}
+              >
+                {formatPrice(model.pricing.completion, lang, currency, exchangeRate)}
               </div>
             )}
           </div>
