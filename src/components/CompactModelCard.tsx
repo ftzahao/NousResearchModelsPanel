@@ -10,7 +10,8 @@ import {
   formatPriceShort,
   getProviderColor,
   getDiscount,
-  formatDiscount
+  formatDiscount,
+  textFaint
 } from "../utils"
 import { SelectCheckbox } from "./SelectCheckbox"
 import { IntelligenceBar } from "./IntelligenceBar"
@@ -151,7 +152,7 @@ export const CompactModelCard = memo(function CompactModelCard({
         </div>
       </div>
       <div
-        className={`mt-2 flex items-center justify-between gap-1 text-[10px] font-mono ${isDark ? "text-gray-400" : "text-gray-500"}`}
+        className={`mt-2 flex items-center justify-between gap-1 text-[10px] font-mono ${textFaint(isDark)}`}
       >
         <span title={t.context}>{formatCtx(model.context_length)}</span>
         <span

@@ -2,7 +2,7 @@ import { X, Crosshair, Trash2, ListChecks } from "lucide-react"
 import type { Model } from "../types"
 import { useTheme, useCurrency } from "../contexts"
 import { useLang } from "../i18n"
-import { formatPrice, formatCtx, getProvider, getProviderColor, currencyUnit } from "../utils"
+import { formatPrice, formatCtx, getProvider, getProviderColor, currencyUnit, textMuted } from "../utils"
 import { ModalShell } from "./ModalShell"
 
 export function SelectedModelsModal({
@@ -53,7 +53,7 @@ export function SelectedModelsModal({
     >
       {models.length === 0 ? (
         <div
-          className={`flex-1 flex flex-col items-center justify-center gap-2 py-16 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+          className={`flex-1 flex flex-col items-center justify-center gap-2 py-16 ${textMuted(isDark)}`}
         >
           <ListChecks size={28} className="opacity-30" />
           <p className="text-xs">{t.noSelection}</p>
@@ -78,13 +78,13 @@ export function SelectedModelsModal({
                   {model.name}
                 </div>
                 <div
-                  className={`text-[10px] font-mono truncate ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                  className={`text-[10px] font-mono truncate ${textMuted(isDark)}`}
                 >
                   {getProvider(model.id)} · {model.id}
                 </div>
               </div>
               <div className="hidden sm:flex items-center gap-3 text-[10px] flex-shrink-0">
-                <span className={isDark ? "text-gray-500" : "text-gray-400"}>
+                <span className={textMuted(isDark)}>
                   {t.context} {formatCtx(model.context_length)}
                 </span>
                 <span className={`font-mono ${isDark ? "text-brand-300" : "text-brand-700"}`}>

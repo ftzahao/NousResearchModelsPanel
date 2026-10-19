@@ -11,11 +11,13 @@ import {
 } from "lucide-react"
 import { useTheme, useCurrency } from "../contexts"
 import { useLang } from "../i18n"
+import { textFaint, textMuted } from "../utils"
 
 export type Tab = "models" | "charts"
 
 export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab) => void }) {
   const { theme, toggleTheme } = useTheme()
+  const isDark = theme === "dark"
   const { lang, t, setLang } = useLang()
   const {
     currency,
@@ -57,7 +59,7 @@ export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab)
                 <span className="text-brand-500 dark:text-brand-400">//</span> {t.title}
               </h1>
               <p
-                className={`text-[10px] truncate font-mono ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                className={`text-[10px] truncate font-mono ${textFaint(isDark)}`}
               >
                 {t.subtitle}
               </p>
@@ -149,7 +151,7 @@ export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab)
                   <div className="p-3 space-y-3">
                     <div>
                       <div
-                        className={`text-[10px] mb-2 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                        className={`text-[10px] mb-2 ${textMuted(isDark)}`}
                       >
                         {t.currency}
                       </div>
@@ -188,7 +190,7 @@ export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab)
                       <>
                         <div>
                           <div
-                            className={`text-[10px] mb-1.5 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                            className={`text-[10px] mb-1.5 ${textMuted(isDark)}`}
                           >
                             {t.exchangeRate}: 1 USD = ¥{exchangeRate.toFixed(4)}
                           </div>
@@ -216,7 +218,7 @@ export function Header({ tab, onTabChange }: { tab: Tab; onTabChange: (tab: Tab)
                         </div>
                         <div>
                           <div
-                            className={`text-[10px] mb-1.5 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                            className={`text-[10px] mb-1.5 ${textMuted(isDark)}`}
                           >
                             {t.customRate}
                           </div>

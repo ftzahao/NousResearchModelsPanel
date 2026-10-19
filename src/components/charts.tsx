@@ -15,26 +15,23 @@ import {
   ZAxis
 } from "recharts"
 import { DollarSign, Brain, Layers, Globe, Tag } from "lucide-react"
-import type { Model } from "../types"
+import type { Lang, Model } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
-import {
-  bn,
-  currencyUnit,
-  formatCtx,
-  formatDiscount,
-  getDiscount,
-  getProvider,
-  getProviderColor,
-  providerColors,
-  stripZeros
-} from "../utils"
+import { bn, currencySymbol, currencyUnit, formatCtx, formatDiscount, getDiscount, getProvider, getProviderColor, providerColors, stripZeros, textFaint, textMuted } from "../utils"
+import type { translations } from "../translations"
 
 const PROVIDER_PREFIX =
   /^(Anthropic|Google|Meta|DeepSeek|Qwen|NVIDIA|IBM|Inception|MoonshotAI|ByteDance|Z\.ai|Upstage|Poolside|Sakana|Thinking Machines|Meituan|Tencent|InclusionAI|VoyageAI):\s*/
 
 function shortName(name: string, max: number): string {
   return name.replace(PROVIDER_PREFIX, "").slice(0, max)
+}
+
+// Recharts click events carry the payload either on the entry or nested.
+function handlePointClick(entry: any, onShowDetails: (id: string) => void) {
+  const d = entry?.payload ?? entry
+  if (d?.id) onShowDetails(d.id)
 }
 
 function tooltipStyle(isDark: boolean): React.CSSProperties {
@@ -53,6 +50,29 @@ function gridStroke(isDark: boolean): string {
 
 function fmtPrice(v: number, sym: string): string {
   return `${sym}${v >= 1 ? v.toFixed(2) : stripZeros(v.toFixed(4))}`
+}
+
+type TipPayload = Record<string, any>
+
+interface TipProps {
+  active?: boolean
+  payload?: Array<{ payload: TipPayload }>
+  t: typeof translations.zh
+  isDark: boolean
+  // Currency symbol and the multiplier that converts a USD per-M price to the
+  // selected currency; both precomputed by the parent so tooltips stay pure.
+  sym: string
+  conv: number
+}
+
+interface DiscountTipProps extends TipProps {
+  lang: Lang
+}
+
+interface PieTipProps {
+  active?: boolean
+  payload?: Array<{ payload: TipPayload }>
+  isDark: boolean
 }
 
 function ChartCard({
@@ -79,11 +99,11 @@ function ChartCard({
         {icon} {title}
       </h3>
       {desc && (
-        <p className={`text-xs mb-2 ${isDark ? "text-gray-500" : "text-gray-400"}`}>{desc}</p>
+        <p className={`text-xs mb-2 ${textMuted(isDark)}`}>{desc}</p>
       )}
       {empty ? (
         <div
-          className={`h-[200px] flex items-center justify-center text-xs ${isDark ? "text-gray-500" : "text-gray-400"}`}
+          className={`h-[200px] flex items-center justify-center text-xs ${textMuted(isDark)}`}
         >
           {t.noData}
         </div>
@@ -103,12 +123,10 @@ function TipRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ScatterTip(props: any) {
-  const { active, payload, t, isDark, currency, rate } = props
+function ScatterTip({ active, payload, t, isDark, sym, conv }: TipProps) {
   if (!active || !payload?.length) return null
-  const d = payload[0].payload
-  const sym = currency === "CNY" ? "¥" : "$"
-  const price = d.prompt * (currency === "CNY" ? rate : 1)
+  const d = payload[0]!.payload
+  const price = d.prompt * conv
   return (
     <div style={tooltipStyle(isDark)} className="p-2 rounded-lg min-w-[200px]">
       <div className="font-semibold text-xs mb-1">{d.name}</div>
@@ -121,12 +139,10 @@ function ScatterTip(props: any) {
   )
 }
 
-function ValueTip(props: any) {
-  const { active, payload, t, isDark, currency, rate } = props
+function ValueTip({ active, payload, t, isDark, sym, conv }: TipProps) {
   if (!active || !payload?.length) return null
-  const d = payload[0].payload
-  const sym = currency === "CNY" ? "¥" : "$"
-  const price = d.price * (currency === "CNY" ? rate : 1)
+  const d = payload[0]!.payload
+  const price = d.price * conv
   return (
     <div style={tooltipStyle(isDark)} className="p-2 rounded-lg min-w-[200px]">
       <div className="font-semibold text-xs mb-1">{d.name}</div>
@@ -138,12 +154,9 @@ function ValueTip(props: any) {
   )
 }
 
-function DiscountTip(props: any) {
-  const { active, payload, t, isDark, lang, currency, rate } = props
+function DiscountTip({ active, payload, t, isDark, lang, sym, conv }: DiscountTipProps) {
   if (!active || !payload?.length) return null
-  const d = payload[0].payload
-  const sym = currency === "CNY" ? "¥" : "$"
-  const conv = currency === "CNY" ? rate : 1
+  const d = payload[0]!.payload
   return (
     <div style={tooltipStyle(isDark)} className="p-2 rounded-lg min-w-[200px]">
       <div className="font-semibold text-xs mb-1">{d.name}</div>
@@ -158,10 +171,9 @@ function DiscountTip(props: any) {
   )
 }
 
-function PieTip(props: any) {
-  const { active, payload, isDark } = props
+function PieTip({ active, payload, isDark }: PieTipProps) {
   if (!active || !payload?.length) return null
-  const d = payload[0].payload
+  const d = payload[0]!.payload
   const pct = ((d.value / d.total) * 100).toFixed(1)
   return (
     <div style={tooltipStyle(isDark)} className="p-2 rounded-lg">
@@ -178,7 +190,7 @@ function ProviderLegend({ providers }: { providers: string[] }) {
       {providers.map((p) => (
         <span
           key={p}
-          className={`flex items-center gap-1 text-[10px] ${isDark ? "text-gray-400" : "text-gray-500"}`}
+          className={`flex items-center gap-1 text-[10px] ${textFaint(isDark)}`}
         >
           <span
             className="w-2 h-2 rounded-full"
@@ -193,6 +205,8 @@ function ProviderLegend({ providers }: { providers: string[] }) {
 
 const AXIS_TICK_DARK = "#8484b0"
 const AXIS_TICK_LIGHT = "#6e6ba6"
+const AXIS_LABEL_DARK = "#6e6ba6"
+const AXIS_LABEL_LIGHT = "#8484b0"
 
 export function PricingChart({ models }: { models: Model[] }) {
   const { lang, t } = useLang()
@@ -200,7 +214,7 @@ export function PricingChart({ models }: { models: Model[] }) {
   const { currency, exchangeRate } = useCurrency()
   const isDark = theme === "dark"
   const conv = currency === "CNY" ? exchangeRate : 1
-  const sym = currency === "CNY" ? "¥" : "$"
+  const sym = currencySymbol(currency)
   const data = useMemo(() => {
     return models
       .filter((m) => !m.id.includes(":batch") && !m.synthesizedFreeVariant && !m.id.startsWith("~"))
@@ -266,6 +280,8 @@ export function BenchmarkScatter({
   const { theme } = useTheme()
   const { currency, exchangeRate } = useCurrency()
   const isDark = theme === "dark"
+  const conv = currency === "CNY" ? exchangeRate : 1
+  const sym = currencySymbol(currency)
   const data = useMemo(() => {
     return models
       .filter(
@@ -285,11 +301,6 @@ export function BenchmarkScatter({
       }))
   }, [models])
 
-  const handlePointClick = (entry: any) => {
-    const d = entry?.payload ?? entry
-    if (d?.id) onShowDetails(d.id)
-  }
-
   return (
     <ChartCard
       icon={<Brain size={14} className={isDark ? "text-brand-400" : "text-brand-600"} />}
@@ -308,7 +319,7 @@ export function BenchmarkScatter({
             label={{
               value: "Coding Index",
               position: "bottom",
-              fill: isDark ? "#6e6ba6" : "#8484b0",
+              fill: isDark ? AXIS_LABEL_DARK : AXIS_LABEL_LIGHT,
               fontSize: 10
             }}
           />
@@ -321,14 +332,14 @@ export function BenchmarkScatter({
               value: "Intelligence",
               angle: -90,
               position: "insideLeft",
-              fill: isDark ? "#6e6ba6" : "#8484b0",
+              fill: isDark ? AXIS_LABEL_DARK : AXIS_LABEL_LIGHT,
               fontSize: 10
             }}
           />
           <Tooltip
-            content={<ScatterTip isDark={isDark} t={t} currency={currency} rate={exchangeRate} />}
+            content={<ScatterTip isDark={isDark} t={t} sym={sym} conv={conv} />}
           />
-          <Scatter data={data} onClick={handlePointClick} cursor="pointer">
+          <Scatter data={data} onClick={(entry) => handlePointClick(entry, onShowDetails)} cursor="pointer">
             {data.map((d) => (
               <Cell key={d.id} fill={d.color} fillOpacity={0.85} />
             ))}
@@ -352,7 +363,7 @@ export function ValueScatter({
   const { currency, exchangeRate } = useCurrency()
   const isDark = theme === "dark"
   const conv = currency === "CNY" ? exchangeRate : 1
-  const sym = currency === "CNY" ? "¥" : "$"
+  const sym = currencySymbol(currency)
   const data = useMemo(() => {
     return models
       .filter(
@@ -374,11 +385,6 @@ export function ValueScatter({
       .filter((d) => d.price > 0)
   }, [models, conv])
 
-  const handlePointClick = (entry: any) => {
-    const d = entry?.payload ?? entry
-    if (d?.id) onShowDetails(d.id)
-  }
-
   return (
     <ChartCard
       icon={<Brain size={14} className={isDark ? "text-amber-400" : "text-amber-600"} />}
@@ -399,7 +405,7 @@ export function ValueScatter({
             label={{
               value: `${t.promptPrice} (${sym}/M, log)`,
               position: "bottom",
-              fill: isDark ? "#6e6ba6" : "#8484b0",
+              fill: isDark ? AXIS_LABEL_DARK : AXIS_LABEL_LIGHT,
               fontSize: 10
             }}
           />
@@ -412,15 +418,15 @@ export function ValueScatter({
               value: t.intelligence,
               angle: -90,
               position: "insideLeft",
-              fill: isDark ? "#6e6ba6" : "#8484b0",
+              fill: isDark ? AXIS_LABEL_DARK : AXIS_LABEL_LIGHT,
               fontSize: 10
             }}
           />
           <ZAxis type="number" dataKey="ctx" range={[60, 380]} />
           <Tooltip
-            content={<ValueTip isDark={isDark} t={t} currency={currency} rate={exchangeRate} />}
+            content={<ValueTip isDark={isDark} t={t} sym={sym} conv={conv} />}
           />
-          <Scatter data={data} onClick={handlePointClick} cursor="pointer">
+          <Scatter data={data} onClick={(entry) => handlePointClick(entry, onShowDetails)} cursor="pointer">
             {data.map((d) => (
               <Cell key={d.id} fill={d.color} fillOpacity={0.75} />
             ))}
@@ -438,7 +444,7 @@ export function DiscountChart({ models }: { models: Model[] }) {
   const { currency, exchangeRate } = useCurrency()
   const isDark = theme === "dark"
   const conv = currency === "CNY" ? exchangeRate : 1
-  const sym = currency === "CNY" ? "¥" : "$"
+  const sym = currencySymbol(currency)
   const data = useMemo(() => {
     return models
       .filter((m) => !m.id.includes(":batch") && !m.id.startsWith("~") && !m.synthesizedFreeVariant)
@@ -493,8 +499,8 @@ export function DiscountChart({ models }: { models: Model[] }) {
                 isDark={isDark}
                 t={t}
                 lang={lang}
-                currency={currency}
-                rate={exchangeRate}
+                sym={sym}
+                conv={conv}
               />
             }
           />
@@ -624,7 +630,7 @@ export function ProviderPie({ models }: { models: Model[] }) {
         {data.slice(0, 8).map((d) => (
           <span
             key={d.name}
-            className={`flex items-center gap-1 text-[10px] ${isDark ? "text-gray-400" : "text-gray-500"}`}
+            className={`flex items-center gap-1 text-[10px] ${textFaint(isDark)}`}
           >
             <span className="w-2 h-2 rounded-full" style={{ background: d.color }} />
             {d.name} ({d.value})

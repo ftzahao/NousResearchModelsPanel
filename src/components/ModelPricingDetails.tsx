@@ -3,7 +3,7 @@ import type { Model, PriceField } from "../types"
 import { useLang } from "../i18n"
 import { useTheme, useCurrency } from "../contexts"
 import { DetailBox } from "./DetailBox"
-import { bn, formatPrice, formatCtx, stripZeros, currencyUnit } from "../utils"
+import { bn, formatPrice, formatCtx, stripZeros, currencyUnit, textFaint, textMuted } from "../utils"
 
 type PricingOverride = NonNullable<Model["pricing"]["overrides"]>[number]
 
@@ -116,7 +116,7 @@ export function ModelPricingDetails({ model }: { model: Model }) {
         className={`text-xs font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-gray-300" : "text-gray-600"}`}
       >
         <DollarSign size={12} /> {t.pricingDetails}
-        <span className={`text-[10px] font-normal ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+        <span className={`text-[10px] font-normal ${textMuted(isDark)}`}>
           ({currencyUnit(lang, currency)})
         </span>
       </h4>
@@ -126,7 +126,7 @@ export function ModelPricingDetails({ model }: { model: Model }) {
           const original = orig?.[item.key] ? priceFor(orig[item.key], item.per1k) : null
           return (
             <DetailBox key={item.key}>
-              <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+              <div className={`text-[10px] ${textMuted(isDark)}`}>
                 {item.label}
               </div>
               <div className={`text-xs font-medium ${isDark ? item.colorDark : item.colorLight}`}>
@@ -134,7 +134,7 @@ export function ModelPricingDetails({ model }: { model: Model }) {
               </div>
               {original && (
                 <div
-                  className={`text-[10px] line-through ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                  className={`text-[10px] line-through ${textMuted(isDark)}`}
                 >
                   {original}
                 </div>
@@ -149,7 +149,7 @@ export function ModelPricingDetails({ model }: { model: Model }) {
           {timeOverrides.length > 0 && (
             <div>
               <div
-                className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                className={`text-[10px] mb-1.5 flex items-center gap-1 ${textMuted(isDark)}`}
               >
                 <Clock size={10} /> {t.peakPricing}
               </div>
@@ -184,9 +184,9 @@ export function ModelPricingDetails({ model }: { model: Model }) {
                         >
                           {isWeekend ? t.weekend : t.weekday}
                         </span>
-                        <span className={isDark ? "text-gray-400" : "text-gray-500"}>{days}</span>
+                        <span className={textFaint(isDark)}>{days}</span>
                         {timeRange && (
-                          <span className={isDark ? "text-gray-500" : "text-gray-400"}>
+                          <span className={textMuted(isDark)}>
                             {timeRange}
                           </span>
                         )}
@@ -201,7 +201,7 @@ export function ModelPricingDetails({ model }: { model: Model }) {
           {tokenOverrides.length > 0 && (
             <div>
               <div
-                className={`text-[10px] mb-1.5 flex items-center gap-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                className={`text-[10px] mb-1.5 flex items-center gap-1 ${textMuted(isDark)}`}
               >
                 <Layers size={10} /> {t.tieredPricing}
               </div>

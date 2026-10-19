@@ -4,9 +4,13 @@ import {
   getContextWindow,
   toPerMillion,
   deriveContextTokens,
+  hasImageInput,
+  supportsToolCalling,
+  NOUS_PROVIDER_ID,
+  perMillionPrice,
+  pricingOf,
   type ExportableModel
 } from "./shared"
-import type { PriceField } from "../types"
 
 export interface GcmpCompatibleModelEntry {
   baseUrl: string
@@ -31,17 +35,17 @@ export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompat
   return models.map((model) => {
     const contextWindow = getContextWindow(model)
     const { maxInputTokens, maxOutputTokens } = deriveContextTokens(model)
-    const pricing: Partial<Record<PriceField, string>> = model.pricing ?? {}
-    const promptPrice = pricing.prompt != null ? toPerMillion(pricing.prompt) : 0
-    const completionPrice = pricing.completion != null ? toPerMillion(pricing.completion) : 0
+    const pricing = pricingOf(model)
+    const promptPrice = perMillionPrice(pricing, "prompt")
+    const completionPrice = perMillionPrice(pricing, "completion")
     const usd: number[] = [promptPrice, completionPrice]
     if (pricing.input_cache_read != null) usd.push(toPerMillion(pricing.input_cache_read))
     if (pricing.input_cache_write != null) usd.push(toPerMillion(pricing.input_cache_write))
     return {
       baseUrl: GCMP_BASE_URL,
       capabilities: {
-        imageInput: model.architecture?.input_modalities?.includes("image") ?? false,
-        toolCalling: model.supported_parameters?.includes("tools") ?? false
+        imageInput: hasImageInput(model),
+        toolCalling: supportsToolCalling(model)
       },
       contextWindow,
       endpoint: "/chat/completions",
@@ -52,7 +56,7 @@ export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompat
       model: model.id,
       modelsEndpoint: "/models",
       name: model.name,
-      provider: "nous",
+      provider: NOUS_PROVIDER_ID,
       ...(model.reasoning?.supported_efforts?.length
         ? { reasoningEffort: model.reasoning.supported_efforts }
         : {}),

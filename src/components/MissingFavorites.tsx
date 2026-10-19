@@ -1,7 +1,7 @@
 import { AlertTriangle } from "lucide-react"
 import { useLang } from "../i18n"
 import { useTheme } from "../contexts"
-import { getProviderColor } from "../utils"
+import { getProviderColor, textFaint } from "../utils"
 import { FavoriteButton } from "./FavoriteButton"
 
 /**
@@ -40,7 +40,7 @@ export function MissingFavorites({
                 ({ids.length})
               </span>
             </p>
-            <p className={`mt-0.5 text-[11px] ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+            <p className={`mt-0.5 text-[11px] ${textFaint(isDark)}`}>
               {t.missingFavoritesDesc}
             </p>
           </div>

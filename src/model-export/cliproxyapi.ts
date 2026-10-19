@@ -1,4 +1,4 @@
-import { GCMP_BASE_URL, getContextWindow, type ExportableModel } from "./shared"
+import { GCMP_BASE_URL, getContextWindow, NOUS_PROVIDER_ID, type ExportableModel } from "./shared"
 
 // ---- CLIProxyAPI (config.yaml openai-compatibility fragment) ----
 
@@ -31,7 +31,7 @@ export interface CliproxyapiConfig {
 }
 
 // fixed provider name so every export replaces the same openai-compatibility entry
-const CLIPROXYAPI_PROVIDER_NAME = "nous"
+const CLIPROXYAPI_PROVIDER_NAME = NOUS_PROVIDER_ID
 // CLIProxyAPI reads provider api keys as literal config values (no env expansion),
 // so the export ships a placeholder the user replaces
 const CLIPROXYAPI_API_KEY_PLACEHOLDER = "YOUR_NOUS_API_KEY"

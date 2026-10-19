@@ -1,5 +1,6 @@
 import {
   NOUS_API_HOST,
+  NOUS_PROVIDER_ID,
   getContextWindow,
   deriveContextTokens,
   hasImageInput,
@@ -35,8 +36,8 @@ export interface ChatboxProviderConfig {
 
 export function buildChatboxProviderConfig(models: ExportableModel[]): ChatboxProviderConfig {
   return {
-    id: "nous",
-    name: "nous",
+    id: NOUS_PROVIDER_ID,
+    name: NOUS_PROVIDER_ID,
     type: "openai",
     iconUrl: "https://nousresearch.com/favicon.ico",
     urls: { website: "https://nousresearch.com" },

@@ -7,7 +7,7 @@ import { useLang } from "../i18n"
 import { useTheme } from "../contexts"
 import { ModelPricingDetails } from "./ModelPricingDetails"
 import { DetailBox } from "./DetailBox"
-import { formatDate, daysSince } from "../utils"
+import { formatDate, daysSince, textFaint, textMuted } from "../utils"
 
 hljs.registerLanguage("json", jsonLang)
 
@@ -39,14 +39,14 @@ export function ModelExpandedDetails({
           <button
             type="button"
             onClick={() => onToggleRawDetails()}
-            className={`px-2 py-1 text-[10px] ${!rawDetails ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-400" : "text-gray-500"}`}
+            className={`px-2 py-1 text-[10px] ${!rawDetails ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : textFaint(isDark)}`}
           >
             {t.optimized}
           </button>
           <button
             type="button"
             onClick={() => onToggleRawDetails()}
-            className={`px-2 py-1 text-[10px] ${rawDetails ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-400" : "text-gray-500"}`}
+            className={`px-2 py-1 text-[10px] ${rawDetails ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : textFaint(isDark)}`}
           >
             {t.apiJson}
           </button>
@@ -71,7 +71,7 @@ export function ModelExpandedDetails({
         <>
           {/* Description */}
           {model.description && (
-            <p className={`text-xs leading-relaxed ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+            <p className={`text-xs leading-relaxed ${textFaint(isDark)}`}>
               {model.description}
             </p>
           )}
@@ -88,7 +88,7 @@ export function ModelExpandedDetails({
             </h4>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <DetailBox>
-                <span className={isDark ? "text-gray-500" : "text-gray-400"}>
+                <span className={textMuted(isDark)}>
                   {t.contextLengthLabel}
                 </span>
                 <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
@@ -97,7 +97,7 @@ export function ModelExpandedDetails({
                 {model.top_provider?.context_length &&
                   model.top_provider.context_length !== model.context_length && (
                     <div
-                      className={`text-[10px] mt-0.5 ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                      className={`text-[10px] mt-0.5 ${textFaint(isDark)}`}
                     >
                       {t.contextTopProvider}: {model.top_provider.context_length} tokens
                     </div>
@@ -105,7 +105,7 @@ export function ModelExpandedDetails({
               </DetailBox>
               {model.top_provider?.max_completion_tokens && (
                 <DetailBox>
-                  <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.maxOutput}</span>
+                  <span className={textMuted(isDark)}>{t.maxOutput}</span>
                   <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
                     {model.top_provider.max_completion_tokens} tokens
                   </div>
@@ -113,7 +113,7 @@ export function ModelExpandedDetails({
               )}
               {model.architecture?.tokenizer && (
                 <DetailBox>
-                  <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.tokenizer}</span>
+                  <span className={textMuted(isDark)}>{t.tokenizer}</span>
                   <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
                     {model.architecture.tokenizer}
                   </div>
@@ -121,7 +121,7 @@ export function ModelExpandedDetails({
               )}
               {model.top_provider?.is_moderated != null && (
                 <DetailBox>
-                  <span className={isDark ? "text-gray-500" : "text-gray-400"}>{t.moderated}</span>
+                  <span className={textMuted(isDark)}>{t.moderated}</span>
                   <div className={`font-medium ${isDark ? "text-gray-200" : "text-gray-700"}`}>
                     {model.top_provider.is_moderated ? t.yes : t.no}
                   </div>
@@ -156,7 +156,7 @@ export function ModelExpandedDetails({
                   </span>
                 ))}
               </div>
-              <div className={`text-[10px] mt-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+              <div className={`text-[10px] mt-1 ${textMuted(isDark)}`}>
                 {model.reasoning.mandatory ? t.mandatory : t.optional}
                 {model.reasoning.default_enabled && ` · ${t.enabledByDefault}`}
               </div>
@@ -180,7 +180,7 @@ export function ModelExpandedDetails({
                   .filter((b) => b.val != null)
                   .map((b) => (
                     <DetailBox key={b.label}>
-                      <div className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+                      <div className={`text-[10px] ${textMuted(isDark)}`}>
                         {b.label}
                       </div>
                       <div
@@ -214,7 +214,7 @@ export function ModelExpandedDetails({
                 {arenas.map((a) => (
                   <DetailBox key={`${a.arena}-${a.category}`}>
                     <div
-                      className={`text-[10px] capitalize ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                      className={`text-[10px] capitalize ${textMuted(isDark)}`}
                     >
                       {a.category.replace(/-/g, " ")}
                     </div>
@@ -224,7 +224,7 @@ export function ModelExpandedDetails({
                       >
                         #{a.rank}
                       </span>
-                      <span className={`text-[10px] ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                      <span className={`text-[10px] ${textFaint(isDark)}`}>
                         ELO {a.elo}
                       </span>
                     </div>

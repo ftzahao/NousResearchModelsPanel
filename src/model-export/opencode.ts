@@ -4,6 +4,8 @@ import {
   deriveContextTokens,
   hasImageInput,
   supportsToolCalling,
+  NOUS_API_KEY_ENV,
+  NOUS_PROVIDER_ID,
   type ExportableModel
 } from "./shared"
 
@@ -73,10 +75,10 @@ export function buildOpencodeConfig(models: ExportableModel[]): OpencodeConfig {
     providers: {
       nous: {
         package: "aisdk:@ai-sdk/openai-compatible",
-        name: "nous",
+        name: NOUS_PROVIDER_ID,
         settings: {
           baseURL: GCMP_BASE_URL,
-          apiKey: "{env:NOUS_API_KEY}"
+          apiKey: `{env:${NOUS_API_KEY_ENV}}`
         },
         models: modelEntries
       }

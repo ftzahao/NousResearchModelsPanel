@@ -10,7 +10,8 @@ import {
   formatPriceShort,
   getProviderColor,
   getDiscount,
-  formatDiscount
+  formatDiscount,
+  textMuted
 } from "../utils"
 import { SelectCheckbox } from "./SelectCheckbox"
 import { IntelligenceBar } from "./IntelligenceBar"
@@ -50,7 +51,7 @@ export const CompactModelTable = memo(function CompactModelTable({
   const { currency, exchangeRate } = useCurrency()
   const isDark = theme === "dark"
 
-  const th = `px-2.5 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide whitespace-nowrap ${isDark ? "text-gray-500" : "text-gray-400"}`
+  const th = `px-2.5 py-1.5 text-left text-[10px] font-medium uppercase tracking-wide whitespace-nowrap ${textMuted(isDark)}`
   const td = `px-2.5 py-1.5 whitespace-nowrap ${isDark ? "text-gray-300" : "text-gray-600"}`
 
   return (

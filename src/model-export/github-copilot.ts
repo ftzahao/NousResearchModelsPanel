@@ -1,4 +1,11 @@
-import { GCMP_BASE_URL, deriveContextTokens, type ExportableModel } from "./shared"
+import {
+  GCMP_BASE_URL,
+  deriveContextTokens,
+  hasImageInput,
+  supportsToolCalling,
+  NOUS_PROVIDER_ID,
+  type ExportableModel
+} from "./shared"
 
 export interface GithubCopilotLanguageModelEntry {
   id: string
@@ -25,7 +32,7 @@ export function buildGithubCopilotLanguageModels(
 ): GithubCopilotLanguageModelsProvider[] {
   return [
     {
-      name: "nous",
+      name: NOUS_PROVIDER_ID,
       vendor: "customendpoint",
       apiType: "chat-completions",
       apiKey: "${input:nousApiKey}",
@@ -36,8 +43,8 @@ export function buildGithubCopilotLanguageModels(
           id: model.id,
           name: model.name,
           url: `${GCMP_BASE_URL}/chat/completions`,
-          toolCalling: model.supported_parameters?.includes("tools") ?? false,
-          vision: model.architecture?.input_modalities?.includes("image") ?? false,
+          toolCalling: supportsToolCalling(model),
+          vision: hasImageInput(model),
           maxInputTokens,
           maxOutputTokens,
           ...(efforts?.length ? { thinking: true, supportsReasoningEffort: efforts } : {})

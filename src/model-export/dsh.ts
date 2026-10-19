@@ -1,4 +1,11 @@
-import { GCMP_BASE_URL, getContextWindow, deriveContextTokens, type ExportableModel } from "./shared"
+import {
+  GCMP_BASE_URL,
+  getContextWindow,
+  deriveContextTokens,
+  NOUS_API_KEY_ENV,
+  NOUS_PROVIDER_ID,
+  type ExportableModel
+} from "./shared"
 
 export type DshModality = "text" | "image"
 
@@ -25,8 +32,8 @@ export interface DshSettings {
 }
 
 // fixed route id so every export replaces the same provider instead of duplicating it
-export const DSH_PROVIDER_ID = "nous"
-export const DSH_API_KEY_ENV = "NOUS_API_KEY"
+export const DSH_PROVIDER_ID = NOUS_PROVIDER_ID
+export const DSH_API_KEY_ENV = NOUS_API_KEY_ENV
 // the pi-ai loader entry both DSH surfaces (settings.yaml and the desktop profile patch) target
 export const DSH_LLM_PI_AI_ID = "llm-pi-ai"
 
@@ -51,7 +58,7 @@ function buildDshReasoningEfforts(efforts: string[] | undefined) {
 
 export function buildDshProviderProfile(models: ExportableModel[]): DshProviderProfile {
   return {
-    displayName: "nous",
+    displayName: NOUS_PROVIDER_ID,
     apiKeyEnv: DSH_API_KEY_ENV,
     api: "openai-completions",
     baseURL: GCMP_BASE_URL,

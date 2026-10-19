@@ -18,6 +18,7 @@ import { XCircle } from "lucide-react"
 import type { ViewMode } from "../types"
 import { useLang } from "../i18n"
 import { useTheme } from "../contexts"
+import { textMuted } from "../utils"
 
 export function FilterBar({
   search,
@@ -122,7 +123,7 @@ export function FilterBar({
         <div className="filter-search relative flex-1 min-w-[160px] sm:min-w-[200px]">
           <Search
             size={14}
-            className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+            className={`absolute left-3 top-1/2 -translate-y-1/2 ${textMuted(isDark)}`}
           />
           <input
             type="text"
@@ -361,28 +362,28 @@ export function FilterBar({
             <button
               onClick={() => setViewMode("grid")}
               title={t.gridView}
-              className={`p-2 ${viewMode === "grid" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+              className={`p-2 ${viewMode === "grid" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : textMuted(isDark)}`}
             >
               <Grid3X3 size={14} />
             </button>
             <button
               onClick={() => setViewMode("list")}
               title={t.listView}
-              className={`p-2 ${viewMode === "list" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+              className={`p-2 ${viewMode === "list" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : textMuted(isDark)}`}
             >
               <List size={14} />
             </button>
             <button
               onClick={() => setViewMode("compact-table")}
               title={t.compactTable}
-              className={`p-2 ${viewMode === "compact-table" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+              className={`p-2 ${viewMode === "compact-table" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : textMuted(isDark)}`}
             >
               <Table size={14} />
             </button>
             <button
               onClick={() => setViewMode("compact-cards")}
               title={t.compactCards}
-              className={`p-2 ${viewMode === "compact-cards" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : isDark ? "text-gray-500" : "text-gray-400"}`}
+              className={`p-2 ${viewMode === "compact-cards" ? (isDark ? "bg-brand-500/20 text-brand-300" : "bg-brand-100 text-brand-700") : textMuted(isDark)}`}
             >
               <LayoutGrid size={14} />
             </button>

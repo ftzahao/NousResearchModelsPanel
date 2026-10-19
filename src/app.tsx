@@ -10,7 +10,8 @@ import { LangContext } from "./i18n"
 import { ThemeContext, CurrencyContext } from "./contexts"
 import { useModels } from "./hooks/useModels"
 import { useCurrencyState } from "./hooks/useCurrency"
-import { bn, getProvider, getDiscount, isFreePrice, missingFavorites, reorderFavorites, sortByFavorites } from "./utils"
+import { bn, getProvider, getDiscount, isFreePrice, missingFavorites, sortByFavorites, textFaint, textMuted } from "./utils"
+import { useFavoritesDrag } from "./hooks/useFavoritesDrag"
 import { Header, type Tab } from "./components/Header"
 import { StatsGrid, type AppStats } from "./components/StatsGrid"
 import { FilterBar } from "./components/FilterBar"
@@ -34,6 +35,39 @@ import {
 import { Search } from "lucide-react"
 
 const PAGE_SIZE = 60
+
+type Translations = typeof translations.zh
+
+// Pick translation keys whose value matches T, so the map below stays type-safe.
+type TranslationsKey<T> = {
+  [K in keyof Translations]: Translations[K] extends T ? K : never
+}[keyof Translations]
+
+// Localized labels per exporter id. The registry stays language-neutral; this is
+// the single place wiring exporter ids to translation keys.
+const EXPORTER_I18N: Record<
+  string,
+  { label: TranslationsKey<string>; usage: TranslationsKey<string[]>; warning?: TranslationsKey<string> }
+> = {
+  codex: { label: "codexSetup", usage: "codexUsage", warning: "codexWarning" },
+  "codex-osaurus": { label: "codexOsaurusSetup", usage: "codexOsaurusUsage" },
+  "github-copilot-gcmp": { label: "gcmpCompatible", usage: "gcmpUsage" },
+  "github-copilot-language-models": { label: "githubCopilotLanguageModels", usage: "githubCopilotUsage" },
+  zcode: { label: "zcodeProviders", usage: "zcodeUsage" },
+  "deepseek-harness": { label: "deepseekHarnessProviders", usage: "deepseekHarnessUsage" },
+  "deepseek-harness-desktop": {
+    label: "deepseekHarnessDesktop",
+    usage: "deepseekHarnessDesktopUsage"
+  },
+  litellm: { label: "litellmConfig", usage: "litellmUsage" },
+  cliproxyapi: { label: "cliproxyapiConfig", usage: "cliproxyapiUsage" },
+  opencode: { label: "opencodeConfig", usage: "opencodeUsage" },
+  crush: { label: "crushConfig", usage: "crushUsage" },
+  chatbox: { label: "chatboxProvider", usage: "chatboxUsage" },
+  "cherry-studio": { label: "cherryStudioProvider", usage: "cherryStudioUsage" },
+  zed: { label: "zedSettings", usage: "zedUsage" },
+  mimocode: { label: "mimocodeConfig", usage: "mimocodeUsage" }
+}
 
 function AppProviders({
   themeValue,
@@ -72,6 +106,7 @@ export function App() {
     if (saved === "light" || saved === "dark") return saved
     return "dark"
   })
+  const isDark = theme === "dark"
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {
@@ -128,52 +163,16 @@ export function App() {
     setShowFavorites(v)
     setSortBy((s) => (v ? "custom" : s === "custom" ? "newest" : s))
   }, [])
-  const moveFavorite = useCallback((fromId: string, toId: string, position: "before" | "after") => {
-    setFavorites((current) => new Set(reorderFavorites([...current], fromId, toId, position)))
-  }, [])
-
-  const canDrag = showFavorites && sortBy === "custom"
-  const [dragId, setDragId] = useState<string | null>(null)
-  const [dropHint, setDropHint] = useState<{ id: string; position: "before" | "after" } | null>(
-    null
-  )
-  const handleDragStart = useCallback((id: string) => setDragId(id), [])
-  const handleDragOver = useCallback(
-    (id: string, e: React.DragEvent) => {
-      if (!dragId || dragId === id) return
-      e.preventDefault()
-      e.dataTransfer.dropEffect = "move"
-      const rect = e.currentTarget.getBoundingClientRect()
-      const position = e.clientY < rect.top + rect.height / 2 ? "before" : "after"
-      setDropHint((prev) =>
-        prev && prev.id === id && prev.position === position ? prev : { id, position }
-      )
-    },
-    [dragId]
-  )
-  const handleDrop = useCallback(
-    (id: string) => {
-      if (dragId && dropHint?.id === id && dragId !== id) {
-        moveFavorite(dragId, id, dropHint.position)
-      }
-      setDragId(null)
-      setDropHint(null)
-    },
-    [dragId, dropHint, moveFavorite]
-  )
-  const handleDragEnd = useCallback(() => {
-    setDragId(null)
-    setDropHint(null)
-  }, [])
+  const drag = useFavoritesDrag(setFavorites, showFavorites && sortBy === "custom")
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem("viewMode")
     if (saved === "list" || saved === "compact-table" || saved === "compact-cards") return saved
     return "grid"
   })
-  const handleSetViewMode = (v: ViewMode) => {
+  const handleSetViewMode = useCallback((v: ViewMode) => {
     setViewMode(v)
     localStorage.setItem("viewMode", v)
-  }
+  }, [])
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [rawDetails, setRawDetails] = useState<Record<string, boolean>>({})
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -344,39 +343,13 @@ export function App() {
   const exporters = useMemo<ModelConfigExporter[]>(
     () =>
       exporterRegistry.map((exporter) => {
-        switch (exporter.id) {
-          case "codex":
-            return { ...exporter, label: t.codexSetup, usage: t.codexUsage, warning: t.codexWarning }
-          case "codex-osaurus":
-            return { ...exporter, label: t.codexOsaurusSetup, usage: t.codexOsaurusUsage }
-          case "github-copilot-gcmp":
-            return { ...exporter, label: t.gcmpCompatible, usage: t.gcmpUsage }
-          case "github-copilot-language-models":
-            return { ...exporter, label: t.githubCopilotLanguageModels, usage: t.githubCopilotUsage }
-          case "zcode":
-            return { ...exporter, label: t.zcodeProviders, usage: t.zcodeUsage }
-          case "deepseek-harness":
-            return { ...exporter, label: t.deepseekHarnessProviders, usage: t.deepseekHarnessUsage }
-          case "deepseek-harness-desktop":
-            return { ...exporter, label: t.deepseekHarnessDesktop, usage: t.deepseekHarnessDesktopUsage }
-          case "litellm":
-            return { ...exporter, label: t.litellmConfig, usage: t.litellmUsage }
-          case "cliproxyapi":
-            return { ...exporter, label: t.cliproxyapiConfig, usage: t.cliproxyapiUsage }
-          case "opencode":
-            return { ...exporter, label: t.opencodeConfig, usage: t.opencodeUsage }
-          case "crush":
-            return { ...exporter, label: t.crushConfig, usage: t.crushUsage }
-          case "chatbox":
-            return { ...exporter, label: t.chatboxProvider, usage: t.chatboxUsage }
-          case "cherry-studio":
-            return { ...exporter, label: t.cherryStudioProvider, usage: t.cherryStudioUsage }
-          case "zed":
-            return { ...exporter, label: t.zedSettings, usage: t.zedUsage }
-          case "mimocode":
-            return { ...exporter, label: t.mimocodeConfig, usage: t.mimocodeUsage }
-          default:
-            throw new Error(`Missing localized labels for exporter: ${exporter.id}`)
+        const i18n = EXPORTER_I18N[exporter.id]
+        if (!i18n) throw new Error(`Missing localized labels for exporter: ${exporter.id}`)
+        return {
+          ...exporter,
+          label: t[i18n.label],
+          usage: t[i18n.usage],
+          ...(i18n.warning ? { warning: t[i18n.warning] } : {})
         }
       }),
     [t]
@@ -472,7 +445,7 @@ export function App() {
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="w-12 h-12 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+            <p className={`text-sm ${textFaint(isDark)}`}>
               {t.loading}
             </p>
           </div>
@@ -487,7 +460,7 @@ export function App() {
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center glass rounded-2xl p-8">
             <p className="text-red-400 text-sm mb-2">{t.loadFailed}</p>
-            <p className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+            <p className={`text-xs ${textMuted(isDark)}`}>
               {error}
             </p>
           </div>
@@ -558,7 +531,7 @@ export function App() {
                 onViewSelected={() => setShowSelectedModels(true)}
               />
 
-              <div className={`text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+              <div className={`text-xs ${textMuted(isDark)}`}>
                 {t.showing} {visibleModels.length}
                 {hasMore ? ` / ${filtered.length}` : ` ${t.of} ${models.length}`} {t.modelsCount}
                 {hasMore && <span className="ml-1.5">· {t.scrollForMore}</span>}
@@ -578,13 +551,13 @@ export function App() {
                   onShowDetails={setDetailId}
                   favorites={favorites}
                   onToggleFavorite={toggleFavorite}
-                  dragEnabled={canDrag}
-                  dragId={dragId}
-                  dropHint={dropHint}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
+                  dragEnabled={drag.enabled}
+                  dragId={drag.dragId}
+                  dropHint={drag.dropHint}
+                  onDragStart={drag.handleDragStart}
+                  onDragOver={drag.handleDragOver}
+                  onDrop={drag.handleDrop}
+                  onDragEnd={drag.handleDragEnd}
                 />
               ) : viewMode === "compact-cards" ? (
                 <div className="card-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
@@ -597,13 +570,13 @@ export function App() {
                       onShowDetails={setDetailId}
                       favorite={favorites.has(m.id)}
                       onToggleFavorite={toggleFavorite}
-                      dragEnabled={canDrag}
-                      isDragging={dragId === m.id}
-                      isDropTarget={dropHint?.id === m.id}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                      onDragEnd={handleDragEnd}
+                      dragEnabled={drag.enabled}
+                      isDragging={drag.dragId === m.id}
+                      isDropTarget={drag.dropHint?.id === m.id}
+                      onDragStart={drag.handleDragStart}
+                      onDragOver={drag.handleDragOver}
+                      onDrop={drag.handleDrop}
+                      onDragEnd={drag.handleDragEnd}
                     />
                   ))}
                 </div>
@@ -627,13 +600,13 @@ export function App() {
                       onToggleRawDetails={toggleRawDetails}
                       favorite={favorites.has(m.id)}
                       onToggleFavorite={toggleFavorite}
-                      dragEnabled={canDrag}
-                      isDragging={dragId === m.id}
-                      isDropTarget={dropHint?.id === m.id}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                      onDragEnd={handleDragEnd}
+                      dragEnabled={drag.enabled}
+                      isDragging={drag.dragId === m.id}
+                      isDropTarget={drag.dropHint?.id === m.id}
+                      onDragStart={drag.handleDragStart}
+                      onDragOver={drag.handleDragOver}
+                      onDrop={drag.handleDrop}
+                      onDragEnd={drag.handleDragEnd}
                     />
                   ))}
                 </div>
@@ -642,7 +615,7 @@ export function App() {
               {hasMore && (
                 <div
                   ref={sentinelRef}
-                  className={`py-3 text-center text-xs font-mono uppercase tracking-wider ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                  className={`py-3 text-center text-xs font-mono uppercase tracking-wider ${textMuted(isDark)}`}
                 >
                   {t.scrollForMore}
                 </div>
@@ -650,7 +623,7 @@ export function App() {
 
               {filtered.length === 0 && !onlyMissingFavorites && (
                 <div
-                  className={`text-center py-16 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                  className={`text-center py-16 ${textMuted(isDark)}`}
                 >
                   <Search size={32} className="mx-auto mb-3 opacity-30" />
                   <p className="text-sm">{t.noModels}</p>
@@ -701,12 +674,7 @@ export function App() {
             selected={selectedIds.has(detailModel.id)}
             onSelect={() => toggleSelect(detailModel.id)}
             rawDetails={rawDetails[detailModel.id] ?? false}
-            onToggleRawDetails={() =>
-              setRawDetails((current) => ({
-                ...current,
-                [detailModel.id]: !(current[detailModel.id] ?? false)
-              }))
-            }
+            onToggleRawDetails={() => toggleRawDetails(detailModel.id)}
             favorite={favorites.has(detailModel.id)}
             onToggleFavorite={() => toggleFavorite(detailModel.id)}
             onClose={() => setDetailId(null)}

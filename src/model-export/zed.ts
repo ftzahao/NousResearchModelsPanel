@@ -4,6 +4,7 @@ import {
   deriveContextTokens,
   hasImageInput,
   supportsToolCalling,
+  NOUS_PROVIDER_ID,
   type ExportableModel
 } from "./shared"
 
@@ -46,7 +47,7 @@ export interface ZedSettings {
 
 // fixed provider id so every export replaces the same entry; Zed derives the env
 // var name from it (NOUS → NOUS_API_KEY)
-const ZED_PROVIDER_ID = "nous"
+const ZED_PROVIDER_ID = NOUS_PROVIDER_ID
 
 function buildZedReasoningEffort(
   efforts: string[] | undefined,

@@ -6,6 +6,8 @@ import {
   isReasoningModel,
   supportsToolCalling,
   toPerMillion,
+  NOUS_API_KEY_ENV,
+  NOUS_PROVIDER_ID,
   type ExportableModel
 } from "./shared"
 
@@ -100,12 +102,12 @@ export function buildMimocodeConfig(models: ExportableModel[]): MimocodeConfig {
     $schema: "https://mimo.xiaomi.com/mimocode/config.json",
     provider: {
       nous: {
-        id: "nous",
-        name: "nous",
+        id: NOUS_PROVIDER_ID,
+        name: NOUS_PROVIDER_ID,
         npm: "@ai-sdk/openai-compatible",
         models: modelEntries,
         options: {
-          apiKey: "{env:NOUS_API_KEY}",
+          apiKey: `{env:${NOUS_API_KEY_ENV}}`,
           baseURL: GCMP_BASE_URL
         }
       }

@@ -1968,6 +1968,8 @@ export const GCMP_BASE_URL = "https://inference-api.nousresearch.com/v1"
 export const GCMP_LIMIT = { rpm: 180, tpm: 720000 }
 export const NOUS_API_HOST = "https://inference-api.nousresearch.com"
 export const NOUS_API_KEY_ENV = "NOUS_API_KEY"
+// The provider id every generated tool config uses for the Nous Research upstream.
+export const NOUS_PROVIDER_ID = "nous"
 
 export const getContextWindow = (model: ExportableModel): number =>
   model.top_provider?.context_length ?? model.context_length ?? 0
@@ -1975,6 +1977,15 @@ export const getContextWindow = (model: ExportableModel): number =>
 // API prices are per-token; the tool configs below expect USD per 1M tokens
 export const toPerMillion = (perToken: string) =>
   new BigNumber(perToken).times(1e6).decimalPlaces(6).toNumber()
+
+// One schema-required cost field: per-million number, absent price reads as 0.
+export function perMillionPrice(
+  pricing: Partial<Record<PriceField, string>>,
+  field: PriceField
+): number {
+  const val = pricing[field]
+  return val != null ? toPerMillion(val) : 0
+}
 
 export function deriveContextTokens(model: ExportableModel): {
   maxInputTokens: number
@@ -2127,7 +2138,7 @@ export function buildCodexConfigToml(models: ExportableModel[]): string {
 # Merge these settings into ~/.codex/config.toml, then point
 # model_catalog_json below at the absolute path of the exported models.json.
 
-model_provider = "nous"
+model_provider = "${NOUS_PROVIDER_ID}"
 model = "${tomlString(firstModel?.id ?? "")}"
 model_reasoning_effort = "${tomlString(configReasoningEffort(defaultEffort, efforts))}"
 model_catalog_json = "<PATH_TO_MODELS_JSON>"
@@ -2142,7 +2153,7 @@ respect_system_proxy = true
 [model_providers.nous]
 name = "Nous Research"
 base_url = "${GCMP_BASE_URL}"
-env_key = "NOUS_API_KEY"
+env_key = "${NOUS_API_KEY_ENV}"
 env_key_instructions = "Set this to your Nous Research API key (portal.nousresearch.com)."
 wire_api = "responses"
 request_max_retries = 4
@@ -2159,7 +2170,7 @@ export const OSAURUS_BASE_URL = `http://127.0.0.1:${OSAURUS_DEFAULT_PORT}/v1`
 
 // Convention for the Nous Research remote provider in Osaurus: name it "nous",
 // then its models are addressed as nous/<model-id> (e.g. nous/xiaomi/mimo-v2.6-flash).
-export const OSAURUS_NOUS_PROVIDER = "nous"
+export const OSAURUS_NOUS_PROVIDER = NOUS_PROVIDER_ID
 
 export const osaurusModelId = (modelId: string) =>
   modelId.startsWith(`${OSAURUS_NOUS_PROVIDER}/`) ? modelId : `${OSAURUS_NOUS_PROVIDER}/${modelId}`
@@ -2234,17 +2245,17 @@ export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompat
   return models.map((model) => {
     const contextWindow = getContextWindow(model)
     const { maxInputTokens, maxOutputTokens } = deriveContextTokens(model)
-    const pricing: Partial<Record<PriceField, string>> = model.pricing ?? {}
-    const promptPrice = pricing.prompt != null ? toPerMillion(pricing.prompt) : 0
-    const completionPrice = pricing.completion != null ? toPerMillion(pricing.completion) : 0
+    const pricing = pricingOf(model)
+    const promptPrice = perMillionPrice(pricing, "prompt")
+    const completionPrice = perMillionPrice(pricing, "completion")
     const usd: number[] = [promptPrice, completionPrice]
     if (pricing.input_cache_read != null) usd.push(toPerMillion(pricing.input_cache_read))
     if (pricing.input_cache_write != null) usd.push(toPerMillion(pricing.input_cache_write))
     return {
       baseUrl: GCMP_BASE_URL,
       capabilities: {
-        imageInput: model.architecture?.input_modalities?.includes("image") ?? false,
-        toolCalling: model.supported_parameters?.includes("tools") ?? false
+        imageInput: hasImageInput(model),
+        toolCalling: supportsToolCalling(model)
       },
       contextWindow,
       endpoint: "/chat/completions",
@@ -2255,7 +2266,7 @@ export function buildGcmpCompatibleModels(models: ExportableModel[]): GcmpCompat
       model: model.id,
       modelsEndpoint: "/models",
       name: model.name,
-      provider: "nous",
+      provider: NOUS_PROVIDER_ID,
       ...(model.reasoning?.supported_efforts?.length
         ? { reasoningEffort: model.reasoning.supported_efforts }
         : {}),
@@ -2292,7 +2303,7 @@ export function buildGithubCopilotLanguageModels(
 ): GithubCopilotLanguageModelsProvider[] {
   return [
     {
-      name: "nous",
+      name: NOUS_PROVIDER_ID,
       vendor: "customendpoint",
       apiType: "chat-completions",
       apiKey: "${input:nousApiKey}",
@@ -2303,8 +2314,8 @@ export function buildGithubCopilotLanguageModels(
           id: model.id,
           name: model.name,
           url: `${GCMP_BASE_URL}/chat/completions`,
-          toolCalling: model.supported_parameters?.includes("tools") ?? false,
-          vision: model.architecture?.input_modalities?.includes("image") ?? false,
+          toolCalling: supportsToolCalling(model),
+          vision: hasImageInput(model),
           maxInputTokens,
           maxOutputTokens,
           ...(efforts?.length ? { thinking: true, supportsReasoningEffort: efforts } : {})
@@ -2377,7 +2388,7 @@ export interface ZcodeConfig {
 // "builtin:" / "account:" prefixes are reserved for ZCode's own providers
 // schema is the open-source client's zod contracts: packages/provider/src/config/rule-data-schema.ts
 // and packages/shared/src/model-config.ts in https://github.com/zai-org/ZCode
-const ZCODE_PROVIDER_ID = "nous"
+const ZCODE_PROVIDER_ID = NOUS_PROVIDER_ID
 // ZCode's reasoningLevel option vocabulary (from the bundled provider catalog);
 // values must be sorted by ascending semantic strength
 const ZCODE_KNOWN_LEVELS = ["disabled", "none", "minimal", "low", "medium", "high", "xhigh", "max"]
@@ -2498,8 +2509,8 @@ export interface DshSettings {
 }
 
 // fixed route id so every export replaces the same provider instead of duplicating it
-export const DSH_PROVIDER_ID = "nous"
-export const DSH_API_KEY_ENV = "NOUS_API_KEY"
+export const DSH_PROVIDER_ID = NOUS_PROVIDER_ID
+export const DSH_API_KEY_ENV = NOUS_API_KEY_ENV
 // the pi-ai loader entry both DSH surfaces (settings.yaml and the desktop profile patch) target
 export const DSH_LLM_PI_AI_ID = "llm-pi-ai"
 
@@ -2524,7 +2535,7 @@ function buildDshReasoningEfforts(efforts: string[] | undefined) {
 
 export function buildDshProviderProfile(models: ExportableModel[]): DshProviderProfile {
   return {
-    displayName: "nous",
+    displayName: NOUS_PROVIDER_ID,
     apiKeyEnv: DSH_API_KEY_ENV,
     api: "openai-completions",
     baseURL: GCMP_BASE_URL,
@@ -2644,7 +2655,7 @@ export interface CliproxyapiConfig {
 }
 
 // fixed provider name so every export replaces the same openai-compatibility entry
-const CLIPROXYAPI_PROVIDER_NAME = "nous"
+const CLIPROXYAPI_PROVIDER_NAME = NOUS_PROVIDER_ID
 // CLIProxyAPI reads provider api keys as literal config values (no env expansion),
 // so the export ships a placeholder the user replaces
 const CLIPROXYAPI_API_KEY_PLACEHOLDER = "YOUR_NOUS_API_KEY"
@@ -2780,10 +2791,10 @@ export function buildOpencodeConfig(models: ExportableModel[]): OpencodeConfig {
     providers: {
       nous: {
         package: "aisdk:@ai-sdk/openai-compatible",
-        name: "nous",
+        name: NOUS_PROVIDER_ID,
         settings: {
           baseURL: GCMP_BASE_URL,
-          apiKey: "{env:NOUS_API_KEY}"
+          apiKey: `{env:${NOUS_API_KEY_ENV}}`
         },
         models: modelEntries
       }
@@ -2826,13 +2837,13 @@ export function buildCrushConfig(models: ExportableModel[]): CrushConfig {
     $schema: "https://charm.land/crush.json",
     providers: {
       nous: {
-        id: "nous",
-        name: "nous",
+        id: NOUS_PROVIDER_ID,
+        name: NOUS_PROVIDER_ID,
         type: "openai",
         base_url: GCMP_BASE_URL,
         api_key: `$${NOUS_API_KEY_ENV}`,
         models: models.map((model) => {
-          const pricing: Partial<Record<PriceField, string>> = model.pricing ?? {}
+          const pricing = pricingOf(model)
           const contextWindow = getContextWindow(model)
           const { maxOutputTokens } = deriveContextTokens(model)
           return {
@@ -2841,10 +2852,9 @@ export function buildCrushConfig(models: ExportableModel[]): CrushConfig {
             context_window: contextWindow,
             default_max_tokens: maxOutputTokens,
             // all four cost fields are schema-required; cache-write has no API price
-            cost_per_1m_in: pricing.prompt != null ? toPerMillion(pricing.prompt) : 0,
-            cost_per_1m_out: pricing.completion != null ? toPerMillion(pricing.completion) : 0,
-            cost_per_1m_in_cached:
-              pricing.input_cache_read != null ? toPerMillion(pricing.input_cache_read) : 0,
+            cost_per_1m_in: perMillionPrice(pricing, "prompt"),
+            cost_per_1m_out: perMillionPrice(pricing, "completion"),
+            cost_per_1m_in_cached: perMillionPrice(pricing, "input_cache_read"),
             cost_per_1m_out_cached: 0,
             can_reason: isReasoningModel(model),
             supports_attachments: hasImageInput(model)
@@ -2883,8 +2893,8 @@ export interface ChatboxProviderConfig {
 
 export function buildChatboxProviderConfig(models: ExportableModel[]): ChatboxProviderConfig {
   return {
-    id: "nous",
-    name: "nous",
+    id: NOUS_PROVIDER_ID,
+    name: NOUS_PROVIDER_ID,
     type: "openai",
     iconUrl: "https://nousresearch.com/favicon.ico",
     urls: { website: "https://nousresearch.com" },
@@ -2938,9 +2948,9 @@ export interface CherryStudioProviderEntry {
 
 export function buildCherryStudioProvider(models: ExportableModel[]): CherryStudioProviderEntry {
   return {
-    id: "nous",
+    id: NOUS_PROVIDER_ID,
     type: "openai",
-    name: "nous",
+    name: NOUS_PROVIDER_ID,
     apiKey: "",
     // cherry studio appends /v1 itself, so no /v1 here
     apiHost: NOUS_API_HOST,
@@ -2952,8 +2962,8 @@ export function buildCherryStudioProvider(models: ExportableModel[]): CherryStud
       return {
         id: model.id,
         name: model.name,
-        provider: "nous",
-        group: "nous",
+        provider: NOUS_PROVIDER_ID,
+        group: NOUS_PROVIDER_ID,
         ...(model.description ? { description: model.description } : {}),
         ...(capabilities.length ? { capabilities: capabilities.map((type) => ({ type })) } : {})
       }
@@ -3003,7 +3013,7 @@ export interface ZedSettings {
 
 // fixed provider id so every export replaces the same entry; Zed derives the env
 // var name from it (NOUS → NOUS_API_KEY)
-const ZED_PROVIDER_ID = "nous"
+const ZED_PROVIDER_ID = NOUS_PROVIDER_ID
 
 function buildZedReasoningEffort(
   efforts: string[] | undefined,
@@ -3155,12 +3165,12 @@ export function buildMimocodeConfig(models: ExportableModel[]): MimocodeConfig {
     $schema: "https://mimo.xiaomi.com/mimocode/config.json",
     provider: {
       nous: {
-        id: "nous",
-        name: "nous",
+        id: NOUS_PROVIDER_ID,
+        name: NOUS_PROVIDER_ID,
         npm: "@ai-sdk/openai-compatible",
         models: modelEntries,
         options: {
-          apiKey: "{env:NOUS_API_KEY}",
+          apiKey: `{env:${NOUS_API_KEY_ENV}}`,
           baseURL: GCMP_BASE_URL
         }
       }

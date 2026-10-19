@@ -1,5 +1,6 @@
 import {
   NOUS_API_HOST,
+  NOUS_PROVIDER_ID,
   hasImageInput,
   isReasoningModel,
   supportsToolCalling,
@@ -32,9 +33,9 @@ export interface CherryStudioProviderEntry {
 
 export function buildCherryStudioProvider(models: ExportableModel[]): CherryStudioProviderEntry {
   return {
-    id: "nous",
+    id: NOUS_PROVIDER_ID,
     type: "openai",
-    name: "nous",
+    name: NOUS_PROVIDER_ID,
     apiKey: "",
     // cherry studio appends /v1 itself, so no /v1 here
     apiHost: NOUS_API_HOST,
@@ -46,8 +47,8 @@ export function buildCherryStudioProvider(models: ExportableModel[]): CherryStud
       return {
         id: model.id,
         name: model.name,
-        provider: "nous",
-        group: "nous",
+        provider: NOUS_PROVIDER_ID,
+        group: NOUS_PROVIDER_ID,
         ...(model.description ? { description: model.description } : {}),
         ...(capabilities.length ? { capabilities: capabilities.map((type) => ({ type })) } : {})
       }

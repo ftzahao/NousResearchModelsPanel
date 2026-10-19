@@ -1,4 +1,4 @@
-import { GCMP_BASE_URL, getContextWindow, type ExportableModel } from "./shared"
+import { GCMP_BASE_URL, getContextWindow, NOUS_API_KEY_ENV, NOUS_PROVIDER_ID, type ExportableModel } from "./shared"
 
 export interface CodexReasoningLevel {
   effort: string
@@ -124,7 +124,7 @@ export function buildCodexConfigToml(models: ExportableModel[]): string {
 # Merge these settings into ~/.codex/config.toml, then point
 # model_catalog_json below at the absolute path of the exported models.json.
 
-model_provider = "nous"
+model_provider = "${NOUS_PROVIDER_ID}"
 model = "${tomlString(firstModel?.id ?? "")}"
 model_reasoning_effort = "${tomlString(configReasoningEffort(defaultEffort, efforts))}"
 model_catalog_json = "<PATH_TO_MODELS_JSON>"
@@ -139,7 +139,7 @@ respect_system_proxy = true
 [model_providers.nous]
 name = "Nous Research"
 base_url = "${GCMP_BASE_URL}"
-env_key = "NOUS_API_KEY"
+env_key = "${NOUS_API_KEY_ENV}"
 env_key_instructions = "Set this to your Nous Research API key (portal.nousresearch.com)."
 wire_api = "responses"
 request_max_retries = 4

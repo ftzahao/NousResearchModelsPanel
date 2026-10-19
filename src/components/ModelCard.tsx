@@ -18,7 +18,8 @@ import {
   getDiscount,
   formatDiscount,
   modelParamsLines,
-  formatParamsForCopy
+  formatParamsForCopy,
+  textMuted
 } from "../utils"
 
 // memoized: the handlers below are id-based so every card in the grid can share one
@@ -220,12 +221,12 @@ export const ModelCard = memo(function ModelCard({
             {expanded ? (
               <ChevronUp
                 size={16}
-                className={`transition-transform group-hover:-translate-y-0.5 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                className={`transition-transform group-hover:-translate-y-0.5 ${textMuted(isDark)}`}
               />
             ) : (
               <ChevronDown
                 size={16}
-                className={`transition-transform group-hover:translate-y-0.5 ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                className={`transition-transform group-hover:translate-y-0.5 ${textMuted(isDark)}`}
               />
             )}
           </div>
@@ -237,7 +238,7 @@ export const ModelCard = memo(function ModelCard({
         <div className={`flex divide-x mt-3 ${isDark ? "divide-white/10" : "divide-gray-200"}`}>
           <div className="flex-1 min-w-0 pr-3">
             <div
-              className={`text-[10px] font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              className={`text-[10px] font-mono uppercase tracking-wider ${textMuted(isDark)}`}
             >
               {t.context}
             </div>
@@ -257,7 +258,7 @@ export const ModelCard = memo(function ModelCard({
           {model.top_provider?.max_completion_tokens ? (
             <div className="flex-1 min-w-0 px-3">
               <div
-                className={`text-[10px] font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                className={`text-[10px] font-mono uppercase tracking-wider ${textMuted(isDark)}`}
               >
                 {t.maxOutput}
               </div>
@@ -270,7 +271,7 @@ export const ModelCard = memo(function ModelCard({
           ) : null}
           <div className="flex-1 min-w-0 px-3">
             <div
-              className={`text-[10px] font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              className={`text-[10px] font-mono uppercase tracking-wider ${textMuted(isDark)}`}
             >
               {t.promptPrice} <span className="opacity-60">{currencyUnit(lang, currency)}</span>
             </div>
@@ -299,7 +300,7 @@ export const ModelCard = memo(function ModelCard({
           </div>
           <div className="flex-1 min-w-0 pl-3">
             <div
-              className={`text-[10px] font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+              className={`text-[10px] font-mono uppercase tracking-wider ${textMuted(isDark)}`}
             >
               {t.completePrice} <span className="opacity-60">{currencyUnit(lang, currency)}</span>
             </div>
@@ -333,7 +334,7 @@ export const ModelCard = memo(function ModelCard({
           <div className="mt-3">
             <div className="flex justify-between text-[10px] mb-0.5">
               <span
-                className={`font-mono uppercase tracking-wider ${isDark ? "text-gray-500" : "text-gray-400"}`}
+                className={`font-mono uppercase tracking-wider ${textMuted(isDark)}`}
               >
                 {t.intelligence}
               </span>

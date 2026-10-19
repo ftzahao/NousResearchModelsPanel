@@ -1,5 +1,6 @@
 import React from "react"
 import { useTheme } from "../contexts"
+import { textFaint, textMuted } from "../utils"
 
 export function StatCard({
   icon,
@@ -13,6 +14,7 @@ export function StatCard({
   sub?: string
 }) {
   const { theme } = useTheme()
+  const isDark = theme === "dark"
   return (
     <div className="glass p-4 flex items-center gap-3 animate-fade-in">
       <div
@@ -27,13 +29,13 @@ export function StatCard({
           {value}
         </div>
         <div
-          className={`text-[10px] font-mono uppercase tracking-wider mt-1.5 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+          className={`text-[10px] font-mono uppercase tracking-wider mt-1.5 ${textFaint(isDark)}`}
         >
           {label}
         </div>
         {sub && (
           <div
-            className={`text-[10px] font-mono ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+            className={`text-[10px] font-mono ${textMuted(isDark)}`}
           >
             {sub}
           </div>

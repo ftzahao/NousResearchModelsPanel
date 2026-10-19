@@ -2,13 +2,14 @@ import {
   GCMP_BASE_URL,
   NOUS_API_KEY_ENV,
   getContextWindow,
-  toPerMillion,
   deriveContextTokens,
   hasImageInput,
   isReasoningModel,
+  NOUS_PROVIDER_ID,
+  perMillionPrice,
+  pricingOf,
   type ExportableModel
 } from "./shared"
-import type { PriceField } from "../types"
 
 // ---- Crush (crush.json) ----
 
@@ -44,13 +45,13 @@ export function buildCrushConfig(models: ExportableModel[]): CrushConfig {
     $schema: "https://charm.land/crush.json",
     providers: {
       nous: {
-        id: "nous",
-        name: "nous",
+        id: NOUS_PROVIDER_ID,
+        name: NOUS_PROVIDER_ID,
         type: "openai",
         base_url: GCMP_BASE_URL,
         api_key: `$${NOUS_API_KEY_ENV}`,
         models: models.map((model) => {
-          const pricing: Partial<Record<PriceField, string>> = model.pricing ?? {}
+          const pricing = pricingOf(model)
           const contextWindow = getContextWindow(model)
           const { maxOutputTokens } = deriveContextTokens(model)
           return {
@@ -59,10 +60,9 @@ export function buildCrushConfig(models: ExportableModel[]): CrushConfig {
             context_window: contextWindow,
             default_max_tokens: maxOutputTokens,
             // all four cost fields are schema-required; cache-write has no API price
-            cost_per_1m_in: pricing.prompt != null ? toPerMillion(pricing.prompt) : 0,
-            cost_per_1m_out: pricing.completion != null ? toPerMillion(pricing.completion) : 0,
-            cost_per_1m_in_cached:
-              pricing.input_cache_read != null ? toPerMillion(pricing.input_cache_read) : 0,
+            cost_per_1m_in: perMillionPrice(pricing, "prompt"),
+            cost_per_1m_out: perMillionPrice(pricing, "completion"),
+            cost_per_1m_in_cached: perMillionPrice(pricing, "input_cache_read"),
             cost_per_1m_out_cached: 0,
             can_reason: isReasoningModel(model),
             supports_attachments: hasImageInput(model)

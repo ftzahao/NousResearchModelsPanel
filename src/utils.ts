@@ -1,8 +1,24 @@
-import React from "react"
+import { createElement, type ReactNode } from "react"
 import BigNumber from "bignumber.js"
 import { FileText, Image as ImageIcon, Mic, Video, Layers, Cpu } from "lucide-react"
 import type { Lang, Currency, Model } from "./types"
 export type { Lang, Currency, Model }
+
+// Global rounding for every BigNumber derived from API price strings.
+BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_HALF_UP })
+
+// Theme-aware Tailwind text classes, named by role. Dark mode dims to
+// gray-500; the faint pair inverts so dark mode keeps a lighter gray.
+export const textMuted = (isDark: boolean) => (isDark ? "text-gray-500" : "text-gray-400")
+export const textFaint = (isDark: boolean) => (isDark ? "text-gray-400" : "text-gray-500")
+
+export function currencySymbol(currency: Currency): string {
+  return currency === "CNY" ? "¥" : "$"
+}
+
+export function bn(val: string | number | undefined | null): BigNumber {
+  return new BigNumber(val ?? "0")
+}
 
 export const providerColors: Record<string, string> = {
   anthropic: "#D97706",
@@ -79,24 +95,15 @@ export function missingFavorites<T extends { id: string }>(
   return [...favorites].filter((id) => !present.has(id))
 }
 
-BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_HALF_UP })
-
-export function bn(val: string | undefined | null): BigNumber {
-  return new BigNumber(val ?? "0")
-}
-
-export function isFreePrice(val: string | undefined | null): boolean {
-  return bn(val).isZero()
-}
-
-export function stripZeros(s: string): string {
-  if (!s.includes(".")) return s
-  return s.replace(/\.?0+$/, "")
-}
-
 export function currencyUnit(lang: Lang, currency: Currency): string {
-  const sym = currency === "CNY" ? "¥" : "$"
+  const sym = currencySymbol(currency)
   return lang === "zh" ? `${sym}/M` : `${sym}/1M tokens`
+}
+
+// USD per-token price → display string per 1M tokens, CNY converted at the rate.
+function perMillion(n: BigNumber, currency: Currency, exchangeRate: number): string {
+  const value = n.times(1e6).times(currency === "CNY" ? exchangeRate : 1)
+  return stripZeros(value.toFixed(2))
 }
 
 export function formatPrice(
@@ -108,13 +115,7 @@ export function formatPrice(
   if (!val) return "—"
   const n = bn(val)
   if (n.isZero()) return lang === "zh" ? "免费" : "Free"
-
-  if (currency === "CNY") {
-    const cnyValue = n.times(1e6).times(exchangeRate)
-    return `¥${stripZeros(cnyValue.toFixed(2))}/1M`
-  }
-
-  return `$${stripZeros(n.times(1e6).toFixed(2))}/1M`
+  return `${currencySymbol(currency)}${perMillion(n, currency, exchangeRate)}/1M`
 }
 
 export function formatPriceShort(
@@ -124,15 +125,22 @@ export function formatPriceShort(
 ): string {
   if (!val) return "—"
   const n = bn(val)
-  const sym = currency === "CNY" ? "¥" : "$"
+  const sym = currencySymbol(currency)
   if (n.isZero()) return `${sym}0`
-  return currency === "CNY"
-    ? `¥${stripZeros(n.times(1e6).times(exchangeRate).toFixed(2))}`
-    : `$${stripZeros(n.times(1e6).toFixed(2))}`
+  return `${sym}${perMillion(n, currency, exchangeRate)}`
+}
+
+export function isFreePrice(val: string | undefined | null): boolean {
+  return bn(val).isZero()
+}
+
+export function stripZeros(s: string): string {
+  if (!s.includes(".")) return s
+  return s.replace(/\.?0+$/, "")
 }
 
 export function formatCtx(n: number): string {
-  const bnN = new BigNumber(n)
+  const bnN = bn(n)
   if (bnN.gte(1_000_000)) {
     const v = bnN.div(1_000_000)
     return `${stripZeros(v.toFixed(v.gte(10) ? 1 : 2))}M`
@@ -239,13 +247,13 @@ export function formatDiscount(ratio: number, lang: Lang): string {
   return `${Math.round(ratio * 100)}% OFF`
 }
 
-export const modalityIcons: Record<string, React.ReactNode> = {
-  text: React.createElement(FileText, { size: 10 }),
-  image: React.createElement(ImageIcon, { size: 10 }),
-  audio: React.createElement(Mic, { size: 10 }),
-  video: React.createElement(Video, { size: 10 }),
-  file: React.createElement(Layers, { size: 10 }),
-  embeddings: React.createElement(Cpu, { size: 10 })
+export const modalityIcons: Record<string, ReactNode> = {
+  text: createElement(FileText, { size: 10 }),
+  image: createElement(ImageIcon, { size: 10 }),
+  audio: createElement(Mic, { size: 10 }),
+  video: createElement(Video, { size: 10 }),
+  file: createElement(Layers, { size: 10 }),
+  embeddings: createElement(Cpu, { size: 10 })
 }
 
 export const modalityColors: Record<string, { dark: string; light: string }> = {

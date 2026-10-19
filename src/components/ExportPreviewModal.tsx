@@ -5,6 +5,7 @@ import { useLang } from "../i18n"
 import type { ExportPreviewFile } from "../types"
 import { buildOneCommand } from "../model-export/one-command"
 import { ModalShell } from "./ModalShell"
+import { textMuted } from "../utils"
 
 export function ExportPreviewModal({
   files,
@@ -26,6 +27,7 @@ export function ExportPreviewModal({
   onClose: () => void
 }) {
   const { theme } = useTheme()
+  const isDark = theme === "dark"
   const { t, lang } = useLang()
   const [copiedFile, setCopiedFile] = useState<string | null>(null)
   const [copiedCommand, setCopiedCommand] = useState(false)
@@ -144,7 +146,7 @@ export function ExportPreviewModal({
               {oneCommand.note}
             </p>
           )}
-          <p className={`mt-1.5 text-[10px] leading-relaxed ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}>
+          <p className={`mt-1.5 text-[10px] leading-relaxed ${textMuted(isDark)}`}>
             {t.mergeCli.remoteNote}
           </p>
         </div>

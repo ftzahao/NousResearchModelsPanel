@@ -3,6 +3,7 @@ import { Download, Eye, ListChecks } from "lucide-react"
 import { useTheme } from "../contexts"
 import { useLang } from "../i18n"
 import type { ModelConfigExporter } from "../types"
+import { textMuted } from "../utils"
 
 export function ExportToolbar({
   selectedCount,
@@ -26,6 +27,7 @@ export function ExportToolbar({
   onViewSelected: () => void
 }) {
   const { theme } = useTheme()
+  const isDark = theme === "dark"
   const { t } = useLang()
   const [showExportMenu, setShowExportMenu] = useState(false)
 
@@ -78,7 +80,7 @@ export function ExportToolbar({
               className={`absolute right-0 top-full mt-1 z-20 w-64 rounded-xl border p-2 shadow-xl ${theme === "dark" ? "bg-gray-900 border-white/10" : "bg-white border-gray-200"}`}
             >
               <div
-                className={`text-[10px] mb-2 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`}
+                className={`text-[10px] mb-2 ${textMuted(isDark)}`}
               >
                 {t.configurationFormat}
               </div>

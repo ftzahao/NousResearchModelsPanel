@@ -3,6 +3,7 @@ import {
   getContextWindow,
   deriveContextTokens,
   supportsToolCalling,
+  NOUS_PROVIDER_ID,
   type ExportableModel
 } from "./shared"
 
@@ -68,7 +69,7 @@ export interface ZcodeConfig {
 // "builtin:" / "account:" prefixes are reserved for ZCode's own providers
 // schema is the open-source client's zod contracts: packages/provider/src/config/rule-data-schema.ts
 // and packages/shared/src/model-config.ts in https://github.com/zai-org/ZCode
-const ZCODE_PROVIDER_ID = "nous"
+const ZCODE_PROVIDER_ID = NOUS_PROVIDER_ID
 // ZCode's reasoningLevel option vocabulary (from the bundled provider catalog);
 // values must be sorted by ascending semantic strength
 const ZCODE_KNOWN_LEVELS = ["disabled", "none", "minimal", "low", "medium", "high", "xhigh", "max"]

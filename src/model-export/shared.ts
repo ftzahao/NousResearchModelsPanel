@@ -31,6 +31,8 @@ export const GCMP_BASE_URL = "https://inference-api.nousresearch.com/v1"
 export const GCMP_LIMIT = { rpm: 180, tpm: 720000 }
 export const NOUS_API_HOST = "https://inference-api.nousresearch.com"
 export const NOUS_API_KEY_ENV = "NOUS_API_KEY"
+// The provider id every generated tool config uses for the Nous Research upstream.
+export const NOUS_PROVIDER_ID = "nous"
 
 export const getContextWindow = (model: ExportableModel): number =>
   model.top_provider?.context_length ?? model.context_length ?? 0
@@ -38,6 +40,15 @@ export const getContextWindow = (model: ExportableModel): number =>
 // API prices are per-token; the tool configs below expect USD per 1M tokens
 export const toPerMillion = (perToken: string) =>
   new BigNumber(perToken).times(1e6).decimalPlaces(6).toNumber()
+
+// One schema-required cost field: per-million number, absent price reads as 0.
+export function perMillionPrice(
+  pricing: Partial<Record<PriceField, string>>,
+  field: PriceField
+): number {
+  const val = pricing[field]
+  return val != null ? toPerMillion(val) : 0
+}
 
 export function deriveContextTokens(model: ExportableModel): {
   maxInputTokens: number

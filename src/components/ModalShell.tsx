@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { X } from "lucide-react"
 import { useTheme } from "../contexts"
 import { useLang } from "../i18n"
+import { textMuted } from "../utils"
 
 export function ModalShell({
   title,
@@ -52,7 +53,7 @@ export function ModalShell({
               {title}
             </h3>
             {subtitle && (
-              <p className={`text-[10px] ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+              <p className={`text-[10px] ${textMuted(isDark)}`}>
                 {subtitle}
               </p>
             )}
