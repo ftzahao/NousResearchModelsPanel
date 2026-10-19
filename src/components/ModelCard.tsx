@@ -159,12 +159,20 @@ export const ModelCard = memo(function ModelCard({
                   lightClass="bg-green-100 text-green-700"
                 />
               )}
-              {discount && (
+              {discount?.prompt && (
                 <CardBadge
-                  label={formatDiscount(discount.ratio, lang)}
-                  title={`${t.originalPrice}: ${formatPrice(discount.originalPrompt, lang, currency, exchangeRate)}`}
+                  label={`${t.prompt} ${formatDiscount(discount.prompt.ratio, lang)}`}
+                  title={`${t.originalPrice}: ${formatPrice(discount.prompt.originalPrice, lang, currency, exchangeRate)}`}
                   darkClass="bg-amber-500/20 text-amber-300"
                   lightClass="bg-amber-100 text-amber-700"
+                />
+              )}
+              {discount?.completion && (
+                <CardBadge
+                  label={`${t.completion} ${formatDiscount(discount.completion.ratio, lang)}`}
+                  title={`${t.originalPrice}: ${formatPrice(discount.completion.originalPrice, lang, currency, exchangeRate)}`}
+                  darkClass="bg-orange-500/20 text-orange-300"
+                  lightClass="bg-orange-100 text-orange-700"
                 />
               )}
               {isRouter && (
@@ -273,10 +281,19 @@ export const ModelCard = memo(function ModelCard({
                 {t.freeLabel}
               </div>
             ) : (
-              <div
-                className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-300" : "text-brand-700"}`}
-              >
-                {formatPrice(model.pricing.prompt, lang, currency, exchangeRate)}
+              <div className="flex items-baseline gap-1.5">
+                <div
+                  className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-300" : "text-brand-700"}`}
+                >
+                  {formatPrice(model.pricing.prompt, lang, currency, exchangeRate)}
+                </div>
+                {discount?.prompt && (
+                  <div
+                    className={`text-[10px] font-mono line-through flex-shrink-0 ${isDark ? "text-gray-600" : "text-gray-400"}`}
+                  >
+                    {formatPrice(discount.prompt.originalPrice, lang, currency, exchangeRate)}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -293,10 +310,19 @@ export const ModelCard = memo(function ModelCard({
                 {t.freeLabel}
               </div>
             ) : (
-              <div
-                className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-400" : "text-brand-600"}`}
-              >
-                {formatPrice(model.pricing.completion, lang, currency, exchangeRate)}
+              <div className="flex items-baseline gap-1.5">
+                <div
+                  className={`text-sm font-medium font-mono truncate ${isDark ? "text-brand-400" : "text-brand-600"}`}
+                >
+                  {formatPrice(model.pricing.completion, lang, currency, exchangeRate)}
+                </div>
+                {discount?.completion && (
+                  <div
+                    className={`text-[10px] font-mono line-through flex-shrink-0 ${isDark ? "text-gray-600" : "text-gray-400"}`}
+                  >
+                    {formatPrice(discount.completion.originalPrice, lang, currency, exchangeRate)}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -191,7 +191,7 @@ export const CompactModelTable = memo(function CompactModelTable({
                       )}
                       {discount && (
                         <span
-                          title={`${formatDiscount(discount.ratio, lang)} · ${t.originalPrice}: ${formatPriceShort(discount.originalPrompt, currency, exchangeRate)}`}
+                          title={`${formatDiscount((discount.prompt ?? discount.completion)!.ratio, lang)} · ${t.originalPrice}: ${formatPriceShort((discount.prompt ?? discount.completion)!.originalPrice, currency, exchangeRate)}`}
                         >
                           <BadgePercent
                             size={12}

@@ -106,7 +106,7 @@ export const CompactModelCard = memo(function CompactModelCard({
             )}
             {discount && (
               <span
-                title={`${formatDiscount(discount.ratio, lang)} · ${t.originalPrice}: ${formatPriceShort(discount.originalPrompt, currency, exchangeRate)}`}
+                title={`${formatDiscount((discount.prompt ?? discount.completion)!.ratio, lang)} · ${t.originalPrice}: ${formatPriceShort((discount.prompt ?? discount.completion)!.originalPrice, currency, exchangeRate)}`}
                 className={`flex-shrink-0 ${isDark ? "text-amber-400" : "text-amber-600"}`}
               >
                 <BadgePercent size={11} />

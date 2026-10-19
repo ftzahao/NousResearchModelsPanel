@@ -203,29 +203,32 @@ export function isNewModel(created: number): boolean {
   return daysSince(created) < 7
 }
 
-export interface DiscountInfo {
+export interface DiscountSide {
   ratio: number
-  originalPrompt?: string
-  originalCompletion?: string
+  originalPrice: string
+}
+
+export interface DiscountInfo {
+  prompt?: DiscountSide
+  completion?: DiscountSide
 }
 
 export function getDiscount(model: Model): DiscountInfo | null {
   const p = model.pricing
   const orig = p?.original
   if (!p || !orig) return null
+  const result: DiscountInfo = {}
   const origPrompt = orig.prompt ? bn(orig.prompt) : null
   const origCompletion = orig.completion ? bn(orig.completion) : null
   if (origPrompt && origPrompt.gt(0) && bn(p.prompt).lt(origPrompt)) {
     const ratio = bn(p.prompt).div(origPrompt).toNumber()
-    if (ratio < 0.995)
-      return { ratio, originalPrompt: orig.prompt, originalCompletion: orig.completion }
+    if (ratio < 0.995) result.prompt = { ratio, originalPrice: orig.prompt! }
   }
   if (origCompletion && origCompletion.gt(0) && bn(p.completion).lt(origCompletion)) {
     const ratio = bn(p.completion).div(origCompletion).toNumber()
-    if (ratio < 0.995)
-      return { ratio, originalPrompt: orig.prompt, originalCompletion: orig.completion }
+    if (ratio < 0.995) result.completion = { ratio, originalPrice: orig.completion! }
   }
-  return null
+  return result.prompt || result.completion ? result : null
 }
 
 export function formatDiscount(ratio: number, lang: Lang): string {

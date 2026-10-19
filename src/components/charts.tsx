@@ -445,15 +445,15 @@ export function DiscountChart({ models }: { models: Model[] }) {
       .map((m) => {
         const d = getDiscount(m)
         if (!d) return null
-        const fromPrompt =
-          d.originalPrompt != null && bn(m.pricing?.prompt).lt(bn(d.originalPrompt))
+        const fromPrompt = d.prompt != null
         const now = fromPrompt ? m.pricing?.prompt : m.pricing?.completion
-        const orig = fromPrompt ? d.originalPrompt : d.originalCompletion
+        const orig = fromPrompt ? d.prompt!.originalPrice : d.completion!.originalPrice
+        const ratio = fromPrompt ? d.prompt!.ratio : d.completion!.ratio
         return {
           id: m.id,
           name: shortName(m.name, 20),
-          depth: (1 - d.ratio) * 100,
-          ratio: d.ratio,
+          depth: (1 - ratio) * 100,
+          ratio,
           now: bn(now).times(1e6).toNumber(),
           orig: orig ? bn(orig).times(1e6).toNumber() : 0,
           color: getProviderColor(m.id)
